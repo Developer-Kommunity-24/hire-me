@@ -1,0 +1,329 @@
+// ==========================================
+// 1. ENUMS
+// ==========================================
+Enum user_role {
+  student
+  recruiter
+  core_admin
+  club_admin
+}
+
+Enum dk24_status {
+  none
+  pending
+  verified
+  rejected
+  revoked
+}
+
+Enum verification_decision {
+  pending
+  approved
+  rejected
+}
+
+Enum posting_status {
+  active
+  closed
+  expired
+}
+
+Enum employment_type {
+  internship
+  full_time
+  part_time
+  contract
+}
+
+Enum application_status {
+  applied
+  under_review
+  shortlisted
+  accepted
+  rejected
+}
+
+Enum notification_type {
+  new_matching_posting
+  application_received
+  status_changed
+  verification_result
+  recruiter_approved
+  admin_queue_reminder
+}
+
+Enum work_arrangement {
+  in_person
+  remote
+  hybrid
+}
+
+Enum achievement_type {
+  hackathon
+  certification
+  award
+  other
+}
+
+Enum club_role {
+  admin
+  member
+}
+
+// ==========================================
+// 2. CENTRAL USERS TABLE
+// ==========================================
+Table users {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  email text [unique, not null]
+  full_name text [not null]
+  roles "user_role[]" [not null, default: `'{student}'`]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+}
+
+// ==========================================
+// 3. ROLE-SPECIFIC TABLES (Subtypes)
+// ==========================================
+
+Table student_profiles {
+  user_id uuid [primary key]
+  bio text
+  headline text
+  grad_year smallint
+  open_to_work boolean [not null, default: false]
+  resume_url text
+  github_url text
+  linkedin_url text
+  other_links jsonb
+  dk24_status dk24_status [not null, default: 'none']
+  consent_given_at timestamptz
+  updated_at timestamptz [not null, default: `now()`]
+}
+
+Table recruiters {
+  user_id uuid [primary key]
+  company_name text [not null]
+  company_mail text [not null]
+  company_url text
+  headquarters_location text
+
+  is_deleted boolean [not null, default: false]
+  created_at timestamptz [not null, default: `now()`]
+}
+
+Table clubs {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  name text [not null, unique]
+  slug text [not null, unique]
+  is_active boolean [not null, default: true]
+  created_at timestamptz [not null, default: `now()`]
+}
+
+Table club_admins {
+  user_id uuid [primary key]
+  club_id uuid [not null]
+
+  indexes {
+    (user_id, club_id) [unique]
+  }
+}
+
+// ==========================================
+// 4. STUDENT-SPECIFIC DATA
+// ==========================================
+
+Table skills {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  student_id uuid [not null]
+  skill text [not null]
+
+  indexes {
+    (student_id, skill) [unique]
+  }
+}
+
+Table projects {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  student_id uuid [not null]
+  title text [not null]
+  description text
+  role text
+  contributions text
+  learnings text
+  skills_used "text[]"
+  live_url text
+  github_url text
+  display_order smallint [not null, default: 0]
+  created_at timestamptz [not null, default: `now()`]
+}
+
+Table experience {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  student_id uuid [not null]
+  company_name text [not null]
+  role text [not null]
+  start_date date
+  end_date date
+  contributions text
+  created_at timestamptz [not null, default: `now()`]
+}
+
+Table achievements {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  student_id uuid [not null]
+  type achievement_type [not null, default: 'other']
+  title text [not null]
+  description text
+  date date
+  created_at timestamptz [not null, default: `now()`]
+}
+
+Table contact_details {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  student_id uuid [not null, unique]
+  phone text
+}
+
+// ==========================================
+// 5. RECRUITMENT & JOB POSTINGS
+// ==========================================
+
+Table postings {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  recruiter_id uuid [not null]
+  title text [not null]
+  description text [not null]
+  stack "text[]"
+  employment_type employment_type [not null]
+  work_arrangement work_arrangement [not null]
+  seniority_level text
+  compensation text
+  location text
+  deadline date
+  status posting_status [not null, default: 'active']
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+}
+
+Table applications {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  posting_id uuid [not null]
+  student_id uuid [not null]
+  status application_status [not null, default: 'applied']
+  applied_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (posting_id, student_id) [unique]
+  }
+}
+
+// ==========================================
+// 6. CLUBS & VERIFICATIONS
+// ==========================================
+
+Table club_memberships {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  club_id uuid [not null]
+  user_id uuid
+  role club_role [not null, default: 'member']
+  full_name text [not null]
+  usn text [not null]
+  email text [not null]
+  added_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (club_id, usn) [unique, name: "idx_club_memberships_usn_active"]
+    (club_id, email) [unique, name: "idx_club_memberships_email_active"]
+    email [name: "idx_club_memberships_email"]
+    club_id [name: "idx_club_memberships_club"]
+  }
+}
+
+Table verification_requests {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  student_id uuid [not null]
+  usn text [not null]
+  club_id uuid 
+  matched_club_membership_id uuid
+  auto_matched boolean [not null, default: false]
+  submitted_at timestamptz [not null, default: `now()`]
+  
+  applied_at timestamptz
+  
+  
+  resubmit_count smallint [not null, default: 0]
+}
+
+Table badge_revocation {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  student_id uuid [not null]
+  club_membership_id uuid [not null]
+  flagged_at timestamptz [not null, default: `now()`]
+  resolved_by uuid
+  resolved_at timestamptz
+  resolution text
+
+  indexes {
+    flagged_at [name: "idx_revocation_pending"]
+  }
+}
+
+// ==========================================
+// 7. SYSTEM (Notifications)
+// ==========================================
+
+Table notifications {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  user_id uuid [not null]
+  type notification_type [not null]
+  payload jsonb [not null, default: `'{}'`]
+  read_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+}
+
+// ==========================================
+// 8. RELATIONSHIPS / REFS
+// ==========================================
+
+// Core User References
+Ref: student_profiles.user_id - users.id [delete: cascade]
+Ref: recruiters.user_id - users.id [delete: cascade]
+Ref: club_admins.user_id - users.id [delete: cascade]
+
+// Admin Actions
+
+
+Ref: club_admins.club_id > clubs.id [delete: cascade]
+
+// Student Profile Relations
+Ref: skills.student_id > student_profiles.user_id [delete: cascade]
+Ref: projects.student_id > student_profiles.user_id [delete: cascade]
+Ref: experience.student_id > student_profiles.user_id [delete: cascade]
+Ref: achievements.student_id > student_profiles.user_id [delete: cascade]
+Ref: contact_details.student_id - student_profiles.user_id [delete: cascade]
+
+// Recruitment Relations
+Ref: postings.recruiter_id > recruiters.user_id [delete: cascade]
+Ref: applications.posting_id > postings.id [delete: cascade]
+Ref: applications.student_id > student_profiles.user_id [delete: cascade]
+
+// Club Relations
+Ref: club_memberships.club_id > clubs.id [delete: cascade]
+Ref: club_memberships.user_id > users.id
+
+
+// Verification Relations
+Ref: verification_requests.student_id > student_profiles.user_id [delete: cascade]
+Ref: verification_requests.club_id > clubs.id
+Ref: verification_requests.matched_club_membership_id > club_memberships.id
+Ref: verification_requests.usn <> verification_requests.student_id // Semantic check
+
+// Revocation Relations
+Ref: badge_revocation.student_id > student_profiles.user_id [delete: cascade]
+Ref: badge_revocation.club_membership_id > club_memberships.id
+Ref: badge_revocation.resolved_by > users.id
+
+// Notifications
+Ref: notifications.user_id > users.id [delete: cascade]
