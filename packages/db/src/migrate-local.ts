@@ -1,5 +1,4 @@
 import 'dotenv/config';
-import { getDb } from './db-client';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
