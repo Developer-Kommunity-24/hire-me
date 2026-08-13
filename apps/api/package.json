@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@repo/db": "workspace:*",
     "hono": "4.13.1"
   },
   "devDependencies": {
