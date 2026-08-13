@@ -1,5 +1,5 @@
-import { pgTable, uuid, text, timestamp, customType } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
+import { pgTable, uuid, text, timestamp, customType } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
 
 // ==========================================
 // CENTRAL USERS TABLE
@@ -12,9 +12,9 @@ import { sql } from 'drizzle-orm';
  */
 const userRoleArray = customType<{ data: string[]; driverData: string }>({
   dataType() {
-    return 'user_role[]';
+    return 'user_role[]'
   },
-});
+})
 
 export const users = pgTable('users', {
   id: uuid('id')
@@ -31,7 +31,7 @@ export const users = pgTable('users', {
   updatedAt: timestamp('updated_at', { withTimezone: true })
     .notNull()
     .default(sql`now()`),
-});
+})
 
-export type User = typeof users.$inferSelect;
-export type NewUser = typeof users.$inferInsert;
+export type User = typeof users.$inferSelect
+export type NewUser = typeof users.$inferInsert

@@ -1,7 +1,7 @@
-import { pgTable, uuid, jsonb, timestamp } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
-import { notificationTypeEnum } from './enums';
-import { users } from './users';
+import { pgTable, uuid, jsonb, timestamp } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
+import { notificationTypeEnum } from './enums'
+import { users } from './users'
 
 // ==========================================
 // SYSTEM (Notifications)
@@ -22,7 +22,7 @@ export const notifications = pgTable('notifications', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .default(sql`now()`),
-});
+})
 
-export type Notification = typeof notifications.$inferSelect;
-export type NewNotification = typeof notifications.$inferInsert;
+export type Notification = typeof notifications.$inferSelect
+export type NewNotification = typeof notifications.$inferInsert

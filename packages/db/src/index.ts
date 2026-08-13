@@ -1,8 +1,8 @@
-import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
-import * as schema from './schema/index';
+import { neon } from '@neondatabase/serverless'
+import { drizzle } from 'drizzle-orm/neon-http'
+import * as schema from './schema/index'
 
-export type { schema };
+export type { schema }
 
 /**
  * Creates a Drizzle database client configured for Neon's serverless HTTP driver.
@@ -16,11 +16,11 @@ export type { schema };
  * @param url - The Neon connection string (typically from an environment/secret binding).
  */
 export function createDb(url: string) {
-  const sql = neon(url);
-  return drizzle(sql, { schema });
+  const sql = neon(url)
+  return drizzle(sql, { schema })
 }
 
-export type Database = ReturnType<typeof createDb>;
+export type Database = ReturnType<typeof createDb>
 
 // Re-export schema types for convenience
-export * from './schema/index';
+export * from './schema/index'

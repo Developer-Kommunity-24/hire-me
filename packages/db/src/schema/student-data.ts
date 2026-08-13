@@ -1,15 +1,7 @@
-import {
-  pgTable,
-  uuid,
-  text,
-  smallint,
-  date,
-  timestamp,
-  uniqueIndex,
-} from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
-import { achievementTypeEnum } from './enums';
-import { studentProfiles } from './profiles';
+import { pgTable, uuid, text, smallint, date, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
+import { achievementTypeEnum } from './enums'
+import { studentProfiles } from './profiles'
 
 // ==========================================
 // STUDENT-SPECIFIC DATA
@@ -27,7 +19,7 @@ export const skills = pgTable(
     skill: text('skill').notNull(),
   },
   (table) => [uniqueIndex('idx_skills_student_skill').on(table.studentId, table.skill)],
-);
+)
 
 export const projects = pgTable('projects', {
   id: uuid('id')
@@ -51,7 +43,7 @@ export const projects = pgTable('projects', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .default(sql`now()`),
-});
+})
 
 export const experience = pgTable('experience', {
   id: uuid('id')
@@ -68,7 +60,7 @@ export const experience = pgTable('experience', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .default(sql`now()`),
-});
+})
 
 export const achievements = pgTable('achievements', {
   id: uuid('id')
@@ -84,7 +76,7 @@ export const achievements = pgTable('achievements', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .default(sql`now()`),
-});
+})
 
 export const contactDetails = pgTable('contact_details', {
   id: uuid('id')
@@ -95,15 +87,15 @@ export const contactDetails = pgTable('contact_details', {
     .unique()
     .references(() => studentProfiles.userId, { onDelete: 'cascade' }),
   phone: text('phone'),
-});
+})
 
-export type Skill = typeof skills.$inferSelect;
-export type NewSkill = typeof skills.$inferInsert;
-export type Project = typeof projects.$inferSelect;
-export type NewProject = typeof projects.$inferInsert;
-export type Experience = typeof experience.$inferSelect;
-export type NewExperience = typeof experience.$inferInsert;
-export type Achievement = typeof achievements.$inferSelect;
-export type NewAchievement = typeof achievements.$inferInsert;
-export type ContactDetail = typeof contactDetails.$inferSelect;
-export type NewContactDetail = typeof contactDetails.$inferInsert;
+export type Skill = typeof skills.$inferSelect
+export type NewSkill = typeof skills.$inferInsert
+export type Project = typeof projects.$inferSelect
+export type NewProject = typeof projects.$inferInsert
+export type Experience = typeof experience.$inferSelect
+export type NewExperience = typeof experience.$inferInsert
+export type Achievement = typeof achievements.$inferSelect
+export type NewAchievement = typeof achievements.$inferInsert
+export type ContactDetail = typeof contactDetails.$inferSelect
+export type NewContactDetail = typeof contactDetails.$inferInsert

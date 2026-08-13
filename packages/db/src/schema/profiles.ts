@@ -7,10 +7,10 @@ import {
   jsonb,
   timestamp,
   uniqueIndex,
-} from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
-import { dk24StatusEnum } from './enums';
-import { users } from './users';
+} from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
+import { dk24StatusEnum } from './enums'
+import { users } from './users'
 
 // ==========================================
 // ROLE-SPECIFIC TABLES (Subtypes)
@@ -33,7 +33,7 @@ export const studentProfiles = pgTable('student_profiles', {
   updatedAt: timestamp('updated_at', { withTimezone: true })
     .notNull()
     .default(sql`now()`),
-});
+})
 
 export const recruiters = pgTable('recruiters', {
   userId: uuid('user_id')
@@ -47,7 +47,7 @@ export const recruiters = pgTable('recruiters', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .default(sql`now()`),
-});
+})
 
 export const clubs = pgTable('clubs', {
   id: uuid('id')
@@ -59,7 +59,7 @@ export const clubs = pgTable('clubs', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .default(sql`now()`),
-});
+})
 
 export const clubAdmins = pgTable(
   'club_admins',
@@ -72,13 +72,13 @@ export const clubAdmins = pgTable(
       .references(() => clubs.id, { onDelete: 'cascade' }),
   },
   (table) => [uniqueIndex('idx_club_admins_user_club').on(table.userId, table.clubId)],
-);
+)
 
-export type StudentProfile = typeof studentProfiles.$inferSelect;
-export type NewStudentProfile = typeof studentProfiles.$inferInsert;
-export type Recruiter = typeof recruiters.$inferSelect;
-export type NewRecruiter = typeof recruiters.$inferInsert;
-export type Club = typeof clubs.$inferSelect;
-export type NewClub = typeof clubs.$inferInsert;
-export type ClubAdmin = typeof clubAdmins.$inferSelect;
-export type NewClubAdmin = typeof clubAdmins.$inferInsert;
+export type StudentProfile = typeof studentProfiles.$inferSelect
+export type NewStudentProfile = typeof studentProfiles.$inferInsert
+export type Recruiter = typeof recruiters.$inferSelect
+export type NewRecruiter = typeof recruiters.$inferInsert
+export type Club = typeof clubs.$inferSelect
+export type NewClub = typeof clubs.$inferInsert
+export type ClubAdmin = typeof clubAdmins.$inferSelect
+export type NewClubAdmin = typeof clubAdmins.$inferInsert

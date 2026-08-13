@@ -7,11 +7,11 @@ import {
   timestamp,
   uniqueIndex,
   index,
-} from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
-import { clubRoleEnum } from './enums';
-import { users } from './users';
-import { clubs, studentProfiles } from './profiles';
+} from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
+import { clubRoleEnum } from './enums'
+import { users } from './users'
+import { clubs, studentProfiles } from './profiles'
 
 // ==========================================
 // CLUBS & VERIFICATIONS
@@ -44,7 +44,7 @@ export const clubMemberships = pgTable(
     index('idx_club_memberships_email').on(table.email),
     index('idx_club_memberships_club').on(table.clubId),
   ],
-);
+)
 
 export const verificationRequests = pgTable('verification_requests', {
   id: uuid('id')
@@ -61,16 +61,14 @@ export const verificationRequests = pgTable('verification_requests', {
   /**
    * Nullable — set when an auto-match is found against club_memberships.
    */
-  matchedClubMembershipId: uuid('matched_club_membership_id').references(
-    () => clubMemberships.id,
-  ),
+  matchedClubMembershipId: uuid('matched_club_membership_id').references(() => clubMemberships.id),
   autoMatched: boolean('auto_matched').notNull().default(false),
   submittedAt: timestamp('submitted_at', { withTimezone: true })
     .notNull()
     .default(sql`now()`),
   appliedAt: timestamp('applied_at', { withTimezone: true }),
   resubmitCount: smallint('resubmit_count').notNull().default(0),
-});
+})
 
 export const badgeRevocation = pgTable(
   'badge_revocation',
@@ -95,11 +93,11 @@ export const badgeRevocation = pgTable(
     resolution: text('resolution'),
   },
   (table) => [index('idx_revocation_pending').on(table.flaggedAt)],
-);
+)
 
-export type ClubMembership = typeof clubMemberships.$inferSelect;
-export type NewClubMembership = typeof clubMemberships.$inferInsert;
-export type VerificationRequest = typeof verificationRequests.$inferSelect;
-export type NewVerificationRequest = typeof verificationRequests.$inferInsert;
-export type BadgeRevocation = typeof badgeRevocation.$inferSelect;
-export type NewBadgeRevocation = typeof badgeRevocation.$inferInsert;
+export type ClubMembership = typeof clubMemberships.$inferSelect
+export type NewClubMembership = typeof clubMemberships.$inferInsert
+export type VerificationRequest = typeof verificationRequests.$inferSelect
+export type NewVerificationRequest = typeof verificationRequests.$inferInsert
+export type BadgeRevocation = typeof badgeRevocation.$inferSelect
+export type NewBadgeRevocation = typeof badgeRevocation.$inferInsert
