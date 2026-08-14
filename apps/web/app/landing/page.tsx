@@ -36,13 +36,12 @@ export default function LandingPage() {
             <div className="flex flex-col z-10">
               <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-[64px] font-black tracking-tight leading-[1.12] text-slate-900">
                 Where college developers meet{' '}
-                <span className="text-[#00d66c]">
-                  great companies.
-                </span>
+                <span className="text-[#00d66c]">great companies.</span>
               </h1>
 
               <p className="text-slate-600 text-base sm:text-lg mt-5 leading-relaxed font-normal max-w-lg">
-                Showcase what you build, highlight your actual skills, and connect directly with teams hiring across the DK24 network.
+                Showcase what you build, highlight your actual skills, and connect directly with
+                teams hiring across the DK24 network.
               </p>
 
               {/* Dual Action Paths (Flat Typographic Layout) */}

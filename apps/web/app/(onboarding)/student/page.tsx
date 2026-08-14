@@ -132,8 +132,8 @@ export default function StudentOnboardingPage() {
                     step >= 3
                       ? 'bg-[#00d66c] text-white shadow-xs'
                       : step === 2
-                      ? 'bg-white border-2 border-[#00d66c] text-[#00d66c]'
-                      : 'bg-white border-2 border-slate-300 text-slate-400'
+                        ? 'bg-white border-2 border-[#00d66c] text-[#00d66c]'
+                        : 'bg-white border-2 border-slate-300 text-slate-400'
                   }`}
                 >
                   {step >= 3 ? (
@@ -183,9 +183,7 @@ export default function StudentOnboardingPage() {
             >
               {/* Name */}
               <div className="rounded-xl border border-slate-300 focus-within:border-black focus-within:ring-1 focus-within:ring-black px-4 py-2.5 transition-all bg-white">
-                <label className="block text-xs font-medium text-slate-500">
-                  Name
-                </label>
+                <label className="block text-xs font-medium text-slate-500">Name</label>
                 <input
                   type="text"
                   required
@@ -198,9 +196,7 @@ export default function StudentOnboardingPage() {
 
               {/* Headline */}
               <div className="rounded-xl border border-slate-300 focus-within:border-black focus-within:ring-1 focus-within:ring-black px-4 py-2.5 transition-all bg-white">
-                <label className="block text-xs font-medium text-slate-500">
-                  Headline
-                </label>
+                <label className="block text-xs font-medium text-slate-500">Headline</label>
                 <input
                   type="text"
                   required
@@ -213,9 +209,7 @@ export default function StudentOnboardingPage() {
 
               {/* Graduation Year */}
               <div className="rounded-xl border border-slate-300 focus-within:border-black focus-within:ring-1 focus-within:ring-black px-4 py-2.5 transition-all bg-white">
-                <label className="block text-xs font-medium text-slate-500">
-                  Graduation Year
-                </label>
+                <label className="block text-xs font-medium text-slate-500">Graduation Year</label>
                 <select
                   value={graduationYear}
                   onChange={(e) => setGraduationYear(e.target.value)}
@@ -233,9 +227,7 @@ export default function StudentOnboardingPage() {
 
               {/* Bio */}
               <div className="rounded-xl border border-slate-300 focus-within:border-black focus-within:ring-1 focus-within:ring-black px-4 py-2.5 transition-all bg-white">
-                <label className="block text-xs font-medium text-slate-500">
-                  Bio / Summary
-                </label>
+                <label className="block text-xs font-medium text-slate-500">Bio / Summary</label>
                 <textarea
                   rows={3}
                   value={bio}
@@ -274,9 +266,7 @@ export default function StudentOnboardingPage() {
 
                 <div className="grid sm:grid-cols-2 gap-3">
                   <div className="rounded-xl border border-slate-300 focus-within:border-black focus-within:ring-1 focus-within:ring-black px-4 py-2.5 transition-all bg-white">
-                    <label className="block text-xs font-medium text-slate-500">
-                      Role / Title
-                    </label>
+                    <label className="block text-xs font-medium text-slate-500">Role / Title</label>
                     <input
                       type="text"
                       value={role}
@@ -349,9 +339,7 @@ export default function StudentOnboardingPage() {
                 </div>
 
                 <div className="rounded-xl border border-slate-300 focus-within:border-black focus-within:ring-1 focus-within:ring-black px-4 py-2.5 transition-all bg-white">
-                  <label className="block text-xs font-medium text-slate-500">
-                    GPA (Optional)
-                  </label>
+                  <label className="block text-xs font-medium text-slate-500">GPA (Optional)</label>
                   <input
                     type="text"
                     value={gpa}
@@ -387,9 +375,7 @@ export default function StudentOnboardingPage() {
               <div className="space-y-2">
                 <div className="rounded-xl border border-slate-300 focus-within:border-black focus-within:ring-1 focus-within:ring-black px-4 py-2.5 transition-all bg-white flex items-center justify-between gap-2">
                   <div className="flex-1">
-                    <label className="block text-xs font-medium text-slate-500">
-                      Key Skills
-                    </label>
+                    <label className="block text-xs font-medium text-slate-500">Key Skills</label>
                     <input
                       type="text"
                       value={newSkillInput}
@@ -438,9 +424,7 @@ export default function StudentOnboardingPage() {
               {/* External Links */}
               <div className="grid sm:grid-cols-2 gap-3">
                 <div className="rounded-xl border border-slate-300 focus-within:border-black focus-within:ring-1 focus-within:ring-black px-4 py-2.5 transition-all bg-white">
-                  <label className="block text-xs font-medium text-slate-500">
-                    LinkedIn URL
-                  </label>
+                  <label className="block text-xs font-medium text-slate-500">LinkedIn URL</label>
                   <input
                     type="text"
                     value={linkedinUrl}
@@ -471,9 +455,7 @@ export default function StudentOnboardingPage() {
                 </h3>
 
                 <div className="rounded-xl border border-slate-300 focus-within:border-black focus-within:ring-1 focus-within:ring-black px-4 py-2.5 transition-all bg-white">
-                  <label className="block text-xs font-medium text-slate-500">
-                    Project Title
-                  </label>
+                  <label className="block text-xs font-medium text-slate-500">Project Title</label>
                   <input
                     type="text"
                     value={projectTitle}
@@ -525,7 +507,8 @@ export default function StudentOnboardingPage() {
               Profile Complete!
             </h2>
             <p className="text-slate-500 text-sm max-w-sm mx-auto leading-relaxed">
-              Your student profile has been set up successfully. You can now browse verified opportunities and apply seamlessly.
+              Your student profile has been set up successfully. You can now browse verified
+              opportunities and apply seamlessly.
             </p>
 
             <div className="pt-4 flex justify-center">

@@ -42,7 +42,6 @@ export default function LoginPage() {
     }, 500)
   }
 
-
   return (
     <main className="min-h-screen h-screen max-h-screen overflow-hidden bg-[#f8fafc] flex items-center justify-center p-0 md:p-6 lg:p-10 selection:bg-[#00d66c]/20 selection:text-[#121212]">
       {/* Dual Pane Container */}
@@ -76,7 +75,6 @@ export default function LoginPage() {
 
           {/* Middle: Welcome Message */}
           <div className="relative z-10 my-auto py-4">
-            
             <h1 className="text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight mt-2">
               Welcome
             </h1>
@@ -98,17 +96,18 @@ export default function LoginPage() {
               CareerLink
             </h2>
             <p className="text-slate-500 text-xs sm:text-sm mt-1.5 leading-relaxed">
-              Sign in to access 
+              Sign in to access
             </p>
           </div>
 
           {/* Status feedback */}
           {message && (
             <div
-              className={`mb-4 p-3 rounded-xl text-xs font-mono transition-all ${status === 'success'
-                ? 'bg-surface text-on-primary-container border border-primary-container/50'
-                : 'bg-neutral-100 text-on-surface border border-neutral-200'
-                }`}
+              className={`mb-4 p-3 rounded-xl text-xs font-mono transition-all ${
+                status === 'success'
+                  ? 'bg-surface text-on-primary-container border border-primary-container/50'
+                  : 'bg-neutral-100 text-on-surface border border-neutral-200'
+              }`}
               role="status"
             >
               {message}

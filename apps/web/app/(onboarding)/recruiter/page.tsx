@@ -55,7 +55,8 @@ export default function RecruiterOnboardingPage() {
               Complete Your Profile
             </h1>
             <p className="text-slate-500 text-sm mt-1.5 leading-relaxed">
-              Let candidates know who they are talking to. This information will appear on your job postings.
+              Let candidates know who they are talking to. This information will appear on your job
+              postings.
             </p>
           </div>
 
@@ -110,9 +111,7 @@ export default function RecruiterOnboardingPage() {
                   </button>
                 )}
               </div>
-              <p className="text-[11px] text-slate-400 mt-2">
-                JPG, GIF or PNG. Max size of 2MB.
-              </p>
+              <p className="text-[11px] text-slate-400 mt-2">JPG, GIF or PNG. Max size of 2MB.</p>
             </div>
           </div>
 
@@ -160,7 +159,13 @@ export default function RecruiterOnboardingPage() {
                 </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg
+                      className="w-4 h-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
                       <rect width="20" height="16" x="2" y="4" rx="2" />
                       <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
                     </svg>
@@ -237,7 +242,8 @@ export default function RecruiterOnboardingPage() {
             Recruiter Profile Ready!
           </h2>
           <p className="text-slate-500 text-sm max-w-sm mx-auto leading-relaxed">
-            Your recruiter profile has been configured. You can now publish job drives, review campus talent, and connect with top candidates.
+            Your recruiter profile has been configured. You can now publish job drives, review
+            campus talent, and connect with top candidates.
           </p>
 
           <div className="pt-4 flex justify-center">
