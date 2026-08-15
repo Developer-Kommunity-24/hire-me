@@ -55,7 +55,9 @@ export default function RecruiterOnboardingPage() {
         origin: { y: 0.6 },
         colors: ['#00C26D', '#34D399', '#10B981', '#059669', '#3B82F6'],
       })
-    } catch {}
+    } catch {
+      // Confetti fallback
+    }
 
     setTimeout(() => {
       router.push('/landing')
