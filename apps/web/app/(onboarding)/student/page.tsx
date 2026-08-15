@@ -4,12 +4,9 @@ import { motion, AnimatePresence } from 'motion/react'
 import {
   ArrowLeft,
   ArrowRight,
-  Briefcase,
   Check,
-  Code,
   FileText,
   Globe,
-  GraduationCap,
   Plus,
   Sparkles,
   X,
