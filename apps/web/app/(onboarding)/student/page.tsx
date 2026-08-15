@@ -1,16 +1,7 @@
 'use client'
 
 import { motion, AnimatePresence } from 'motion/react'
-import {
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  FileText,
-  Globe,
-  Plus,
-  Sparkles,
-  X,
-} from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, FileText, Globe, Plus, Sparkles, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
 
