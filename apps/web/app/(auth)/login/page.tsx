@@ -1,230 +1,313 @@
 'use client'
 
-import Link from 'next/link'
+import confetti from 'canvas-confetti'
+import { ArrowRight, Check, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
+import { CharactersScene, type CharacterSceneState } from './CharactersScene'
+import { sound } from './audio'
+
+function GoogleIcon({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24">
+      <path
+        fill="#4285F4"
+        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+      />
+    </svg>
+  )
+}
 
 export default function LoginPage() {
   const router = useRouter()
+  const [state, setState] = useState<CharacterSceneState>({
+    focusedField: 'none',
+    emailLength: 0,
+    isSubmitting: false,
+    isSuccess: false,
+    isError: false,
+    isHoveringSubmit: false,
+    isHoveringGoogle: false,
+    cursorPos: { x: 0, y: 0 },
+  })
+
+  const [isSignUp, setIsSignUp] = useState(false)
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success'>('idle')
-  const [message, setMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
 
-  const handleMagicLinkSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!email) return
-
-    setStatus('loading')
-    setMessage('')
-
-    localStorage.setItem('user_email', email)
-
-    setTimeout(() => {
-      setStatus('success')
-      setMessage(`Sign-in successful! Redirecting...`)
-      setTimeout(() => {
+  useEffect(() => {
+    if (state.isSuccess) {
+      if (email.trim()) {
+        localStorage.setItem('user_email', email)
+      }
+      const timer = setTimeout(() => {
         router.push('/role-select')
-      }, 500)
-    }, 600)
+      }, 1200)
+      return () => clearTimeout(timer)
+    }
+  }, [state.isSuccess, email, router])
+
+  const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value
+    setEmail(val)
+    setState((s) => ({ ...s, emailLength: val.length }))
+    sound.playKeystroke(val.length)
+    setErrorMsg('')
   }
 
-  const handleGoogleSignIn = () => {
-    setStatus('loading')
-    setMessage('')
-    localStorage.setItem('user_email', 'google.user@university.edu')
+  const triggerConfetti = () => {
+    try {
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#F24E38', '#45C6B6', '#3A82F7', '#FFA2B6', '#FBBF24'],
+      })
+    } catch {
+      // Confetti fallback
+    }
+  }
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault()
+    if (!email.trim()) {
+      setErrorMsg('Please enter your email address')
+      sound.playError()
+      return
+    }
+
+    setIsLoading(true)
+    sound.playPop(480)
 
     setTimeout(() => {
-      setStatus('success')
-      setMessage('Redirecting to role selection...')
-      setTimeout(() => {
-        router.push('/role-select')
-      }, 500)
-    }, 500)
+      setIsLoading(false)
+      setState((s) => ({ ...s, isSuccess: true }))
+      sound.playSuccess()
+      triggerConfetti()
+    }, 1100)
+  }
+
+  const handleGoogleLogin = () => {
+    setIsLoading(true)
+    sound.playPop(520)
+
+    setTimeout(() => {
+      setIsLoading(false)
+      setState((s) => ({ ...s, isSuccess: true }))
+      sound.playSuccess()
+      triggerConfetti()
+    }, 900)
   }
 
   return (
-    <main className="min-h-screen h-screen max-h-screen overflow-hidden bg-[#f8fafc] flex items-center justify-center p-0 md:p-6 lg:p-10 selection:bg-[#00d66c]/20 selection:text-[#121212]">
-      {/* Dual Pane Container */}
-      <div className="w-full max-w-[920px] h-full md:h-[540px] bg-white md:rounded-3xl shadow-2xl border border-slate-200/80 grid md:grid-cols-2 overflow-hidden">
-        {/* Left Pane: DK24 Brand Showcase */}
-        <div className="relative bg-[#121212] p-8 md:p-10 flex flex-col justify-between overflow-hidden text-white">
-          {/* Subtle electric green ambient glows */}
+    <main
+      id="app-root"
+      className="min-h-screen w-full flex items-center justify-center p-3 sm:p-6 md:p-8 bg-[#E9EEF5] select-none font-['Plus_Jakarta_Sans',sans-serif]"
+    >
+      {/* Centered Interactive Login Card */}
+      <div
+        id="login-card"
+        className="w-full max-w-4xl bg-white rounded-3xl shadow-[0_20px_50px_-10px_rgba(15,23,42,0.12)] border border-slate-200/80 overflow-hidden flex flex-col md:flex-row transition-all"
+      >
+        {/* Left Pane: Characters Scene */}
+        <section
+          id="characters-pane"
+          className="w-full md:w-[48%] lg:w-1/2 min-h-[380px] sm:min-h-[440px] md:min-h-[560px] bg-[#EEF2F6] flex shrink-0"
+        >
+          <CharactersScene state={state} />
+        </section>
+
+        {/* Right Pane: Login Form */}
+        <section
+          id="login-pane"
+          className="w-full md:w-[52%] lg:w-1/2 flex flex-col justify-center bg-white"
+        >
           <div
-            className="pointer-events-none absolute -top-16 -right-16 w-60 h-60 rounded-full bg-[#00d66c]/15 blur-3xl"
-            aria-hidden="true"
-          />
-          <div
-            className="pointer-events-none absolute bottom-0 -left-12 w-56 h-56 rounded-full bg-[#00d66c]/10 blur-3xl"
-            aria-hidden="true"
-          />
-
-          {/* Top: Brand Logo & Back Link */}
-          <div className="relative z-10 flex items-center justify-between -mt-2">
-            <Link
-              href="/"
-              className="text-xs font-semibold text-neutral-400 hover:text-white transition-colors"
-            >
-              Back
-            </Link>
-            <Link href="/" className="flex items-center gap-2 group">
-              <span className="text-2xl font-black tracking-tight text-[#00d66c] font-mono">
-                DK24
-              </span>
-            </Link>
-          </div>
-
-          {/* Middle: Welcome Message */}
-          <div className="relative z-10 my-auto py-4">
-            <h1 className="text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight mt-2">
-              Welcome
-            </h1>
-            <p className="text-neutral-400 text-sm mt-2.5 leading-relaxed max-w-[280px]">
-              Sign in to manage your DK24 student profile, opportunities, and applications.
-            </p>
-          </div>
-          {/* Bottom: Website Link */}
-          <div className="relative z-10 text-xs font-medium text-neutral-500">
-            <span>careerlink.dk24.org</span>
-          </div>
-        </div>
-
-        {/* Right Pane: Clean Sign In Form */}
-        <div className="bg-white p-8 md:p-12 flex flex-col justify-center">
-          {/* Header */}
-          <div className="text-center mb-6">
-            <h2 className="text-2xl lg:text-3xl font-bold tracking-tight text-slate-900">
-              CareerLink
-            </h2>
-            <p className="text-slate-500 text-xs sm:text-sm mt-1.5 leading-relaxed">
-              Sign in to access
-            </p>
-          </div>
-
-          {/* Status feedback */}
-          {message && (
-            <div
-              className={`mb-4 p-3 rounded-xl text-xs font-mono transition-all ${
-                status === 'success'
-                  ? 'bg-surface text-on-primary-container border border-primary-container/50'
-                  : 'bg-neutral-100 text-on-surface border border-neutral-200'
-              }`}
-              role="status"
-            >
-              {message}
-            </div>
-          )}
-
-          {/* Email Magic Link Form */}
-          <form onSubmit={handleMagicLinkSubmit} className="space-y-4">
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-xs font-mono font-semibold tracking-wider text-on-surface-variant uppercase mb-2"
-              >
-                EMAIL ADDRESS
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="student@university.edu"
-                disabled={status === 'loading'}
-                className="w-full px-3.5 py-2.5 rounded-lg border border-outline-variant/70 bg-surface/20 text-on-surface placeholder:text-on-surface-variant/60 placeholder:font-mono text-sm focus:outline-none focus:ring-2 focus:ring-on-surface focus:border-transparent transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={status === 'loading'}
-              className="w-full py-3 px-4 bg-on-surface hover:bg-black active:bg-on-surface text-white rounded-lg font-mono text-sm font-medium flex items-center justify-center gap-2.5 shadow-sm transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {status === 'loading' ? (
-                <span className="inline-flex items-center gap-2">
-                  <svg
-                    className="animate-spin h-4 w-4 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                  Processing...
-                </span>
-              ) : (
-                <>
-                  <svg
-                    className="w-4 h-4 text-white shrink-0"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <rect width="20" height="16" x="2" y="4" rx="2" />
-                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-                  </svg>
-                  <span>Send Magic Link</span>
-                </>
-              )}
-            </button>
-          </form>
-
-          {/* OR Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center" aria-hidden="true">
-              <div className="w-full border-t border-outline-variant/50" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-3 font-mono text-on-surface-variant font-medium tracking-wider">
-                OR
-              </span>
-            </div>
-          </div>
-
-          {/* Google Sign-in */}
-          <button
-            type="button"
-            onClick={handleGoogleSignIn}
-            disabled={status === 'loading'}
-            className="w-full py-2.5 px-4 bg-white hover:bg-surface/30 active:bg-surface/50 text-on-surface border border-outline-variant/80 rounded-lg font-mono text-sm font-medium flex items-center justify-center gap-3 transition-colors shadow-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            id="login-form-container"
+            className="relative flex-1 w-full h-full p-6 sm:p-8 md:p-10 flex flex-col justify-center items-center bg-white"
           >
-            <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                fill="#4285F4"
-                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-              />
-              <path
-                fill="#34A853"
-                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-              />
-              <path
-                fill="#FBBC05"
-                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-              />
-              <path
-                fill="#EA4335"
-                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-              />
-            </svg>
-            <span>Continue with Google</span>
-          </button>
-        </div>
+            {state.isSuccess ? (
+              <div className="flex flex-col items-center justify-center text-center py-8 space-y-5 animate-in fade-in zoom-in-95 duration-300">
+                <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shadow-xs">
+                  <Check className="w-8 h-8 stroke-[3]" />
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-sm text-zinc-500 max-w-[280px]">
+                    You are successfully logged in as{' '}
+                    <span className="font-semibold text-zinc-800">{email}</span>
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="w-full max-w-[360px] mx-auto">
+                {/* Header Branding */}
+                <div className="flex flex-col items-center text-center mb-6">
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">
+                    {isSignUp ? 'Create an account' : 'Welcome'}
+                  </h1>
+                  <p className="text-sm text-zinc-500 mt-1">
+                    {isSignUp
+                      ? 'Enter your details to get started.'
+                      : 'Enter your email to sign in.'}
+                  </p>
+                </div>
+
+                {/* Form */}
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {isSignUp && (
+                    <div className="space-y-1.5 text-left">
+                      <label
+                        htmlFor="name-input"
+                        className="text-xs font-semibold text-zinc-700 block"
+                      >
+                        Name
+                      </label>
+                      <input
+                        id="name-input"
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        onFocus={() => {
+                          setState((s) => ({ ...s, focusedField: 'email' }))
+                          sound.playPop(380)
+                        }}
+                        onBlur={() => setState((s) => ({ ...s, focusedField: 'none' }))}
+                        placeholder="Your full name"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition bg-zinc-50/50 hover:bg-zinc-50"
+                      />
+                    </div>
+                  )}
+
+                  {/* Email Field */}
+                  <div className="space-y-1.5 text-left">
+                    <label
+                      htmlFor="email-input"
+                      className="text-xs font-semibold text-zinc-700 block"
+                    >
+                      Email
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="email-input"
+                        type="email"
+                        required
+                        value={email}
+                        onChange={handleEmailChange}
+                        onFocus={() => {
+                          setState((s) => ({ ...s, focusedField: 'email' }))
+                          sound.playPop(420)
+                        }}
+                        onBlur={() => setState((s) => ({ ...s, focusedField: 'none' }))}
+                        placeholder="Enter your email"
+                        className={`w-full px-3.5 py-2.5 rounded-xl border text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none transition bg-zinc-50/40 hover:bg-zinc-50 ${
+                          state.focusedField === 'email'
+                            ? 'border-zinc-900 ring-2 ring-zinc-900/10 bg-white'
+                            : 'border-zinc-200'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Error banner */}
+                  {errorMsg && (
+                    <div className="text-xs text-rose-600 bg-rose-50 border border-rose-100 px-3 py-2 rounded-lg">
+                      {errorMsg}
+                    </div>
+                  )}
+
+                  {/* Submit Button */}
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      id="submit-login-btn"
+                      disabled={isLoading}
+                      onMouseEnter={() => setState((s) => ({ ...s, isHoveringSubmit: true }))}
+                      onMouseLeave={() => setState((s) => ({ ...s, isHoveringSubmit: false }))}
+                      className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-zinc-900 text-white font-semibold text-sm hover:bg-zinc-800 active:scale-[0.99] transition shadow-xs cursor-pointer disabled:opacity-70"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Signing in...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>{isSignUp ? 'Create account' : 'Continue with Email'}</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Google Sign-in Button */}
+                  <div className="pt-0.5">
+                    <button
+                      type="button"
+                      id="google-login-btn"
+                      disabled={isLoading}
+                      onClick={handleGoogleLogin}
+                      onMouseEnter={() => setState((s) => ({ ...s, isHoveringGoogle: true }))}
+                      onMouseLeave={() => setState((s) => ({ ...s, isHoveringGoogle: false }))}
+                      className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl border border-zinc-200 bg-white text-zinc-700 font-medium text-sm hover:bg-zinc-50 hover:border-zinc-300 active:scale-[0.99] transition shadow-2xs cursor-pointer"
+                    >
+                      <GoogleIcon className="w-4 h-4" />
+                      <span>Continue with Google</span>
+                    </button>
+                  </div>
+                </form>
+
+                {/* Footer toggle */}
+                <div className="mt-6 text-center text-xs text-zinc-500">
+                  {isSignUp ? (
+                    <>
+                      Already have an account?{' '}
+                      <button
+                        type="button"
+                        id="toggle-to-login-btn"
+                        onClick={() => {
+                          setIsSignUp(false)
+                          sound.playPop(400)
+                        }}
+                        className="font-semibold text-zinc-900 hover:underline cursor-pointer ml-1"
+                      >
+                        Log in
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      Don&apos;t have an account?{' '}
+                      <button
+                        type="button"
+                        id="toggle-to-signup-btn"
+                        onClick={() => {
+                          setIsSignUp(true)
+                          sound.playPop(400)
+                        }}
+                        className="font-semibold text-zinc-900 hover:underline cursor-pointer ml-1"
+                      >
+                        Sign up
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
       </div>
     </main>
   )
