@@ -1,18 +1,74 @@
 @import 'tailwindcss';
 
-:root {
-  --background: #ffffff;
-  --foreground: #0a0a0a;
+@theme {
+  --font-sans: var(--font-sans), 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+
+  /* Brand Theme Colors */
+  --color-brand: var(--brand-green);
+  --color-brand-hover: var(--brand-green-hover);
+  --color-brand-dark: var(--brand-green-dark);
+  --color-brand-light: var(--brand-green-light);
+  --color-brand-mint: var(--brand-green-mint);
+  --color-brand-emerald: var(--brand-emerald);
+  
+  /* Surface & Background */
+  --color-bg-page: var(--bg-page);
+  --color-card: var(--bg-card);
+  --color-surface-hero-start: var(--surface-hero-start);
+  --color-surface-hero-end: var(--surface-hero-end);
+
+  /* Borders & Lines */
+  --color-border-subtle: var(--border-subtle);
+  --color-border-muted: var(--border-muted);
+
+  /* Text & Dark UI */
+  --color-text-main: var(--text-main);
+  --color-text-muted: var(--text-muted);
+  --color-action-dark: var(--action-dark);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+
+  /* Brand Palette */
+  --brand-green: #00c26d;
+  --brand-green-hover: #00a85c;
+  --brand-green-dark: #00874a;
+  --brand-green-light: #e8f8f2;
+  --brand-green-mint: #a7f3d0;
+  --brand-emerald: #10b981;
+  --brand-green-glow: rgba(0, 194, 109, 0.22);
+
+  /* 3D Student Clay Sphere Shading */
+  --clay-sphere-start: #25eb8f;
+  --clay-sphere-mid1: #00c26d;
+  --clay-sphere-mid2: #009e56;
+  --clay-sphere-dark: #007f45;
+  --clay-sphere-end: #006336;
+
+  /* Surface & Layout */
+  --bg-page: #f8fafc;
+  --bg-card: #ffffff;
+  --surface-hero-start: #f9fcfa;
+  --surface-hero-end: #f1f8f5;
+
+  /* Borders */
+  --border-subtle: #e2e8f0;
+  --border-muted: #cbd5e1;
+
+  /* Text & Actions */
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --action-dark: #0f172a;
+  --action-dark-hover: #000000;
+
+  /* System */
+  --background: #f8fafc;
+  --foreground: #0f172a;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background-color: var(--bg-page);
+  color: var(--text-main);
+  font-family: var(--font-sans);
 }

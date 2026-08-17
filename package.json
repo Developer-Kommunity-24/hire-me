@@ -6,6 +6,7 @@
     "node": ">=24"
   },
   "scripts": {
+    "prepare": "husky",
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
@@ -15,6 +16,7 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,css,md}\""
   },
   "devDependencies": {
+    "husky": "^9.1.7",
     "prettier": "3.9.6",
     "turbo": "2.10.9",
     "typescript": "6.0.3"
