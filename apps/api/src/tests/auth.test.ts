@@ -1,12 +1,17 @@
 import { Hono } from 'hono'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { app } from '../app.js'
-import { createAuthMiddleware } from '../middleware/auth.js'
+import { createAuthMiddleware, expectedIssuer, jwksUrl } from '../middleware/auth.js'
 import type { AuthVariables } from '../middleware/auth.js'
 import { createTestKeys, testUser, type TestKeys } from './helpers/tokens.js'
 
+// A base URL with a path, like the real ones: Neon Auth issues
+// `https://<endpoint>.neonauth.<region>.aws.neon.tech/<db>/auth`. Anything
+// mounted at the origin would hide path-dropping bugs.
 const AUTH_BASE_URL = 'https://auth.example.test/api/v1/projects/test-project'
-const ISSUER = new URL(AUTH_BASE_URL).origin
+// Neon Auth signs `iss` with the origin, even though it serves the key set under
+// the path. See `expectedIssuer`.
+const ISSUER = 'https://auth.example.test'
 const DATABASE_URL = 'postgresql://user:pass@db.test/hireme'
 
 // Hono's `env()` reads process.env outside workerd, so bindings are set here
@@ -55,6 +60,62 @@ function whoamiWithToken(token: string) {
 
 afterEach(() => {
   vi.unstubAllEnvs()
+})
+
+// ==========================================
+// URL DERIVATION
+// ==========================================
+// The middleware suites below stub `resolveKeySet`, so the real JWKS URL never
+// gets built there. Both derivations are covered directly instead — pointing at
+// the wrong URL made every token fail verification once already.
+//
+// Expected values are written as literals on purpose. Deriving them with the
+// same expression the middleware uses is what let the original bug hide: a wrong
+// assumption agrees with itself.
+
+describe('jwksUrl', () => {
+  it('appends the well-known path to the base URL path', () => {
+    expect(jwksUrl(AUTH_BASE_URL).toString()).toBe(
+      'https://auth.example.test/api/v1/projects/test-project/.well-known/jwks.json',
+    )
+  })
+
+  it('keeps the base URL path rather than resolving against the origin', () => {
+    expect(jwksUrl(AUTH_BASE_URL).pathname).toBe(
+      '/api/v1/projects/test-project/.well-known/jwks.json',
+    )
+  })
+
+  it('does not double up on a trailing slash', () => {
+    expect(jwksUrl(`${AUTH_BASE_URL}/`).toString()).toBe(
+      'https://auth.example.test/api/v1/projects/test-project/.well-known/jwks.json',
+    )
+  })
+
+  it('handles a base URL with no path', () => {
+    expect(jwksUrl('https://auth.example.test').toString()).toBe(
+      'https://auth.example.test/.well-known/jwks.json',
+    )
+  })
+})
+
+describe('expectedIssuer', () => {
+  it('drops the base URL path', () => {
+    expect(expectedIssuer(AUTH_BASE_URL)).toBe('https://auth.example.test')
+  })
+
+  it('keeps a non-default port', () => {
+    expect(expectedIssuer('https://auth.example.test:8443/neondb/auth')).toBe(
+      'https://auth.example.test:8443',
+    )
+  })
+
+  it('does not agree with the JWKS path', () => {
+    // Guards the asymmetry itself: these two must not be collapsed into one
+    // derivation, however much they look like they should be.
+    expect(jwksUrl(AUTH_BASE_URL).origin).toBe(expectedIssuer(AUTH_BASE_URL))
+    expect(jwksUrl(AUTH_BASE_URL).toString()).not.toBe(expectedIssuer(AUTH_BASE_URL))
+  })
 })
 
 // ==========================================
@@ -119,6 +180,12 @@ describe('requireAuth rejections', () => {
 
   it('401s on a token from another issuer', async () => {
     const res = await whoamiWithToken(await keys.mint({ issuer: 'https://attacker.example' }))
+
+    expect(res.status).toBe(401)
+  })
+
+  it('401s on a token whose issuer is the base URL including its path', async () => {
+    const res = await whoamiWithToken(await keys.mint({ issuer: AUTH_BASE_URL }))
 
     expect(res.status).toBe(401)
   })

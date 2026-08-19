@@ -31,6 +31,14 @@ Two distinct credentials, deliberately:
   `${NEON_AUTH_BASE_URL}/.well-known/jwks.json`. The Worker also pins the token's
   `iss` to that URL's origin.
 
+**These two are derived differently, and deliberately so.** Neon Auth URLs look like
+`https://<endpoint>.neonauth.<region>.aws.neon.tech/<db>/auth`. The key set is served
+under the full path, but Neon configures Better Auth's `baseURL` as the bare origin, so
+the origin is what lands in `iss`. Verified against the live service. Making the two
+agree — in either direction — breaks verification: resolve the JWKS against the origin
+and it 404s; pin `iss` to the path and every token is rejected. The origin still pins
+the token to one project, since the hostname carries the Neon endpoint ID.
+
 The Worker never talks to the auth service to validate a request — it only fetches
 public signing keys, which `jose` caches per isolate.
 
@@ -104,8 +112,16 @@ To confirm persistence, open `pnpm --filter @repo/db db:studio` and check that t
 ## Troubleshooting
 
 **Every API call returns 401.** Usually `NEON_AUTH_BASE_URL` differs between the two
-apps, so the issuer check fails. Confirm both files hold the same value. Note that
-tokens expire in about 15 minutes; a token captured from an old session will also 401.
+apps, so the issuer check fails. Confirm both files hold the same value, path included.
+Note that tokens expire in about 15 minutes; a token captured from an old session will
+also 401. The Worker logs the underlying `jose` error next to `Token verification
+failed:`, which distinguishes the cases: `JWKSNoMatchingKey`/`JWKSInvalid` points at the
+JWKS URL, `JWTExpired` at the token's age, and `JWTClaimValidationFailed` on `iss` logs
+the expected and actual values side by side.
+
+Restart `wrangler dev` after changing `NEON_AUTH_BASE_URL`. `createRemoteJWKSet` caches
+its result — failures included, behind a cooldown — for the life of the isolate, so a
+running dev server can keep serving a stale 404.
 
 **Requests are blocked by CORS.** `WEB_ORIGIN` in `apps/api/.dev.vars` must exactly
 match the browser origin, scheme and port included.
@@ -132,7 +148,9 @@ pnpm test
 `apps/api/src/tests/auth.test.ts` mints EdDSA tokens with `jose` and points the
 middleware at a local JWKS, covering the accepted path plus missing, malformed,
 foreign-signed, wrong-issuer, expired, and claim-less tokens, and the fail-closed 500
-when `NEON_AUTH_BASE_URL` is unset. `users.test.ts` covers the two routes, including
+when `NEON_AUTH_BASE_URL` is unset. Because that local JWKS bypasses URL construction,
+`jwksUrl` and `expectedIssuer` are tested on their own — including the fact that they
+disagree. `users.test.ts` covers the two routes, including
 the rejection of `core_admin` and `club_admin`. On the web side the login and
 role-select pages are tested against a mocked auth client and API.
 
