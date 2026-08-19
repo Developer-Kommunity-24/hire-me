@@ -4,6 +4,7 @@ import { motion } from 'motion/react'
 import { ArrowRight, Check } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
+import { ApiError, apiFetch } from '@/lib/api-client'
 
 export default function RoleSelectPage() {
   const router = useRouter()
@@ -11,6 +12,8 @@ export default function RoleSelectPage() {
   const [hoveredRole, setHoveredRole] = useState<'student' | 'recruiter' | null>(null)
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
   const [blink, setBlink] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Track mouse coordinates for interactive eye tracking
@@ -34,18 +37,39 @@ export default function RoleSelectPage() {
     return () => clearInterval(interval)
   }, [])
 
-  // Selection handler with smooth transition
-  const handleSelect = (role: 'student' | 'recruiter') => {
-    setSelectedRole(role)
-    localStorage.setItem('user_role', role)
+  /**
+   * Persists the chosen role, then moves on to the matching dashboard.
+   *
+   * The role is authorization state, so it lives in Postgres rather than
+   * `localStorage` — navigation only happens once the API confirms the write.
+   */
+  const handleSelect = async (role: 'student' | 'recruiter') => {
+    if (isSaving) return
 
-    setTimeout(() => {
-      if (role === 'student') {
-        router.push('/student')
-      } else {
-        router.push('/recruiter')
+    setSelectedRole(role)
+    setIsSaving(true)
+    setErrorMsg('')
+
+    try {
+      await apiFetch('/api/users/me/role', { method: 'PATCH', body: { role } })
+    } catch (error) {
+      // An expired session cannot be recovered here — send them back to sign in.
+      if (error instanceof ApiError && error.status === 401) {
+        router.push('/login')
+        return
       }
-    }, 900)
+
+      setSelectedRole(null)
+      setIsSaving(false)
+      setErrorMsg(
+        error instanceof ApiError
+          ? error.message
+          : 'Could not save your role. Check your connection and try again.',
+      )
+      return
+    }
+
+    router.push(role === 'student' ? '/student' : '/recruiter')
   }
 
   // Calculate eye gaze vector
@@ -107,7 +131,8 @@ export default function RoleSelectPage() {
               <button
                 type="button"
                 id="role-student-btn"
-                onClick={() => handleSelect('student')}
+                onClick={() => void handleSelect('student')}
+                disabled={isSaving}
                 onMouseEnter={() => setHoveredRole('student')}
                 onMouseLeave={() => setHoveredRole(null)}
                 className={`group relative rounded-3xl p-6 sm:p-7 flex flex-col items-center text-center transition-all duration-300 cursor-pointer select-none bg-card border ${
@@ -184,7 +209,8 @@ export default function RoleSelectPage() {
               <button
                 type="button"
                 id="role-recruiter-btn"
-                onClick={() => handleSelect('recruiter')}
+                onClick={() => void handleSelect('recruiter')}
+                disabled={isSaving}
                 onMouseEnter={() => setHoveredRole('recruiter')}
                 onMouseLeave={() => setHoveredRole(null)}
                 className={`group relative rounded-3xl p-6 sm:p-7 flex flex-col items-center text-center transition-all duration-300 cursor-pointer select-none bg-card border ${
@@ -261,6 +287,17 @@ export default function RoleSelectPage() {
                 </div>
               </button>
             </div>
+
+            {/* Save failure */}
+            {errorMsg && (
+              <div
+                id="role-select-error"
+                role="alert"
+                className="mt-6 text-sm text-rose-600 bg-rose-50 border border-rose-100 px-4 py-3 rounded-xl"
+              >
+                {errorMsg}
+              </div>
+            )}
           </div>
 
           {/* Right Column: Exact Vector 3D Scene */}

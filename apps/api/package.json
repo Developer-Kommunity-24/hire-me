@@ -16,6 +16,7 @@
     "@repo/db": "workspace:*",
     "drizzle-orm": "^0.43.1",
     "hono": "4.13.1",
+    "jose": "^6.2.9",
     "zod": "^4.4.3"
   },
   "devDependencies": {

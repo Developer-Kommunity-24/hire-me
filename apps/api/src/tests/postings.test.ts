@@ -1,7 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { app } from '../app.js'
 
-process.env.DATABASE_URL = 'postgresql://fake'
+const DATABASE_URL = 'postgresql://user:pass@db.test/hireme'
+
+process.env.DATABASE_URL = DATABASE_URL
 
 /** Parse a Response body as JSON with a loose type for easy test assertions. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -60,7 +62,7 @@ function makePosting(overrides: Record<string, unknown> = {}): any {
 
 /** Makes a request to the app with a fake DATABASE_URL so the db middleware doesn't throw before the mocked service runs. */
 function request(path: string) {
-  return app.request(path, {}, { DATABASE_URL: 'postgresql://fake' })
+  return app.request(path, {}, { DATABASE_URL })
 }
 
 // ==========================================

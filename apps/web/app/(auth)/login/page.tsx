@@ -1,9 +1,8 @@
 'use client'
 
-import confetti from 'canvas-confetti'
-import { ArrowRight, Check, Loader2 } from 'lucide-react'
-import { useRouter } from 'next/navigation'
-import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
+import { ArrowRight, Loader2 } from 'lucide-react'
+import { useState, type ChangeEvent, type FormEvent } from 'react'
+import { authClient } from '@/lib/auth/client'
 import { CharactersScene, type CharacterSceneState } from './CharactersScene'
 import { sound } from './audio'
 
@@ -31,7 +30,6 @@ function GoogleIcon({ className = 'w-4 h-4' }: { className?: string }) {
 }
 
 export default function LoginPage() {
-  const router = useRouter()
   const [state, setState] = useState<CharacterSceneState>({
     focusedField: 'none',
     emailLength: 0,
@@ -46,20 +44,8 @@ export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [isRedirecting, setIsRedirecting] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
-
-  useEffect(() => {
-    if (state.isSuccess) {
-      if (email.trim()) {
-        localStorage.setItem('user_email', email)
-      }
-      const timer = setTimeout(() => {
-        router.push('/role-select')
-      }, 1200)
-      return () => clearTimeout(timer)
-    }
-  }, [state.isSuccess, email, router])
 
   const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
@@ -69,48 +55,38 @@ export default function LoginPage() {
     setErrorMsg('')
   }
 
-  const triggerConfetti = () => {
-    try {
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#F24E38', '#45C6B6', '#3A82F7', '#FFA2B6', '#FBBF24'],
-      })
-    } catch {
-      // Confetti fallback
-    }
+  const failWith = (message: string) => {
+    setIsRedirecting(false)
+    setErrorMsg(message)
+    setState((s) => ({ ...s, isError: true }))
+    sound.playError()
   }
 
+  /**
+   * Email sign-in is not wired up yet — Google is the only provider. The fields
+   * stay in place for a later change, but submitting must never fake a session.
+   */
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
-    if (!email.trim()) {
-      setErrorMsg('Please enter your email address')
-      sound.playError()
-      return
-    }
-
-    setIsLoading(true)
-    sound.playPop(480)
-
-    setTimeout(() => {
-      setIsLoading(false)
-      setState((s) => ({ ...s, isSuccess: true }))
-      sound.playSuccess()
-      triggerConfetti()
-    }, 1100)
+    failWith("Email sign-in isn't available yet — continue with Google.")
   }
 
-  const handleGoogleLogin = () => {
-    setIsLoading(true)
+  const handleGoogleLogin = async () => {
+    setIsRedirecting(true)
+    setErrorMsg('')
+    setState((s) => ({ ...s, isError: false }))
     sound.playPop(520)
 
-    setTimeout(() => {
-      setIsLoading(false)
-      setState((s) => ({ ...s, isSuccess: true }))
-      sound.playSuccess()
-      triggerConfetti()
-    }, 900)
+    const { error } = await authClient.signIn.social({
+      provider: 'google',
+      callbackURL: '/role-select',
+    })
+
+    // On success the browser navigates to Google, so this only runs when the
+    // handshake could not be started at all.
+    if (error) {
+      failWith(error.message ?? 'Could not start Google sign-in. Please try again.')
+    }
   }
 
   return (
@@ -140,17 +116,17 @@ export default function LoginPage() {
             id="login-form-container"
             className="relative flex-1 w-full h-full p-6 sm:p-8 md:p-10 flex flex-col justify-center items-center bg-white"
           >
-            {state.isSuccess ? (
-              <div className="flex flex-col items-center justify-center text-center py-8 space-y-5 animate-in fade-in zoom-in-95 duration-300">
-                <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shadow-xs">
-                  <Check className="w-8 h-8 stroke-[3]" />
+            {isRedirecting ? (
+              <div
+                id="redirecting-panel"
+                className="flex flex-col items-center justify-center text-center py-8 space-y-5 animate-in fade-in zoom-in-95 duration-300"
+              >
+                <div className="w-16 h-16 rounded-full bg-zinc-100 text-zinc-600 flex items-center justify-center shadow-xs">
+                  <Loader2 className="w-8 h-8 animate-spin" />
                 </div>
-                <div className="space-y-1.5">
-                  <p className="text-sm text-zinc-500 max-w-[280px]">
-                    You are successfully logged in as{' '}
-                    <span className="font-semibold text-zinc-800">{email}</span>
-                  </p>
-                </div>
+                <p className="text-sm text-zinc-500 max-w-[280px]">
+                  Taking you to Google to finish signing in&hellip;
+                </p>
               </div>
             ) : (
               <div className="w-full max-w-[360px] mx-auto">
@@ -160,9 +136,7 @@ export default function LoginPage() {
                     {isSignUp ? 'Create an account' : 'Welcome'}
                   </h1>
                   <p className="text-sm text-zinc-500 mt-1">
-                    {isSignUp
-                      ? 'Enter your details to get started.'
-                      : 'Enter your email to sign in.'}
+                    {isSignUp ? 'Enter your details to get started.' : 'Sign in to continue.'}
                   </p>
                 </div>
 
@@ -204,7 +178,6 @@ export default function LoginPage() {
                       <input
                         id="email-input"
                         type="email"
-                        required
                         value={email}
                         onChange={handleEmailChange}
                         onFocus={() => {
@@ -224,7 +197,11 @@ export default function LoginPage() {
 
                   {/* Error banner */}
                   {errorMsg && (
-                    <div className="text-xs text-rose-600 bg-rose-50 border border-rose-100 px-3 py-2 rounded-lg">
+                    <div
+                      id="login-error"
+                      role="alert"
+                      className="text-xs text-rose-600 bg-rose-50 border border-rose-100 px-3 py-2 rounded-lg"
+                    >
                       {errorMsg}
                     </div>
                   )}
@@ -234,22 +211,12 @@ export default function LoginPage() {
                     <button
                       type="submit"
                       id="submit-login-btn"
-                      disabled={isLoading}
                       onMouseEnter={() => setState((s) => ({ ...s, isHoveringSubmit: true }))}
                       onMouseLeave={() => setState((s) => ({ ...s, isHoveringSubmit: false }))}
                       className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-zinc-900 text-white font-semibold text-sm hover:bg-zinc-800 active:scale-[0.99] transition shadow-xs cursor-pointer disabled:opacity-70"
                     >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Signing in...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>{isSignUp ? 'Create account' : 'Continue with Email'}</span>
-                          <ArrowRight className="w-4 h-4" />
-                        </>
-                      )}
+                      <span>{isSignUp ? 'Create account' : 'Continue with Email'}</span>
+                      <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
 
@@ -258,8 +225,7 @@ export default function LoginPage() {
                     <button
                       type="button"
                       id="google-login-btn"
-                      disabled={isLoading}
-                      onClick={handleGoogleLogin}
+                      onClick={() => void handleGoogleLogin()}
                       onMouseEnter={() => setState((s) => ({ ...s, isHoveringGoogle: true }))}
                       onMouseLeave={() => setState((s) => ({ ...s, isHoveringGoogle: false }))}
                       className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl border border-zinc-200 bg-white text-zinc-700 font-medium text-sm hover:bg-zinc-50 hover:border-zinc-300 active:scale-[0.99] transition shadow-2xs cursor-pointer"
