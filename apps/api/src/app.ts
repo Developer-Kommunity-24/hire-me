@@ -5,6 +5,7 @@ import { logger } from 'hono/logger'
 import { dbMiddleware } from './middleware/db.js'
 import { postingsRouter } from './routes/postings.js'
 import { usersRouter } from './routes/users.js'
+import { recruitersRouter } from './routes/recruiters.js'
 
 const app = new Hono<{
   Bindings: { DATABASE_URL: string; NEON_AUTH_BASE_URL: string; WEB_ORIGIN: string }
@@ -38,6 +39,9 @@ app.route('/api/postings', postingsRouter)
 
 // Authenticated user record and role selection
 app.route('/api/users', usersRouter)
+
+// Recruiter profile management
+app.route('/api/recruiters', recruitersRouter)
 
 export { app }
 export type AppType = typeof app

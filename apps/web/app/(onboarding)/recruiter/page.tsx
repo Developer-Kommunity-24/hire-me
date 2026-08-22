@@ -1,71 +1,207 @@
 'use client'
 
-import { ArrowLeft, ArrowRight, Building2, Globe, Mail, MapPin, Sparkles, X } from 'lucide-react'
+import { motion, AnimatePresence } from 'motion/react'
+import { ArrowLeft, ArrowRight, Building2, Check, Globe, Mail, MapPin, Sparkles, X, User } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { ApiError, apiFetch } from '@/lib/api-client'
 import confetti from 'canvas-confetti'
-
-export interface RecruiterProfileData {
-  companyName: string
-  companyMail: string
-  companyUrl: string
-  headquartersLocation: string
-}
 
 export default function RecruiterOnboardingPage() {
   const router = useRouter()
+  const [step, setStep] = useState<1 | 2 | 3>(1)
+  const [isCompleted, setIsCompleted] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [draftSaved, setDraftSaved] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
 
+  // Step 1: About you
+  const [fullName, setFullName] = useState('')
+  const [jobTitle, setJobTitle] = useState('')
+  const [step1Error, setStep1Error] = useState('')
+
+  // Step 2: Company
   const [companyName, setCompanyName] = useState('')
   const [companyMail, setCompanyMail] = useState('')
   const [companyUrl, setCompanyUrl] = useState('')
   const [headquartersLocation, setHeadquartersLocation] = useState('')
-  const [errorMsg, setErrorMsg] = useState('')
-  const [isCompleted, setIsCompleted] = useState(false)
+  const [step2Error, setStep2Error] = useState('')
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  // Step 3: Bio & review
+  const [bio, setBio] = useState('')
 
-    if (!companyName.trim()) {
-      setErrorMsg('Please enter your company name.')
-      return
+  // Load existing data on mount
+  useEffect(() => {
+    const loadRecruiterData = async () => {
+      try {
+        // First get user data for full name
+        const userResponse = await apiFetch<{ user: { fullName: string } }>('/api/users/me')
+        setFullName(userResponse.user.fullName || '')
+
+        // Then get recruiter data if exists
+        const recruiterResponse = await apiFetch<{ recruiter: { 
+          companyName: string
+          companyMail: string
+          companyUrl: string | null
+          headquartersLocation: string | null
+          jobTitle: string | null
+          bio: string | null
+          isComplete: boolean
+        } | null }>('/api/recruiters/me')
+
+        if (recruiterResponse.recruiter) {
+          const r = recruiterResponse.recruiter
+          setCompanyName(r.companyName || '')
+          setCompanyMail(r.companyMail || '')
+          setCompanyUrl(r.companyUrl || '')
+          setHeadquartersLocation(r.headquartersLocation || '')
+          setJobTitle(r.jobTitle || '')
+          setBio(r.bio || '')
+
+          // If already complete, redirect to landing
+          if (r.isComplete) {
+            router.push('/landing')
+            return
+          }
+        }
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) {
+          router.push('/login')
+          return
+        }
+        console.error('Failed to load recruiter data:', error)
+      } finally {
+        setIsLoading(false)
+      }
     }
 
-    if (!companyMail.trim()) {
-      setErrorMsg('Please enter your company work email.')
-      return
-    }
+    loadRecruiterData()
+  }, [router])
 
+  // Save draft function
+  const saveDraft = async (showConfirmation = true) => {
+    setIsSaving(true)
     setErrorMsg('')
 
-    const recruiterProfile: RecruiterProfileData = {
-      companyName: companyName.trim(),
-      companyMail: companyMail.trim(),
-      companyUrl: companyUrl.trim(),
-      headquartersLocation: headquartersLocation.trim(),
-    }
-
-    localStorage.setItem('recruiter_profile', JSON.stringify(recruiterProfile))
-    localStorage.setItem('user_role', 'recruiter')
-    setIsCompleted(true)
-
     try {
-      confetti({
-        particleCount: 90,
-        spread: 75,
-        origin: { y: 0.6 },
-        colors: ['#00C26D', '#34D399', '#10B981', '#059669', '#3B82F6'],
-      })
-    } catch {
-      // Confetti fallback
-    }
+      const payload: Record<string, string | boolean> = {}
+      
+      if (fullName.trim()) payload.fullName = fullName.trim()
+      if (jobTitle.trim()) payload.jobTitle = jobTitle.trim()
+      if (companyName.trim()) payload.companyName = companyName.trim()
+      if (companyMail.trim()) payload.companyMail = companyMail.trim()
+      if (companyUrl.trim()) payload.companyUrl = companyUrl.trim()
+      if (headquartersLocation.trim()) payload.headquartersLocation = headquartersLocation.trim()
+      if (bio.trim()) payload.bio = bio.trim()
 
-    setTimeout(() => {
-      router.push('/landing')
-    }, 1400)
+      await apiFetch('/api/recruiters/me', { method: 'PATCH', body: payload })
+
+      if (showConfirmation) {
+        setDraftSaved(true)
+        setTimeout(() => setDraftSaved(false), 2000)
+      }
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        router.push('/login')
+        return
+      }
+      setErrorMsg(
+        error instanceof ApiError
+          ? error.message
+          : 'Failed to save draft. Please try again.',
+      )
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // Stepper navigation
+  const handleNext = async () => {
+    if (step === 1) {
+      if (!fullName.trim() || !jobTitle.trim()) {
+        setStep1Error('Please fill in your full name and job title.')
+        return
+      }
+      setStep1Error('')
+      
+      // Save step 1 data
+      await saveDraft(false)
+      setStep(2)
+    } else if (step === 2) {
+      if (!companyName.trim() || !companyMail.trim()) {
+        setStep2Error('Please provide your company name and work email.')
+        return
+      }
+      setStep2Error('')
+      
+      // Save step 2 data
+      await saveDraft(false)
+      setStep(3)
+    } else if (step === 3) {
+      // Final submit
+      setIsSaving(true)
+      setErrorMsg('')
+
+      try {
+        await apiFetch('/api/recruiters/me', {
+          method: 'PATCH',
+          body: {
+            fullName: fullName.trim(),
+            jobTitle: jobTitle.trim(),
+            companyName: companyName.trim(),
+            companyMail: companyMail.trim(),
+            companyUrl: companyUrl.trim(),
+            headquartersLocation: headquartersLocation.trim(),
+            bio: bio.trim(),
+            isComplete: true,
+          },
+        })
+
+        setIsCompleted(true)
+
+        confetti({
+          particleCount: 90,
+          spread: 75,
+          origin: { y: 0.6 },
+          colors: ['#00C26D', '#34D399', '#10B981', '#059669', '#3B82F6'],
+        })
+
+        setTimeout(() => {
+          router.push('/landing')
+        }, 1400)
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) {
+          router.push('/login')
+          return
+        }
+        setErrorMsg(
+          error instanceof ApiError
+            ? error.message
+            : 'Failed to complete profile. Please try again.',
+        )
+        setIsSaving(false)
+      }
+    }
   }
 
   const handleBack = () => {
-    router.push('/role-select')
+    if (step === 1) {
+      router.push('/role-select')
+    } else {
+      setStep((prev) => (prev - 1) as 1 | 2 | 3)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="h-screen w-screen bg-bg-page text-text-main flex items-center justify-center font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-text-muted">Loading your profile...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -275,22 +411,114 @@ export default function RecruiterOnboardingPage() {
           </div>
 
           {/* ========================================================================= */}
-          {/* RIGHT COLUMN: 4 FORM FIELDS (NO PROGRESS BAR) */}
+          {/* RIGHT COLUMN: MULTI-STEP WIZARD FORM */}
           {/* ========================================================================= */}
           <div className="lg:col-span-7 p-6 sm:p-8 lg:p-10 flex flex-col justify-between h-full">
-            {/* Header: Title & Subtitle */}
-            <div className="space-y-1 shrink-0 pb-2">
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-text-main tracking-tight">
-                Company &amp; Recruiter Details
-              </h2>
-              <p className="text-xs sm:text-sm text-text-muted font-medium">
-                Set up your verified company profile to start hiring talent from the DK24 network.
-              </p>
+            {/* Top Stepper Indicator */}
+            <div className="w-full shrink-0 pb-3 border-b border-border-subtle/50">
+              <div className="w-full flex items-start justify-between">
+                {/* Step 1: About you */}
+                <div
+                  className="flex flex-col items-center gap-1.5 cursor-pointer group shrink-0"
+                  onClick={() => setStep(1)}
+                >
+                  <div
+                    className={`w-[34px] h-[34px] rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                      step > 1
+                        ? 'bg-brand text-white shadow-xs'
+                        : step === 1
+                          ? 'bg-brand text-white shadow-[0_0_0_5px_var(--brand-green-glow)]'
+                          : 'bg-card border-2 border-border-subtle text-text-muted group-hover:border-slate-300'
+                    }`}
+                  >
+                    {step > 1 ? <Check className="w-4 h-4 stroke-[3]" /> : '1'}
+                  </div>
+                  <span
+                    className={`text-[11px] whitespace-nowrap transition-colors ${
+                      step === 1
+                        ? 'font-bold text-brand'
+                        : step > 1
+                          ? 'font-semibold text-slate-700'
+                          : 'font-medium text-text-muted'
+                    }`}
+                  >
+                    About you
+                  </span>
+                </div>
+
+                {/* Connector Line 1 -> 2 */}
+                <div className="flex-1 h-[2px] bg-border-subtle mt-[16px] mx-1 sm:mx-2 relative overflow-hidden rounded-full">
+                  <div
+                    className="h-full bg-brand transition-all duration-400 ease-out"
+                    style={{ width: step > 1 ? '100%' : '0%' }}
+                  />
+                </div>
+
+                {/* Step 2: Company */}
+                <div
+                  className="flex flex-col items-center gap-1.5 cursor-pointer group shrink-0"
+                  onClick={() => step > 1 && setStep(2)}
+                >
+                  <div
+                    className={`w-[34px] h-[34px] rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                      step > 2
+                        ? 'bg-brand text-white shadow-xs'
+                        : step === 2
+                          ? 'bg-brand text-white shadow-[0_0_0_5px_var(--brand-green-glow)]'
+                          : 'bg-card border-2 border-border-subtle text-text-muted group-hover:border-slate-300'
+                    }`}
+                  >
+                    {step > 2 ? <Check className="w-4 h-4 stroke-[3]" /> : '2'}
+                  </div>
+                  <span
+                    className={`text-[11px] whitespace-nowrap transition-colors ${
+                      step === 2
+                        ? 'font-bold text-brand'
+                        : step > 2
+                          ? 'font-semibold text-slate-700'
+                          : 'font-medium text-text-muted'
+                    }`}
+                  >
+                    Company
+                  </span>
+                </div>
+
+                {/* Connector Line 2 -> 3 */}
+                <div className="flex-1 h-[2px] bg-border-subtle mt-[16px] mx-1 sm:mx-2 relative overflow-hidden rounded-full">
+                  <div
+                    className="h-full bg-brand transition-all duration-400 ease-out"
+                    style={{ width: step > 2 ? '100%' : '0%' }}
+                  />
+                </div>
+
+                {/* Step 3: Bio & review */}
+                <div
+                  className="flex flex-col items-center gap-1.5 cursor-pointer group shrink-0"
+                  onClick={() => step > 2 && setStep(3)}
+                >
+                  <div
+                    className={`w-[34px] h-[34px] rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                      step === 3
+                        ? 'bg-brand text-white shadow-[0_0_0_5px_var(--brand-green-glow)]'
+                        : 'bg-card border-2 border-border-subtle text-text-muted'
+                    }`}
+                  >
+                    <span>3</span>
+                  </div>
+                  <span
+                    className={`text-[11px] whitespace-nowrap transition-colors ${
+                      step === 3 ? 'font-bold text-brand' : 'font-medium text-text-muted'
+                    }`}
+                  >
+                    Bio &amp; review
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* Error Banner */}
             {errorMsg && (
-              <div className="my-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium flex items-center justify-between">
+              <div role="alert" className="my-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium flex items-center justify-between">
                 <span>{errorMsg}</span>
                 <button
                   type="button"
@@ -302,111 +530,278 @@ export default function RecruiterOnboardingPage() {
               </div>
             )}
 
-            {/* 4 Form Fields Form */}
-            <form
-              onSubmit={handleSubmit}
-              className="flex-1 py-3 flex flex-col justify-center space-y-4"
-            >
-              {/* Field 1: Company Name */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Company Name <span className="text-red-500">*</span>
-                </label>
-                <div className="relative flex items-center">
-                  <Building2 className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
-                  <input
-                    type="text"
-                    required
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="e.g. Acme Innovations Inc."
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
-                  />
-                </div>
+            {/* Draft saved confirmation */}
+            {draftSaved && (
+              <div className="my-2 p-3 rounded-xl bg-green-50 border border-green-200 text-green-700 text-xs font-medium">
+                Draft saved successfully
               </div>
+            )}
 
-              {/* Field 2: Company Work Email */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Company Work Email <span className="text-red-500">*</span>
-                </label>
-                <div className="relative flex items-center">
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
-                  <input
-                    type="email"
-                    required
-                    value={companyMail}
-                    onChange={(e) => setCompanyMail(e.target.value)}
-                    placeholder="recruiting@company.com"
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
-                  />
-                </div>
-                <p className="text-[11px] text-text-muted mt-1">
-                  Official corporate email for candidate correspondence and verification.
-                </p>
-              </div>
+            {/* Step Form Content Body */}
+            <div className="flex-1 flex flex-col justify-center overflow-hidden py-1">
+              <AnimatePresence mode="wait">
+                {/* ------------------------------------------------------------- */}
+                {/* STEP 1: ABOUT YOU */}
+                {/* ------------------------------------------------------------- */}
+                {step === 1 && (
+                  <motion.div
+                    key="step-1"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.18 }}
+                    className="space-y-3.5"
+                  >
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-extrabold text-text-main tracking-tight">
+                        About you
+                      </h2>
+                      <p className="text-xs text-text-muted font-medium mt-0.5">
+                        Let&apos;s start with your basic information.
+                      </p>
+                    </div>
 
-              {/* Field 3: Company Website URL */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Company Website URL
-                </label>
-                <div className="relative flex items-center">
-                  <Globe className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
-                  <input
-                    type="url"
-                    value={companyUrl}
-                    onChange={(e) => setCompanyUrl(e.target.value)}
-                    placeholder="https://acme.example.com"
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
-                  />
-                </div>
-              </div>
+                    {step1Error && (
+                      <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+                        {step1Error}
+                      </div>
+                    )}
 
-              {/* Field 4: Headquarters Location */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Headquarters Location
-                </label>
-                <div className="relative flex items-center">
-                  <MapPin className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
-                  <input
-                    type="text"
-                    value={headquartersLocation}
-                    onChange={(e) => setHeadquartersLocation(e.target.value)}
-                    placeholder="e.g. Bengaluru, India or San Francisco, CA"
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
-                  />
-                </div>
-              </div>
+                    {/* Full Name */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 mb-1">
+                        Full Name <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative flex items-center">
+                        <User className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
+                        <input
+                          type="text"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          placeholder="e.g. Alex Chen"
+                          className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
+                        />
+                      </div>
+                    </div>
 
-              {/* Bottom Actions Bar */}
-              <div className="flex items-center justify-between pt-4 border-t border-border-subtle/60 mt-3 shrink-0">
-                {/* Back Button */}
+                    {/* Job Title */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 mb-1">
+                        Job Title <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={jobTitle}
+                        onChange={(e) => setJobTitle(e.target.value)}
+                        placeholder="e.g. Senior Technical Recruiter"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
+                      />
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* ------------------------------------------------------------- */}
+                {/* STEP 2: COMPANY */}
+                {/* ------------------------------------------------------------- */}
+                {step === 2 && (
+                  <motion.div
+                    key="step-2"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.18 }}
+                    className="space-y-3.5"
+                  >
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-extrabold text-text-main tracking-tight">
+                        Company Details
+                      </h2>
+                      <p className="text-xs text-text-muted font-medium mt-0.5">
+                        Tell us about the company you represent.
+                      </p>
+                    </div>
+
+                    {step2Error && (
+                      <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+                        {step2Error}
+                      </div>
+                    )}
+
+                    {/* Company Name */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 mb-1">
+                        Company Name <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative flex items-center">
+                        <Building2 className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
+                        <input
+                          type="text"
+                          value={companyName}
+                          onChange={(e) => setCompanyName(e.target.value)}
+                          placeholder="e.g. Acme Innovations Inc."
+                          className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Company Work Email */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 mb-1">
+                        Company Work Email <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative flex items-center">
+                        <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
+                        <input
+                          type="email"
+                          value={companyMail}
+                          onChange={(e) => setCompanyMail(e.target.value)}
+                          placeholder="recruiting@company.com"
+                          className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
+                        />
+                      </div>
+                      <p className="text-[11px] text-text-muted mt-1">
+                        Official corporate email for candidate correspondence and verification.
+                      </p>
+                    </div>
+
+                    {/* Company Website URL */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 mb-1">
+                        Company Website URL
+                      </label>
+                      <div className="relative flex items-center">
+                        <Globe className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
+                        <input
+                          type="url"
+                          value={companyUrl}
+                          onChange={(e) => setCompanyUrl(e.target.value)}
+                          placeholder="https://acme.example.com"
+                          className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Headquarters Location */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 mb-1">
+                        Headquarters Location
+                      </label>
+                      <div className="relative flex items-center">
+                        <MapPin className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
+                        <input
+                          type="text"
+                          value={headquartersLocation}
+                          onChange={(e) => setHeadquartersLocation(e.target.value)}
+                          placeholder="e.g. Bengaluru, India or San Francisco, CA"
+                          className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* ------------------------------------------------------------- */}
+                {/* STEP 3: BIO & REVIEW */}
+                {/* ------------------------------------------------------------- */}
+                {step === 3 && (
+                  <motion.div
+                    key="step-3"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.18 }}
+                    className="space-y-3.5"
+                  >
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-extrabold text-text-main tracking-tight">
+                        Bio &amp; Review
+                      </h2>
+                      <p className="text-xs text-text-muted font-medium mt-0.5">
+                        Add a short bio and review your profile before completing.
+                      </p>
+                    </div>
+
+                    {/* Bio */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 mb-1">
+                        Short Bio (Optional)
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={bio}
+                        onChange={(e) => setBio(e.target.value)}
+                        placeholder="Tell candidates a bit about your company culture and what you're looking for..."
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card resize-none placeholder:text-slate-400"
+                      />
+                    </div>
+
+                    {/* Profile Summary */}
+                    <div className="border-t border-border-subtle/50 pt-3 mt-2">
+                      <h4 className="text-xs font-bold text-slate-800 mb-2">Profile Summary</h4>
+                      <div className="space-y-1.5 text-xs text-slate-600">
+                        <p><span className="font-medium">Name:</span> {fullName || 'Not provided'}</p>
+                        <p><span className="font-medium">Job Title:</span> {jobTitle || 'Not provided'}</p>
+                        <p><span className="font-medium">Company:</span> {companyName || 'Not provided'}</p>
+                        <p><span className="font-medium">Email:</span> {companyMail || 'Not provided'}</p>
+                        {companyUrl && <p><span className="font-medium">Website:</span> {companyUrl}</p>}
+                        {headquartersLocation && <p><span className="font-medium">Location:</span> {headquartersLocation}</p>}
+                        {bio && <p><span className="font-medium">Bio:</span> {bio.substring(0, 100)}{bio.length > 100 ? '...' : ''}</p>}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Bottom Actions Bar */}
+            <div className="flex items-center justify-between pt-3 border-t border-border-subtle/50 shrink-0">
+              {/* Back Button */}
+              <button
+                type="button"
+                onClick={handleBack}
+                disabled={isSaving}
+                className="flex items-center gap-2 px-4 sm:px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs sm:text-sm transition cursor-pointer active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                {/* Save Draft Button */}
                 <button
                   type="button"
-                  onClick={handleBack}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-border-subtle hover:bg-slate-100 text-slate-700 font-semibold text-xs sm:text-sm transition cursor-pointer active:scale-[0.98]"
+                  onClick={() => saveDraft(true)}
+                  disabled={isSaving || isCompleted}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border-subtle hover:bg-slate-50 text-slate-700 font-semibold text-xs sm:text-sm transition cursor-pointer active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Back</span>
+                  <span>Save Draft</span>
                 </button>
 
-                {/* Complete Setup Button */}
+                {/* Next / Complete Button */}
                 <button
-                  type="submit"
-                  disabled={isCompleted}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-action-dark hover:bg-black text-white font-semibold text-xs sm:text-sm transition shadow-md hover:shadow-lg cursor-pointer active:scale-[0.98]"
+                  type="button"
+                  onClick={handleNext}
+                  disabled={isSaving || isCompleted}
+                  className="flex items-center gap-2 px-5 sm:px-6 py-2 rounded-xl bg-action-dark hover:bg-black text-white font-semibold text-xs sm:text-sm transition shadow-md hover:shadow-lg cursor-pointer active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <span>{isCompleted ? 'Profile Created!' : 'Complete Setup'}</span>
-                  {isCompleted ? (
-                    <Sparkles className="w-4 h-4 text-brand-emerald" />
+                  {step < 3 ? (
+                    <>
+                      <span>Next</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
                   ) : (
-                    <ArrowRight className="w-4 h-4" />
+                    <>
+                      <span>{isCompleted ? 'Profile Created!' : 'Complete Setup'}</span>
+                      {isCompleted ? (
+                        <Sparkles className="w-4 h-4 text-brand-emerald" />
+                      ) : (
+                        <Sparkles className="w-4 h-4" />
+                      )}
+                    </>
                   )}
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       </main>

@@ -43,6 +43,9 @@ export const recruiters = pgTable('recruiters', {
   companyMail: text('company_mail').notNull(),
   companyUrl: text('company_url'),
   headquartersLocation: text('headquarters_location'),
+  jobTitle: text('job_title'),
+  bio: text('bio'),
+  isComplete: boolean('is_complete').notNull().default(false),
   isDeleted: boolean('is_deleted').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
