@@ -134,7 +134,9 @@ describe('RecruiterOnboardingPage', () => {
     fireEvent.click(nextButton)
 
     await waitFor(() => {
-      expect(screen.getByText(/Please provide your company name and work email/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/Please provide your company name and work email/i),
+      ).toBeInTheDocument()
     })
   })
 
@@ -254,16 +256,16 @@ describe('RecruiterOnboardingPage', () => {
         return Promise.resolve({ user: { fullName: 'Test User' } })
       }
       if (url === '/api/recruiters/me') {
-        return Promise.resolve({ 
-          recruiter: { 
+        return Promise.resolve({
+          recruiter: {
             companyName: 'Acme Inc',
             companyMail: 'recruiter@acme.com',
             companyUrl: null,
             headquartersLocation: null,
             jobTitle: 'Recruiter',
             bio: null,
-            isComplete: true 
-          } 
+            isComplete: true,
+          },
         })
       }
       return Promise.resolve({})

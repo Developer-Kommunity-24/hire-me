@@ -56,20 +56,16 @@ recruitersRouter.get('/me', async (c) => {
  * Upserts the caller's recruiter profile.
  * Accepts all fields as optional for per-step saves and draft saving.
  */
-recruitersRouter.patch(
-  '/me',
-  zValidator('json', recruiterUpdateSchema),
-  async (c) => {
-    const data = c.req.valid('json')
+recruitersRouter.patch('/me', zValidator('json', recruiterUpdateSchema), async (c) => {
+  const data = c.req.valid('json')
 
-    const recruiter = await upsertRecruiter(c.var.db, c.var.authUser, data)
+  const recruiter = await upsertRecruiter(c.var.db, c.var.authUser, data)
 
-    if (!recruiter) {
-      return c.json({ error: 'User not found' }, 404)
-    }
+  if (!recruiter) {
+    return c.json({ error: 'User not found' }, 404)
+  }
 
-    return c.json({ recruiter })
-  },
-)
+  return c.json({ recruiter })
+})
 
 export { recruitersRouter }
