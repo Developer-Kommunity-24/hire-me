@@ -1,7 +1,18 @@
 'use client'
 
 import { motion, AnimatePresence } from 'motion/react'
-import { ArrowLeft, ArrowRight, Building2, Check, Globe, Mail, MapPin, Sparkles, X, User } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowRight,
+  Building2,
+  Check,
+  Globe,
+  Mail,
+  MapPin,
+  Sparkles,
+  X,
+  User,
+} from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { ApiError, apiFetch } from '@/lib/api-client'
@@ -40,15 +51,17 @@ export default function RecruiterOnboardingPage() {
         setFullName(userResponse.user.fullName || '')
 
         // Then get recruiter data if exists
-        const recruiterResponse = await apiFetch<{ recruiter: { 
-          companyName: string
-          companyMail: string
-          companyUrl: string | null
-          headquartersLocation: string | null
-          jobTitle: string | null
-          bio: string | null
-          isComplete: boolean
-        } | null }>('/api/recruiters/me')
+        const recruiterResponse = await apiFetch<{
+          recruiter: {
+            companyName: string
+            companyMail: string
+            companyUrl: string | null
+            headquartersLocation: string | null
+            jobTitle: string | null
+            bio: string | null
+            isComplete: boolean
+          } | null
+        }>('/api/recruiters/me')
 
         if (recruiterResponse.recruiter) {
           const r = recruiterResponse.recruiter
@@ -86,7 +99,7 @@ export default function RecruiterOnboardingPage() {
 
     try {
       const payload: Record<string, string | boolean> = {}
-      
+
       if (fullName.trim()) payload.fullName = fullName.trim()
       if (jobTitle.trim()) payload.jobTitle = jobTitle.trim()
       if (companyName.trim()) payload.companyName = companyName.trim()
@@ -107,9 +120,7 @@ export default function RecruiterOnboardingPage() {
         return
       }
       setErrorMsg(
-        error instanceof ApiError
-          ? error.message
-          : 'Failed to save draft. Please try again.',
+        error instanceof ApiError ? error.message : 'Failed to save draft. Please try again.',
       )
     } finally {
       setIsSaving(false)
@@ -124,7 +135,7 @@ export default function RecruiterOnboardingPage() {
         return
       }
       setStep1Error('')
-      
+
       // Save step 1 data
       await saveDraft(false)
       setStep(2)
@@ -134,7 +145,7 @@ export default function RecruiterOnboardingPage() {
         return
       }
       setStep2Error('')
-      
+
       // Save step 2 data
       await saveDraft(false)
       setStep(3)
@@ -518,7 +529,10 @@ export default function RecruiterOnboardingPage() {
 
             {/* Error Banner */}
             {errorMsg && (
-              <div role="alert" className="my-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium flex items-center justify-between">
+              <div
+                role="alert"
+                className="my-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium flex items-center justify-between"
+              >
                 <span>{errorMsg}</span>
                 <button
                   type="button"
@@ -739,13 +753,37 @@ export default function RecruiterOnboardingPage() {
                     <div className="border-t border-border-subtle/50 pt-3 mt-2">
                       <h4 className="text-xs font-bold text-slate-800 mb-2">Profile Summary</h4>
                       <div className="space-y-1.5 text-xs text-slate-600">
-                        <p><span className="font-medium">Name:</span> {fullName || 'Not provided'}</p>
-                        <p><span className="font-medium">Job Title:</span> {jobTitle || 'Not provided'}</p>
-                        <p><span className="font-medium">Company:</span> {companyName || 'Not provided'}</p>
-                        <p><span className="font-medium">Email:</span> {companyMail || 'Not provided'}</p>
-                        {companyUrl && <p><span className="font-medium">Website:</span> {companyUrl}</p>}
-                        {headquartersLocation && <p><span className="font-medium">Location:</span> {headquartersLocation}</p>}
-                        {bio && <p><span className="font-medium">Bio:</span> {bio.substring(0, 100)}{bio.length > 100 ? '...' : ''}</p>}
+                        <p>
+                          <span className="font-medium">Name:</span> {fullName || 'Not provided'}
+                        </p>
+                        <p>
+                          <span className="font-medium">Job Title:</span>{' '}
+                          {jobTitle || 'Not provided'}
+                        </p>
+                        <p>
+                          <span className="font-medium">Company:</span>{' '}
+                          {companyName || 'Not provided'}
+                        </p>
+                        <p>
+                          <span className="font-medium">Email:</span>{' '}
+                          {companyMail || 'Not provided'}
+                        </p>
+                        {companyUrl && (
+                          <p>
+                            <span className="font-medium">Website:</span> {companyUrl}
+                          </p>
+                        )}
+                        {headquartersLocation && (
+                          <p>
+                            <span className="font-medium">Location:</span> {headquartersLocation}
+                          </p>
+                        )}
+                        {bio && (
+                          <p>
+                            <span className="font-medium">Bio:</span> {bio.substring(0, 100)}
+                            {bio.length > 100 ? '...' : ''}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </motion.div>

@@ -56,9 +56,7 @@
         "users_email_unique": {
           "name": "users_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
@@ -110,12 +108,8 @@
           "name": "club_admins_user_id_users_id_fk",
           "tableFrom": "club_admins",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -123,12 +117,8 @@
           "name": "club_admins_club_id_clubs_id_fk",
           "tableFrom": "club_admins",
           "tableTo": "clubs",
-          "columnsFrom": [
-            "club_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["club_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -184,16 +174,12 @@
         "clubs_name_unique": {
           "name": "clubs_name_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
+          "columns": ["name"]
         },
         "clubs_slug_unique": {
           "name": "clubs_slug_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "slug"
-          ]
+          "columns": ["slug"]
         }
       },
       "policies": {},
@@ -274,12 +260,8 @@
           "name": "recruiters_user_id_users_id_fk",
           "tableFrom": "recruiters",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -377,12 +359,8 @@
           "name": "student_profiles_user_id_users_id_fk",
           "tableFrom": "student_profiles",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -450,12 +428,8 @@
           "name": "achievements_student_id_student_profiles_user_id_fk",
           "tableFrom": "achievements",
           "tableTo": "student_profiles",
-          "columnsFrom": [
-            "student_id"
-          ],
-          "columnsTo": [
-            "user_id"
-          ],
+          "columnsFrom": ["student_id"],
+          "columnsTo": ["user_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -496,12 +470,8 @@
           "name": "contact_details_student_id_student_profiles_user_id_fk",
           "tableFrom": "contact_details",
           "tableTo": "student_profiles",
-          "columnsFrom": [
-            "student_id"
-          ],
-          "columnsTo": [
-            "user_id"
-          ],
+          "columnsFrom": ["student_id"],
+          "columnsTo": ["user_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -511,9 +481,7 @@
         "contact_details_student_id_unique": {
           "name": "contact_details_student_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "student_id"
-          ]
+          "columns": ["student_id"]
         }
       },
       "policies": {},
@@ -581,12 +549,8 @@
           "name": "experience_student_id_student_profiles_user_id_fk",
           "tableFrom": "experience",
           "tableTo": "student_profiles",
-          "columnsFrom": [
-            "student_id"
-          ],
-          "columnsTo": [
-            "user_id"
-          ],
+          "columnsFrom": ["student_id"],
+          "columnsTo": ["user_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -683,12 +647,8 @@
           "name": "projects_student_id_student_profiles_user_id_fk",
           "tableFrom": "projects",
           "tableTo": "student_profiles",
-          "columnsFrom": [
-            "student_id"
-          ],
-          "columnsTo": [
-            "user_id"
-          ],
+          "columnsFrom": ["student_id"],
+          "columnsTo": ["user_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -751,12 +711,8 @@
           "name": "skills_student_id_student_profiles_user_id_fk",
           "tableFrom": "skills",
           "tableTo": "student_profiles",
-          "columnsFrom": [
-            "student_id"
-          ],
-          "columnsTo": [
-            "user_id"
-          ],
+          "columnsFrom": ["student_id"],
+          "columnsTo": ["user_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -841,12 +797,8 @@
           "name": "applications_posting_id_postings_id_fk",
           "tableFrom": "applications",
           "tableTo": "postings",
-          "columnsFrom": [
-            "posting_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["posting_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -854,12 +806,8 @@
           "name": "applications_student_id_student_profiles_user_id_fk",
           "tableFrom": "applications",
           "tableTo": "student_profiles",
-          "columnsFrom": [
-            "student_id"
-          ],
-          "columnsTo": [
-            "user_id"
-          ],
+          "columnsFrom": ["student_id"],
+          "columnsTo": ["user_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -972,12 +920,8 @@
           "name": "postings_recruiter_id_recruiters_user_id_fk",
           "tableFrom": "postings",
           "tableTo": "recruiters",
-          "columnsFrom": [
-            "recruiter_id"
-          ],
-          "columnsTo": [
-            "user_id"
-          ],
+          "columnsFrom": ["recruiter_id"],
+          "columnsTo": ["user_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1059,12 +1003,8 @@
           "name": "badge_revocation_student_id_student_profiles_user_id_fk",
           "tableFrom": "badge_revocation",
           "tableTo": "student_profiles",
-          "columnsFrom": [
-            "student_id"
-          ],
-          "columnsTo": [
-            "user_id"
-          ],
+          "columnsFrom": ["student_id"],
+          "columnsTo": ["user_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1072,12 +1012,8 @@
           "name": "badge_revocation_club_membership_id_club_memberships_id_fk",
           "tableFrom": "badge_revocation",
           "tableTo": "club_memberships",
-          "columnsFrom": [
-            "club_membership_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["club_membership_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1085,12 +1021,8 @@
           "name": "badge_revocation_resolved_by_users_id_fk",
           "tableFrom": "badge_revocation",
           "tableTo": "users",
-          "columnsFrom": [
-            "resolved_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["resolved_by"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1237,12 +1169,8 @@
           "name": "club_memberships_club_id_clubs_id_fk",
           "tableFrom": "club_memberships",
           "tableTo": "clubs",
-          "columnsFrom": [
-            "club_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["club_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1250,12 +1178,8 @@
           "name": "club_memberships_user_id_users_id_fk",
           "tableFrom": "club_memberships",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1335,12 +1259,8 @@
           "name": "verification_requests_student_id_student_profiles_user_id_fk",
           "tableFrom": "verification_requests",
           "tableTo": "student_profiles",
-          "columnsFrom": [
-            "student_id"
-          ],
-          "columnsTo": [
-            "user_id"
-          ],
+          "columnsFrom": ["student_id"],
+          "columnsTo": ["user_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1348,12 +1268,8 @@
           "name": "verification_requests_club_id_clubs_id_fk",
           "tableFrom": "verification_requests",
           "tableTo": "clubs",
-          "columnsFrom": [
-            "club_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["club_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1361,12 +1277,8 @@
           "name": "verification_requests_matched_club_membership_id_club_memberships_id_fk",
           "tableFrom": "verification_requests",
           "tableTo": "club_memberships",
-          "columnsFrom": [
-            "matched_club_membership_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["matched_club_membership_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1428,12 +1340,8 @@
           "name": "notifications_user_id_users_id_fk",
           "tableFrom": "notifications",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1449,52 +1357,27 @@
     "public.achievement_type": {
       "name": "achievement_type",
       "schema": "public",
-      "values": [
-        "hackathon",
-        "certification",
-        "award",
-        "other"
-      ]
+      "values": ["hackathon", "certification", "award", "other"]
     },
     "public.application_status": {
       "name": "application_status",
       "schema": "public",
-      "values": [
-        "applied",
-        "under_review",
-        "shortlisted",
-        "accepted",
-        "rejected"
-      ]
+      "values": ["applied", "under_review", "shortlisted", "accepted", "rejected"]
     },
     "public.club_role": {
       "name": "club_role",
       "schema": "public",
-      "values": [
-        "admin",
-        "member"
-      ]
+      "values": ["admin", "member"]
     },
     "public.dk24_status": {
       "name": "dk24_status",
       "schema": "public",
-      "values": [
-        "none",
-        "pending",
-        "verified",
-        "rejected",
-        "revoked"
-      ]
+      "values": ["none", "pending", "verified", "rejected", "revoked"]
     },
     "public.employment_type": {
       "name": "employment_type",
       "schema": "public",
-      "values": [
-        "internship",
-        "full_time",
-        "part_time",
-        "contract"
-      ]
+      "values": ["internship", "full_time", "part_time", "contract"]
     },
     "public.notification_type": {
       "name": "notification_type",
@@ -1511,39 +1394,22 @@
     "public.posting_status": {
       "name": "posting_status",
       "schema": "public",
-      "values": [
-        "active",
-        "closed",
-        "expired"
-      ]
+      "values": ["active", "closed", "expired"]
     },
     "public.user_role": {
       "name": "user_role",
       "schema": "public",
-      "values": [
-        "student",
-        "recruiter",
-        "core_admin",
-        "club_admin"
-      ]
+      "values": ["student", "recruiter", "core_admin", "club_admin"]
     },
     "public.verification_decision": {
       "name": "verification_decision",
       "schema": "public",
-      "values": [
-        "pending",
-        "approved",
-        "rejected"
-      ]
+      "values": ["pending", "approved", "rejected"]
     },
     "public.work_arrangement": {
       "name": "work_arrangement",
       "schema": "public",
-      "values": [
-        "in_person",
-        "remote",
-        "hybrid"
-      ]
+      "values": ["in_person", "remote", "hybrid"]
     }
   },
   "schemas": {},
