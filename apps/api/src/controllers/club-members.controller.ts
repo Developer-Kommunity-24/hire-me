@@ -1,5 +1,5 @@
 import { and, asc, eq } from 'drizzle-orm'
-import { clubMemberships } from '@repo/db'
+import { clubMemberships, badgeRevocation } from '@repo/db'
 import type { Database, ClubMembership } from '@repo/db'
 
 // ==========================================
@@ -174,6 +174,12 @@ export async function editClubMember(
  * The `clubId` guard in the WHERE clause provides the same cross-club
  * protection as `editClubMember`.
  *
+ * When the deleted member has a linked user account (`userId` is set), a
+ * `badge_revocation` record is written before the row is removed so that
+ * the deletion is auditable. Members without a linked account are removed
+ * without a revocation entry because `badge_revocation.student_id` is NOT
+ * NULL and requires an existing `student_profiles` row.
+ *
  * @returns `true` when a row was deleted, `false` when no matching row was
  *   found in this club.
  */
@@ -182,10 +188,26 @@ export async function deleteClubMember(
   clubId: string,
   memberId: string,
 ): Promise<boolean> {
-  const deleted = await db
+  const [membership] = await db
+    .select()
+    .from(clubMemberships)
+    .where(and(eq(clubMemberships.id, memberId), eq(clubMemberships.clubId, clubId)))
+    .limit(1)
+
+  if (!membership) {
+    return false
+  }
+
+  if (membership.userId) {
+    await db.insert(badgeRevocation).values({
+      studentId: membership.userId,
+      clubMembershipId: membership.id,
+    })
+  }
+
+  await db
     .delete(clubMemberships)
     .where(and(eq(clubMemberships.id, memberId), eq(clubMemberships.clubId, clubId)))
-    .returning({ id: clubMemberships.id })
 
-  return deleted.length > 0
+  return true
 }
