@@ -8,6 +8,13 @@
       "when": 1786389519563,
       "tag": "0000_goofy_the_renegades",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787803290302,
+      "tag": "0001_marvelous_la_nuit",
+      "breakpoints": true
     }
   ]
 }

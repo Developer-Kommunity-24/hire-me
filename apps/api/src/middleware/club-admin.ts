@@ -1,5 +1,5 @@
 import { createMiddleware } from 'hono/factory'
-import { eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { clubAdmins, users } from '@repo/db'
 import type { AuthVariables } from './auth.js'
 import type { DbVariables } from './db.js'
@@ -33,20 +33,16 @@ export const requireClubAdmin = createMiddleware<{
 }>(async (c, next) => {
   const { db, authUser } = c.var
 
-  const [userRow] = await db
-    .select({ roles: users.roles })
-    .from(users)
-    .where(eq(users.id, authUser.id))
-    .limit(1)
-
-  if (!userRow?.roles.includes('club_admin')) {
-    return c.json({ error: 'Forbidden' }, 403)
-  }
-
   const [adminRow] = await db
     .select({ clubId: clubAdmins.clubId })
     .from(clubAdmins)
-    .where(eq(clubAdmins.userId, authUser.id))
+    .innerJoin(users, eq(users.id, clubAdmins.userId))
+    .where(
+      and(
+        eq(clubAdmins.userId, authUser.id),
+        sql`${users.roles} @> ARRAY['club_admin']::user_role[]`,
+      ),
+    )
     .limit(1)
 
   if (!adminRow) {

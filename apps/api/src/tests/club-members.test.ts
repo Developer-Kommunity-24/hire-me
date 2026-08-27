@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { app } from '../app.js'
+import { normalizeMemberInput } from '../controllers/club-members.controller.js'
 
 // ==========================================
 // TEST CONFIG
@@ -40,5 +41,19 @@ describe('Club Members API', () => {
       method: 'DELETE',
     })
     expect(res.status).toBe(401)
+  })
+
+  it('normalizes member data before persistence', () => {
+    expect(
+      normalizeMemberInput({
+        fullName: '  Alice Smith  ',
+        usn: '1dk24cs001',
+        email: 'ALICE@College.edu ',
+      }),
+    ).toEqual({
+      fullName: 'Alice Smith',
+      usn: '1DK24CS001',
+      email: 'alice@college.edu',
+    })
   })
 })

@@ -27,16 +27,16 @@ type ClubMembersEnv = {
 // ==========================================
 
 const addMemberSchema = z.object({
-  fullName: z.string().min(1, 'Full name is required').max(255),
-  usn: z.string().min(1, 'USN is required').max(20),
-  email: z.string().email('Must be a valid email address'),
+  fullName: z.string().trim().min(1, 'Full name is required').max(255),
+  usn: z.string().trim().min(1, 'USN is required').max(20).transform((value) => value.toUpperCase()),
+  email: z.string().trim().toLowerCase().email('Must be a valid email address'),
 })
 
 const editMemberSchema = z
   .object({
-    fullName: z.string().min(1).max(255).optional(),
-    usn: z.string().min(1).max(20).optional(),
-    email: z.string().email('Must be a valid email address').optional(),
+    fullName: z.string().trim().min(1).max(255).optional(),
+    usn: z.string().trim().min(1).max(20).transform((value) => value.toUpperCase()).optional(),
+    email: z.string().trim().toLowerCase().email('Must be a valid email address').optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'At least one field must be provided',

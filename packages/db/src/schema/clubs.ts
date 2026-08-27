@@ -34,13 +34,18 @@ export const clubMemberships = pgTable(
     fullName: text('full_name').notNull(),
     usn: text('usn').notNull(),
     email: text('email').notNull(),
+    isActive: boolean('is_active').notNull().default(true),
     addedAt: timestamp('added_at', { withTimezone: true })
       .notNull()
       .default(sql`now()`),
   },
   (table) => [
-    uniqueIndex('idx_club_memberships_usn_active').on(table.clubId, table.usn),
-    uniqueIndex('idx_club_memberships_email_active').on(table.clubId, table.email),
+    uniqueIndex('idx_club_memberships_usn_active')
+      .on(table.clubId, table.usn)
+      .where(sql`${table.isActive} = true`),
+    uniqueIndex('idx_club_memberships_email_active')
+      .on(table.clubId, table.email)
+      .where(sql`${table.isActive} = true`),
     index('idx_club_memberships_email').on(table.email),
     index('idx_club_memberships_club').on(table.clubId),
   ],

@@ -1,6 +1,46 @@
 import { and, asc, eq } from 'drizzle-orm'
-import { clubMemberships, badgeRevocation } from '@repo/db'
+import { badgeRevocation, clubMemberships, studentProfiles } from '@repo/db'
 import type { Database, ClubMembership } from '@repo/db'
+
+const ACTIVE_CLUB_MEMBER = eq(clubMemberships.isActive, true)
+
+export interface ClubMemberResponse {
+  id: string
+  clubId: string
+  fullName: string
+  usn: string
+  email: string
+  role: string
+  addedAt: Date | string | null
+  userId: string | null
+}
+
+export function normalizeMemberInput(input: AddMemberInput | EditMemberInput): {
+  fullName: string
+  usn: string
+  email: string
+} {
+  const fullName = input.fullName?.trim() ?? ''
+  const usn = input.usn?.trim().toUpperCase() ?? ''
+  const email = input.email?.trim().toLowerCase() ?? ''
+
+  return { fullName, usn, email }
+}
+
+function toClubMemberResponse(
+  member: Pick<ClubMembership, 'id' | 'clubId' | 'fullName' | 'usn' | 'email' | 'role' | 'addedAt' | 'userId'>,
+): ClubMemberResponse {
+  return {
+    id: member.id,
+    clubId: member.clubId,
+    fullName: member.fullName,
+    usn: member.usn,
+    email: member.email,
+    role: member.role,
+    addedAt: member.addedAt,
+    userId: member.userId,
+  }
+}
 
 // ==========================================
 // TYPES
@@ -71,12 +111,23 @@ function classifyConstraintError(err: unknown): MemberWriteError | null {
  * @param db     - Request-scoped Drizzle client.
  * @param clubId - The club whose members to list.
  */
-export async function listClubMembers(db: Database, clubId: string): Promise<ClubMembership[]> {
-  return db
-    .select()
+export async function listClubMembers(db: Database, clubId: string): Promise<ClubMemberResponse[]> {
+  const members = await db
+    .select({
+      id: clubMemberships.id,
+      clubId: clubMemberships.clubId,
+      fullName: clubMemberships.fullName,
+      usn: clubMemberships.usn,
+      email: clubMemberships.email,
+      role: clubMemberships.role,
+      addedAt: clubMemberships.addedAt,
+      userId: clubMemberships.userId,
+    })
     .from(clubMemberships)
-    .where(eq(clubMemberships.clubId, clubId))
+    .where(and(eq(clubMemberships.clubId, clubId), ACTIVE_CLUB_MEMBER))
     .orderBy(asc(clubMemberships.fullName))
+
+  return members.map(toClubMemberResponse)
 }
 
 // ==========================================
@@ -97,15 +148,17 @@ export async function addClubMember(
   db: Database,
   clubId: string,
   input: AddMemberInput,
-): Promise<MemberWriteResult<ClubMembership>> {
+): Promise<MemberWriteResult<ClubMemberResponse>> {
+  const normalized = normalizeMemberInput(input)
+
   try {
     const [member] = await db
       .insert(clubMemberships)
       .values({
         clubId,
-        fullName: input.fullName,
-        usn: input.usn,
-        email: input.email,
+        fullName: normalized.fullName,
+        usn: normalized.usn,
+        email: normalized.email,
       })
       .returning()
 
@@ -113,7 +166,7 @@ export async function addClubMember(
       throw new Error('Insert returned no rows')
     }
 
-    return { ok: true, data: member }
+    return { ok: true, data: toClubMemberResponse(member) }
   } catch (err) {
     const constraintError = classifyConstraintError(err)
 
@@ -140,23 +193,25 @@ export async function editClubMember(
   clubId: string,
   memberId: string,
   input: EditMemberInput,
-): Promise<MemberWriteResult<ClubMembership>> {
+): Promise<MemberWriteResult<ClubMemberResponse>> {
+  const normalized = normalizeMemberInput(input)
+
   try {
     const [member] = await db
       .update(clubMemberships)
       .set({
-        ...(input.fullName !== undefined ? { fullName: input.fullName } : {}),
-        ...(input.usn !== undefined ? { usn: input.usn } : {}),
-        ...(input.email !== undefined ? { email: input.email } : {}),
+        ...(input.fullName !== undefined ? { fullName: normalized.fullName } : {}),
+        ...(input.usn !== undefined ? { usn: normalized.usn } : {}),
+        ...(input.email !== undefined ? { email: normalized.email } : {}),
       })
-      .where(and(eq(clubMemberships.id, memberId), eq(clubMemberships.clubId, clubId)))
+      .where(and(eq(clubMemberships.id, memberId), eq(clubMemberships.clubId, clubId), ACTIVE_CLUB_MEMBER))
       .returning()
 
     if (!member) {
       return { ok: false, error: 'not_found' }
     }
 
-    return { ok: true, data: member }
+    return { ok: true, data: toClubMemberResponse(member) }
   } catch (err) {
     const constraintError = classifyConstraintError(err)
 
@@ -191,7 +246,7 @@ export async function deleteClubMember(
   const [membership] = await db
     .select()
     .from(clubMemberships)
-    .where(and(eq(clubMemberships.id, memberId), eq(clubMemberships.clubId, clubId)))
+    .where(and(eq(clubMemberships.id, memberId), eq(clubMemberships.clubId, clubId), ACTIVE_CLUB_MEMBER))
     .limit(1)
 
   if (!membership) {
@@ -199,15 +254,26 @@ export async function deleteClubMember(
   }
 
   if (membership.userId) {
-    await db.insert(badgeRevocation).values({
-      studentId: membership.userId,
-      clubMembershipId: membership.id,
-    })
+    const [profile] = await db
+      .select({ userId: studentProfiles.userId })
+      .from(studentProfiles)
+      .where(eq(studentProfiles.userId, membership.userId))
+      .limit(1)
+
+    if (profile) {
+      await db.insert(badgeRevocation).values({
+        studentId: membership.userId,
+        clubMembershipId: membership.id,
+      })
+    }
   }
 
   await db
-    .delete(clubMemberships)
-    .where(and(eq(clubMemberships.id, memberId), eq(clubMemberships.clubId, clubId)))
+    .update(clubMemberships)
+    .set({
+      isActive: false,
+    })
+    .where(and(eq(clubMemberships.id, memberId), eq(clubMemberships.clubId, clubId), ACTIVE_CLUB_MEMBER))
 
   return true
 }
