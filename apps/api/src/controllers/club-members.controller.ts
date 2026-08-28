@@ -28,7 +28,10 @@ export function normalizeMemberInput(input: AddMemberInput | EditMemberInput): {
 }
 
 function toClubMemberResponse(
-  member: Pick<ClubMembership, 'id' | 'clubId' | 'fullName' | 'usn' | 'email' | 'role' | 'addedAt' | 'userId'>,
+  member: Pick<
+    ClubMembership,
+    'id' | 'clubId' | 'fullName' | 'usn' | 'email' | 'role' | 'addedAt' | 'userId'
+  >,
 ): ClubMemberResponse {
   return {
     id: member.id,
@@ -204,7 +207,13 @@ export async function editClubMember(
         ...(input.usn !== undefined ? { usn: normalized.usn } : {}),
         ...(input.email !== undefined ? { email: normalized.email } : {}),
       })
-      .where(and(eq(clubMemberships.id, memberId), eq(clubMemberships.clubId, clubId), ACTIVE_CLUB_MEMBER))
+      .where(
+        and(
+          eq(clubMemberships.id, memberId),
+          eq(clubMemberships.clubId, clubId),
+          ACTIVE_CLUB_MEMBER,
+        ),
+      )
       .returning()
 
     if (!member) {
@@ -246,7 +255,9 @@ export async function deleteClubMember(
   const [membership] = await db
     .select()
     .from(clubMemberships)
-    .where(and(eq(clubMemberships.id, memberId), eq(clubMemberships.clubId, clubId), ACTIVE_CLUB_MEMBER))
+    .where(
+      and(eq(clubMemberships.id, memberId), eq(clubMemberships.clubId, clubId), ACTIVE_CLUB_MEMBER),
+    )
     .limit(1)
 
   if (!membership) {
@@ -273,7 +284,9 @@ export async function deleteClubMember(
     .set({
       isActive: false,
     })
-    .where(and(eq(clubMemberships.id, memberId), eq(clubMemberships.clubId, clubId), ACTIVE_CLUB_MEMBER))
+    .where(
+      and(eq(clubMemberships.id, memberId), eq(clubMemberships.clubId, clubId), ACTIVE_CLUB_MEMBER),
+    )
 
   return true
 }
