@@ -1,5 +1,5 @@
 {
-  "id": "9fcbe04a-00ba-4e14-9d25-749f35f350ce",
+  "id": "0b770815-e05a-4587-a01b-8cf3d2c343dd",
   "prevId": "068a8f58-145f-4069-ac48-67aad6b5b431",
   "version": "7",
   "dialect": "postgresql",
@@ -219,25 +219,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
-        },
-        "job_title": {
-          "name": "job_title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "bio": {
-          "name": "bio",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_complete": {
-          "name": "is_complete",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
         },
         "is_deleted": {
           "name": "is_deleted",
@@ -1082,6 +1063,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
         "added_at": {
           "name": "added_at",
           "type": "timestamp with time zone",
@@ -1108,6 +1096,7 @@
             }
           ],
           "isUnique": true,
+          "where": "\"club_memberships\".\"is_active\" = true",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -1129,6 +1118,7 @@
             }
           ],
           "isUnique": true,
+          "where": "\"club_memberships\".\"is_active\" = true",
           "concurrently": false,
           "method": "btree",
           "with": {}

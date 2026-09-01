@@ -897,7 +897,7 @@ export default function StudentOnboardingPage() {
                           LinkedIn Profile URL
                         </label>
                         <div className="relative flex items-center">
-                          <LinkedinIcon className="w-4 h-4 text-[#0A66C2] absolute left-3" />
+                          <LinkedinIcon className="w-4 h-4 text-linkedin absolute left-3" />
                           <input
                             type="url"
                             value={linkedinUrl}

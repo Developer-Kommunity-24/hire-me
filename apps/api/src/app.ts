@@ -6,6 +6,7 @@ import { dbMiddleware } from './middleware/db.js'
 import { postingsRouter } from './routes/postings.js'
 import { usersRouter } from './routes/users.js'
 import { recruitersRouter } from './routes/recruiters.js'
+import { clubMembersRouter } from './routes/club-members.js'
 
 const app = new Hono<{
   Bindings: { DATABASE_URL: string; NEON_AUTH_BASE_URL: string; WEB_ORIGIN: string }
@@ -42,6 +43,9 @@ app.route('/api/users', usersRouter)
 
 // Recruiter profile management
 app.route('/api/recruiters', recruitersRouter)
+
+// Club admin: membership management for appointed volunteers
+app.route('/api/clubs/members', clubMembersRouter)
 
 export { app }
 export type AppType = typeof app

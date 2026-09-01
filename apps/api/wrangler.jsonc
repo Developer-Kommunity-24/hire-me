@@ -4,9 +4,9 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-08-08",
   "observability": {
-    "enabled": true
+    "enabled": true,
   },
   "dev": {
-    "port": 8787
-  }
+    "port": 8787,
+  },
 }

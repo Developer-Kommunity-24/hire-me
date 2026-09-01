@@ -129,10 +129,10 @@ export function CharactersScene({ state, onCharacterPoke }: CharactersSceneProps
       ref={containerRef}
       onMouseMove={handleMouseMove}
       id="characters-stage"
-      className="relative w-full h-full min-h-[380px] sm:min-h-[420px] md:min-h-[560px] bg-[#EEF2F6] overflow-hidden flex items-end justify-center select-none cursor-pointer p-2 sm:p-4 md:p-6"
+      className="relative w-full h-full min-h-[380px] sm:min-h-[420px] md:min-h-[560px] bg-stage overflow-hidden flex items-end justify-center select-none cursor-pointer p-2 sm:p-4 md:p-6"
     >
-      <div className="absolute inset-0 bg-gradient-to-b from-[#F3F6F9] via-[#EEF2F6] to-[#E2E8F0] pointer-events-none" />
-      <div className="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-[#CBD5E1]/50 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-surface-hero-start via-stage to-border-subtle pointer-events-none" />
+      <div className="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-border-muted/50 to-transparent pointer-events-none" />
 
       <div className="relative w-full h-full max-w-[460px] flex items-end justify-center pb-2">
         <svg
