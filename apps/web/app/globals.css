@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@config "../tailwind.config.ts";
 
 @theme {
   --font-sans: var(--font-sans), 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
@@ -11,8 +12,17 @@
   --color-brand-mint: var(--brand-green-mint);
   --color-brand-emerald: var(--brand-emerald);
   
+  /* Recruiter Theme Colors */
+  --color-recruiter: var(--recruiter-purple);
+  --color-recruiter-hover: var(--recruiter-purple-hover);
+  --color-recruiter-dark: var(--recruiter-purple-dark);
+  --color-recruiter-light: var(--recruiter-purple-light);
+  --color-recruiter-muted: var(--recruiter-purple-muted);
+
   /* Surface & Background */
   --color-bg-page: var(--bg-page);
+  --color-page-subtle: var(--bg-page-subtle);
+  --color-stage: var(--bg-stage);
   --color-card: var(--bg-card);
   --color-surface-hero-start: var(--surface-hero-start);
   --color-surface-hero-end: var(--surface-hero-end);
@@ -25,6 +35,19 @@
   --color-text-main: var(--text-main);
   --color-text-muted: var(--text-muted);
   --color-action-dark: var(--action-dark);
+
+  /* Social Brands */
+  --color-linkedin: var(--brand-linkedin);
+
+  /* Monster Characters */
+  --color-monster-red: var(--monster-red);
+  --color-monster-red-dark: var(--monster-red-dark);
+  --color-monster-pink: var(--monster-pink);
+  --color-monster-pink-dark: var(--monster-pink-dark);
+  --color-monster-cyan: var(--monster-cyan);
+  --color-monster-cyan-dark: var(--monster-cyan-dark);
+  --color-monster-blue: var(--monster-blue);
+  --color-monster-blue-dark: var(--monster-blue-dark);
 }
 
 :root {
@@ -39,6 +62,27 @@
   --brand-emerald: #10b981;
   --brand-green-glow: rgba(0, 194, 109, 0.22);
 
+  /* Recruiter Purple Palette */
+  --recruiter-purple: #8b5cf6;
+  --recruiter-purple-hover: #7c3aed;
+  --recruiter-purple-dark: #6d28d9;
+  --recruiter-purple-light: #efefff;
+  --recruiter-purple-muted: #a78bfa;
+  --recruiter-purple-glow: rgba(139, 92, 246, 0.15);
+
+  /* Social Brands */
+  --brand-linkedin: #0a66c2;
+
+  /* Monster Characters */
+  --monster-red: #fa4d6e;
+  --monster-red-dark: #7f1d2e;
+  --monster-pink: #ffaebe;
+  --monster-pink-dark: #9f4d65;
+  --monster-cyan: #68d5d9;
+  --monster-cyan-dark: #2a7b82;
+  --monster-blue: #388bfd;
+  --monster-blue-dark: #1c4b82;
+
   /* 3D Student Clay Sphere Shading */
   --clay-sphere-start: #25eb8f;
   --clay-sphere-mid1: #00c26d;
@@ -48,6 +92,8 @@
 
   /* Surface & Layout */
   --bg-page: #f8fafc;
+  --bg-page-subtle: #e9eef5;
+  --bg-stage: #eef2f6;
   --bg-card: #ffffff;
   --surface-hero-start: #f9fcfa;
   --surface-hero-end: #f1f8f5;
