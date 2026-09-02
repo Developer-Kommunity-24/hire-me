@@ -5,6 +5,7 @@ import { logger } from 'hono/logger'
 import { dbMiddleware } from './middleware/db.js'
 import { postingsRouter } from './routes/postings.js'
 import { usersRouter } from './routes/users.js'
+import { recruitersRouter } from './routes/recruiters.js'
 import { clubMembersRouter } from './routes/club-members.js'
 
 const app = new Hono<{
@@ -39,6 +40,9 @@ app.route('/api/postings', postingsRouter)
 
 // Authenticated user record and role selection
 app.route('/api/users', usersRouter)
+
+// Recruiter profile management
+app.route('/api/recruiters', recruitersRouter)
 
 // Club admin: membership management for appointed volunteers
 app.route('/api/clubs/members', clubMembersRouter)

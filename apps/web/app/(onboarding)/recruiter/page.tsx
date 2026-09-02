@@ -1,71 +1,293 @@
 'use client'
 
-import { ArrowLeft, ArrowRight, Building2, Globe, Mail, MapPin, Sparkles, X } from 'lucide-react'
+import { motion, AnimatePresence } from 'motion/react'
+import {
+  ArrowLeft,
+  ArrowRight,
+  Building2,
+  Check,
+  Globe,
+  Mail,
+  MapPin,
+  Sparkles,
+  X,
+  User,
+} from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { useQuery, useMutation } from '@tanstack/react-query'
+import { z } from 'zod'
+import { ApiError, apiFetch } from '@/lib/api-client'
+import { cn } from '@/lib/utils'
 import confetti from 'canvas-confetti'
 
-export interface RecruiterProfileData {
-  companyName: string
-  companyMail: string
-  companyUrl: string
-  headquartersLocation: string
+type OnboardingStep = 1 | 2 | 3
+
+// Base Schema matching backend recruiterUpdateSchema
+export const recruiterBaseSchema = z.object({
+  fullName: z.string().trim().min(1, 'Please fill in your full name.').optional(),
+  jobTitle: z.string().trim().min(1, 'Please fill in your job title.').optional(),
+  companyName: z.string().trim().min(1, 'Please fill in your company name.').optional(),
+  companyMail: z
+    .string()
+    .trim()
+    .email('Please enter a valid work email address.')
+    .optional()
+    .or(z.literal('')),
+  companyUrl: z
+    .string()
+    .trim()
+    .url('Please enter a valid website URL.')
+    .optional()
+    .or(z.literal('')),
+  headquartersLocation: z.string().trim().optional(),
+  bio: z.string().trim().optional(),
+})
+
+export type RecruiterFormData = z.infer<typeof recruiterBaseSchema>
+
+export const step1Schema = recruiterBaseSchema.pick({ fullName: true, jobTitle: true }).required()
+
+export const step2Schema = recruiterBaseSchema
+  .pick({ companyName: true, companyUrl: true, headquartersLocation: true })
+  .required({ companyName: true })
+  .extend({
+    companyMail: z
+      .string()
+      .trim()
+      .min(1, 'Please provide your work email.')
+      .email('Please enter a valid work email address.'),
+  })
+
+export const finalSubmitSchema = step1Schema.merge(step2Schema)
+
+function getSanitizedPayload(values: RecruiterFormData, isComplete = false) {
+  const payload: Record<string, string | boolean> = {}
+
+  for (const [key, value] of Object.entries(values)) {
+    if (typeof value === 'string' && value.trim()) {
+      payload[key] = value.trim()
+    }
+  }
+
+  if (isComplete) {
+    payload.isComplete = true
+  }
+
+  return payload
+}
+
+const getStepCircleClass = (currentStep: number, targetStep: number) => {
+  return cn(
+    'w-[34px] h-[34px] rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300',
+    currentStep > targetStep && 'bg-brand text-white shadow-xs',
+    currentStep === targetStep && 'bg-brand text-white shadow-[0_0_0_5px_var(--brand-green-glow)]',
+    currentStep < targetStep && 'bg-card border-2 border-border-subtle text-text-muted',
+    currentStep < targetStep && targetStep !== 3 && 'group-hover:border-slate-300',
+  )
+}
+
+const getStepTextClass = (currentStep: number, targetStep: number) => {
+  return cn(
+    'text-[11px] whitespace-nowrap transition-colors',
+    currentStep === targetStep && 'font-bold text-brand',
+    currentStep > targetStep && 'font-semibold text-slate-700',
+    currentStep < targetStep && 'font-medium text-text-muted',
+  )
 }
 
 export default function RecruiterOnboardingPage() {
   const router = useRouter()
-
-  const [companyName, setCompanyName] = useState('')
-  const [companyMail, setCompanyMail] = useState('')
-  const [companyUrl, setCompanyUrl] = useState('')
-  const [headquartersLocation, setHeadquartersLocation] = useState('')
-  const [errorMsg, setErrorMsg] = useState('')
+  const [step, setStep] = useState<OnboardingStep>(1)
   const [isCompleted, setIsCompleted] = useState(false)
+  const [draftSaved, setDraftSaved] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
+  const [step1Error, setStep1Error] = useState('')
+  const [step2Error, setStep2Error] = useState('')
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const { register, watch, reset, getValues } = useForm<RecruiterFormData>({
+    defaultValues: {
+      fullName: '',
+      jobTitle: '',
+      companyName: '',
+      companyMail: '',
+      companyUrl: '',
+      headquartersLocation: '',
+      bio: '',
+    },
+  })
 
-    if (!companyName.trim()) {
-      setErrorMsg('Please enter your company name.')
-      return
+  // Data Loading using TanStack Query
+  const {
+    data: initialData,
+    isLoading,
+    error: queryError,
+  } = useQuery({
+    queryKey: ['recruiter-onboarding-init'],
+    retry: (failureCount, error) => {
+      if (error instanceof ApiError && error.status === 401) {
+        return false
+      }
+      return failureCount < 3
+    },
+    queryFn: async () => {
+      const userResponse = await apiFetch<{ user: { fullName: string } }>('/api/users/me')
+      const recruiterResponse = await apiFetch<{
+        recruiter: {
+          companyName: string
+          companyMail: string
+          companyUrl: string | null
+          headquartersLocation: string | null
+          jobTitle: string | null
+          bio: string | null
+          isComplete: boolean
+        } | null
+      }>('/api/recruiters/me')
+
+      return {
+        user: userResponse.user,
+        recruiter: recruiterResponse.recruiter,
+      }
+    },
+  })
+
+  // Handle Query Error (401 -> redirect to /login)
+  useEffect(() => {
+    if (queryError) {
+      if (queryError instanceof ApiError && queryError.status === 401) {
+        router.push('/login')
+      } else {
+        console.error('Failed to load recruiter data:', queryError)
+      }
     }
+  }, [queryError, router])
 
-    if (!companyMail.trim()) {
-      setErrorMsg('Please enter your company work email.')
-      return
+  // Populate form on query success
+  useEffect(() => {
+    if (initialData) {
+      if (initialData.recruiter?.isComplete) {
+        router.push('/landing')
+        return
+      }
+
+      const r = initialData.recruiter
+      reset({
+        fullName: initialData.user?.fullName || '',
+        jobTitle: r?.jobTitle || '',
+        companyName: r?.companyName || '',
+        companyMail: r?.companyMail || '',
+        companyUrl: r?.companyUrl || '',
+        headquartersLocation: r?.headquartersLocation || '',
+        bio: r?.bio || '',
+      })
     }
+  }, [initialData, reset, router])
 
+  // Mutation using TanStack Query
+  const patchMutation = useMutation({
+    mutationFn: async (payload: Record<string, string | boolean>) => {
+      return apiFetch<{ recruiter: { isComplete: boolean } }>('/api/recruiters/me', {
+        method: 'PATCH',
+        body: payload,
+      })
+    },
+    onError: (error) => {
+      if (error instanceof ApiError && error.status === 401) {
+        router.push('/login')
+        return
+      }
+      setErrorMsg(error instanceof ApiError ? error.message : 'Operation failed. Please try again.')
+    },
+  })
+
+  const isSaving = patchMutation.isPending
+
+  // Save Draft logic
+  const saveDraft = async (showConfirmation = true) => {
     setErrorMsg('')
-
-    const recruiterProfile: RecruiterProfileData = {
-      companyName: companyName.trim(),
-      companyMail: companyMail.trim(),
-      companyUrl: companyUrl.trim(),
-      headquartersLocation: headquartersLocation.trim(),
-    }
-
-    localStorage.setItem('recruiter_profile', JSON.stringify(recruiterProfile))
-    localStorage.setItem('user_role', 'recruiter')
-    setIsCompleted(true)
+    const payload = getSanitizedPayload(getValues())
 
     try {
-      confetti({
-        particleCount: 90,
-        spread: 75,
-        origin: { y: 0.6 },
-        colors: ['#00C26D', '#34D399', '#10B981', '#059669', '#3B82F6'],
-      })
+      await patchMutation.mutateAsync(payload)
+      if (showConfirmation) {
+        setDraftSaved(true)
+        setTimeout(() => setDraftSaved(false), 2000)
+      }
     } catch {
-      // Confetti fallback
+      // Error handled by mutation onError
     }
+  }
 
-    setTimeout(() => {
-      router.push('/landing')
-    }, 1400)
+  // Stepper navigation with safeParse validation
+  const handleNext = async () => {
+    const values = getValues()
+
+    if (step === 1) {
+      const validation = step1Schema.safeParse(values)
+      if (!validation.success) {
+        setStep1Error('Please fill in your full name and job title.')
+        return
+      }
+      setStep1Error('')
+      await saveDraft(false)
+      setStep(2)
+    } else if (step === 2) {
+      const validation = step2Schema.safeParse(values)
+      if (!validation.success) {
+        setStep2Error('Please provide your company name and work email.')
+        return
+      }
+      setStep2Error('')
+      await saveDraft(false)
+      setStep(3)
+    } else if (step === 3) {
+      const validation = finalSubmitSchema.safeParse(values)
+      if (!validation.success) {
+        setErrorMsg('Please complete all required fields.')
+        return
+      }
+      setErrorMsg('')
+
+      try {
+        const payload = getSanitizedPayload(values, true)
+
+        await patchMutation.mutateAsync(payload)
+        setIsCompleted(true)
+
+        await confetti({
+          particleCount: 90,
+          spread: 75,
+          origin: { y: 0.6 },
+          colors: ['#00C26D', '#34D399', '#10B981', '#059669', '#3B82F6'],
+        })
+
+        router.push('/landing')
+      } catch {
+        // Error handled by mutation onError
+      }
+    }
   }
 
   const handleBack = () => {
-    router.push('/role-select')
+    if (step === 1) {
+      router.push('/role-select')
+    } else {
+      setStep((prev) => (prev - 1) as OnboardingStep)
+    }
+  }
+
+  const formValues = watch()
+
+  if (isLoading) {
+    return (
+      <div className="h-screen w-screen bg-bg-page text-text-main flex items-center justify-center font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-text-muted">Loading your profile...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -198,7 +420,7 @@ export default function RecruiterOnboardingPage() {
                   <g transform="translate(102, 122)">
                     <circle cx="9" cy="9" r="8" fill="var(--brand-green)" />
                     <circle cx="9" cy="7" r="3.2" fill="#FFFFFF" />
-                    <path d="M 4,14 C 4,11 6.5,10 9,10 C 11.5,10 14,11 14,14 Z" fill="#FFFFFF" />
+                    <path d="M 4,14 C 4,11 6.5,10 9,10 C 11.5,10 14,14 Z" fill="#FFFFFF" />
                     <rect x="24" y="4" width="70" height="4" rx="2" fill="#94A3B8" />
                     <rect x="24" y="11" width="45" height="3" rx="1.5" fill="var(--border-muted)" />
                   </g>
@@ -207,7 +429,7 @@ export default function RecruiterOnboardingPage() {
                   <g transform="translate(102, 147)">
                     <circle cx="9" cy="9" r="8" fill="var(--brand-green)" />
                     <circle cx="9" cy="7" r="3.2" fill="#FFFFFF" />
-                    <path d="M 4,14 C 4,11 6.5,10 9,10 C 11.5,10 14,14 14,14 Z" fill="#FFFFFF" />
+                    <path d="M 4,14 C 4,11 6.5,10 9,10 C 11.5,10 14,14 Z" fill="#FFFFFF" />
                     <rect x="24" y="4" width="80" height="4" rx="2" fill="#94A3B8" />
                     <rect x="24" y="11" width="55" height="3" rx="1.5" fill="var(--border-muted)" />
                   </g>
@@ -216,7 +438,7 @@ export default function RecruiterOnboardingPage() {
                   <g transform="translate(102, 172)">
                     <circle cx="9" cy="9" r="8" fill="var(--brand-green)" />
                     <circle cx="9" cy="7" r="3.2" fill="#FFFFFF" />
-                    <path d="M 4,14 C 4,11 6.5,10 9,10 C 11.5,10 14,14 14,14 Z" fill="#FFFFFF" />
+                    <path d="M 4,14 C 4,11 6.5,10 9,10 C 11.5,10 14,14 Z" fill="#FFFFFF" />
                     <rect x="24" y="4" width="65" height="4" rx="2" fill="#94A3B8" />
                     <rect x="24" y="11" width="40" height="3" rx="1.5" fill="var(--border-muted)" />
                   </g>
@@ -275,22 +497,69 @@ export default function RecruiterOnboardingPage() {
           </div>
 
           {/* ========================================================================= */}
-          {/* RIGHT COLUMN: 4 FORM FIELDS (NO PROGRESS BAR) */}
+          {/* RIGHT COLUMN: MULTI-STEP WIZARD FORM */}
           {/* ========================================================================= */}
           <div className="lg:col-span-7 p-6 sm:p-8 lg:p-10 flex flex-col justify-between h-full">
-            {/* Header: Title & Subtitle */}
-            <div className="space-y-1 shrink-0 pb-2">
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-text-main tracking-tight">
-                Company &amp; Recruiter Details
-              </h2>
-              <p className="text-xs sm:text-sm text-text-muted font-medium">
-                Set up your verified company profile to start hiring talent from the DK24 network.
-              </p>
+            {/* Top Stepper Indicator */}
+            <div className="w-full shrink-0 pb-3 border-b border-border-subtle/50">
+              <div className="w-full flex items-start justify-between">
+                {/* Step 1: About you */}
+                <div
+                  className="flex flex-col items-center gap-1.5 cursor-pointer group shrink-0"
+                  onClick={() => setStep(1)}
+                >
+                  <div className={getStepCircleClass(step, 1)}>
+                    {step > 1 ? <Check className="w-4 h-4 stroke-[3]" /> : '1'}
+                  </div>
+                  <span className={getStepTextClass(step, 1)}>About you</span>
+                </div>
+
+                {/* Connector Line 1 -> 2 */}
+                <div className="flex-1 h-[2px] bg-border-subtle mt-[16px] mx-1 sm:mx-2 relative overflow-hidden rounded-full">
+                  <div
+                    className="h-full bg-brand transition-all duration-400 ease-out"
+                    style={{ width: step > 1 ? '100%' : '0%' }}
+                  />
+                </div>
+
+                {/* Step 2: Company */}
+                <div
+                  className="flex flex-col items-center gap-1.5 cursor-pointer group shrink-0"
+                  onClick={() => step > 1 && setStep(2)}
+                >
+                  <div className={getStepCircleClass(step, 2)}>
+                    {step > 2 ? <Check className="w-4 h-4 stroke-[3]" /> : '2'}
+                  </div>
+                  <span className={getStepTextClass(step, 2)}>Company</span>
+                </div>
+
+                {/* Connector Line 2 -> 3 */}
+                <div className="flex-1 h-[2px] bg-border-subtle mt-[16px] mx-1 sm:mx-2 relative overflow-hidden rounded-full">
+                  <div
+                    className="h-full bg-brand transition-all duration-400 ease-out"
+                    style={{ width: step > 2 ? '100%' : '0%' }}
+                  />
+                </div>
+
+                {/* Step 3: Bio & review */}
+                <div
+                  className="flex flex-col items-center gap-1.5 cursor-pointer group shrink-0"
+                  onClick={() => step > 2 && setStep(3)}
+                >
+                  <div className={getStepCircleClass(step, 3)}>
+                    <span>3</span>
+                  </div>
+                  <span className={getStepTextClass(step, 3)}>Bio &amp; review</span>
+                </div>
+              </div>
             </div>
 
             {/* Error Banner */}
             {errorMsg && (
-              <div className="my-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium flex items-center justify-between">
+              <div
+                role="alert"
+                className="my-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium flex items-center justify-between"
+              >
                 <span>{errorMsg}</span>
                 <button
                   type="button"
@@ -302,111 +571,298 @@ export default function RecruiterOnboardingPage() {
               </div>
             )}
 
-            {/* 4 Form Fields Form */}
-            <form
-              onSubmit={handleSubmit}
-              className="flex-1 py-3 flex flex-col justify-center space-y-4"
-            >
-              {/* Field 1: Company Name */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Company Name <span className="text-red-500">*</span>
-                </label>
-                <div className="relative flex items-center">
-                  <Building2 className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
-                  <input
-                    type="text"
-                    required
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="e.g. Acme Innovations Inc."
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
-                  />
-                </div>
+            {/* Draft saved confirmation */}
+            {draftSaved && (
+              <div className="my-2 p-3 rounded-xl bg-green-50 border border-green-200 text-green-700 text-xs font-medium">
+                Draft saved successfully
               </div>
+            )}
 
-              {/* Field 2: Company Work Email */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Company Work Email <span className="text-red-500">*</span>
-                </label>
-                <div className="relative flex items-center">
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
-                  <input
-                    type="email"
-                    required
-                    value={companyMail}
-                    onChange={(e) => setCompanyMail(e.target.value)}
-                    placeholder="recruiting@company.com"
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
-                  />
-                </div>
-                <p className="text-[11px] text-text-muted mt-1">
-                  Official corporate email for candidate correspondence and verification.
-                </p>
-              </div>
+            {/* Step Form Content Body */}
+            <div className="flex-1 flex flex-col justify-center overflow-hidden py-1">
+              <AnimatePresence mode="wait">
+                {/* ------------------------------------------------------------- */}
+                {/* STEP 1: ABOUT YOU */}
+                {/* ------------------------------------------------------------- */}
+                {step === 1 && (
+                  <motion.div
+                    key="step-1"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.18 }}
+                    className="space-y-3.5"
+                  >
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-extrabold text-text-main tracking-tight">
+                        About you
+                      </h2>
+                      <p className="text-xs text-text-muted font-medium mt-0.5">
+                        Let&apos;s start with your basic information.
+                      </p>
+                    </div>
 
-              {/* Field 3: Company Website URL */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Company Website URL
-                </label>
-                <div className="relative flex items-center">
-                  <Globe className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
-                  <input
-                    type="url"
-                    value={companyUrl}
-                    onChange={(e) => setCompanyUrl(e.target.value)}
-                    placeholder="https://acme.example.com"
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
-                  />
-                </div>
-              </div>
+                    {step1Error && (
+                      <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+                        {step1Error}
+                      </div>
+                    )}
 
-              {/* Field 4: Headquarters Location */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Headquarters Location
-                </label>
-                <div className="relative flex items-center">
-                  <MapPin className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
-                  <input
-                    type="text"
-                    value={headquartersLocation}
-                    onChange={(e) => setHeadquartersLocation(e.target.value)}
-                    placeholder="e.g. Bengaluru, India or San Francisco, CA"
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
-                  />
-                </div>
-              </div>
+                    {/* Full Name */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 mb-1">
+                        Full Name <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative flex items-center">
+                        <User className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
+                        <input
+                          type="text"
+                          {...register('fullName')}
+                          placeholder="e.g. Alex Chen"
+                          className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
+                        />
+                      </div>
+                    </div>
 
-              {/* Bottom Actions Bar */}
-              <div className="flex items-center justify-between pt-4 border-t border-border-subtle/60 mt-3 shrink-0">
-                {/* Back Button */}
+                    {/* Job Title */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 mb-1">
+                        Job Title <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        {...register('jobTitle')}
+                        placeholder="e.g. Senior Technical Recruiter"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
+                      />
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* ------------------------------------------------------------- */}
+                {/* STEP 2: COMPANY */}
+                {/* ------------------------------------------------------------- */}
+                {step === 2 && (
+                  <motion.div
+                    key="step-2"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.18 }}
+                    className="space-y-3.5"
+                  >
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-extrabold text-text-main tracking-tight">
+                        Company Details
+                      </h2>
+                      <p className="text-xs text-text-muted font-medium mt-0.5">
+                        Tell us about the company you represent.
+                      </p>
+                    </div>
+
+                    {step2Error && (
+                      <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+                        {step2Error}
+                      </div>
+                    )}
+
+                    {/* Company Name */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 mb-1">
+                        Company Name <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative flex items-center">
+                        <Building2 className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
+                        <input
+                          type="text"
+                          {...register('companyName')}
+                          placeholder="e.g. Acme Innovations Inc."
+                          className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Company Work Email */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 mb-1">
+                        Company Work Email <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative flex items-center">
+                        <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
+                        <input
+                          type="email"
+                          {...register('companyMail')}
+                          placeholder="recruiting@company.com"
+                          className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
+                        />
+                      </div>
+                      <p className="text-[11px] text-text-muted mt-1">
+                        Official corporate email for candidate correspondence and verification.
+                      </p>
+                    </div>
+
+                    {/* Company Website URL */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 mb-1">
+                        Company Website URL
+                      </label>
+                      <div className="relative flex items-center">
+                        <Globe className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
+                        <input
+                          type="url"
+                          {...register('companyUrl')}
+                          placeholder="https://acme.example.com"
+                          className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Headquarters Location */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 mb-1">
+                        Headquarters Location
+                      </label>
+                      <div className="relative flex items-center">
+                        <MapPin className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
+                        <input
+                          type="text"
+                          {...register('headquartersLocation')}
+                          placeholder="e.g. Bengaluru, India or San Francisco, CA"
+                          className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* ------------------------------------------------------------- */}
+                {/* STEP 3: BIO & REVIEW */}
+                {/* ------------------------------------------------------------- */}
+                {step === 3 && (
+                  <motion.div
+                    key="step-3"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.18 }}
+                    className="space-y-3.5"
+                  >
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-extrabold text-text-main tracking-tight">
+                        Bio &amp; Review
+                      </h2>
+                      <p className="text-xs text-text-muted font-medium mt-0.5">
+                        Add a short bio and review your profile before completing.
+                      </p>
+                    </div>
+
+                    {/* Bio */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 mb-1">
+                        Short Bio (Optional)
+                      </label>
+                      <textarea
+                        rows={3}
+                        {...register('bio')}
+                        placeholder="Tell candidates a bit about your company culture and what you're looking for..."
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card resize-none placeholder:text-slate-400"
+                      />
+                    </div>
+
+                    {/* Profile Summary */}
+                    <div className="border-t border-border-subtle/50 pt-3 mt-2">
+                      <h4 className="text-xs font-bold text-slate-800 mb-2">Profile Summary</h4>
+                      <div className="space-y-1.5 text-xs text-slate-600">
+                        <p>
+                          <span className="font-medium">Name:</span>{' '}
+                          {formValues.fullName || 'Not provided'}
+                        </p>
+                        <p>
+                          <span className="font-medium">Job Title:</span>{' '}
+                          {formValues.jobTitle || 'Not provided'}
+                        </p>
+                        <p>
+                          <span className="font-medium">Company:</span>{' '}
+                          {formValues.companyName || 'Not provided'}
+                        </p>
+                        <p>
+                          <span className="font-medium">Email:</span>{' '}
+                          {formValues.companyMail || 'Not provided'}
+                        </p>
+                        {formValues.companyUrl && (
+                          <p>
+                            <span className="font-medium">Website:</span> {formValues.companyUrl}
+                          </p>
+                        )}
+                        {formValues.headquartersLocation && (
+                          <p>
+                            <span className="font-medium">Location:</span>{' '}
+                            {formValues.headquartersLocation}
+                          </p>
+                        )}
+                        {formValues.bio && (
+                          <p>
+                            <span className="font-medium">Bio:</span>{' '}
+                            {formValues.bio.substring(0, 100)}
+                            {formValues.bio.length > 100 ? '...' : ''}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Bottom Actions Bar */}
+            <div className="flex items-center justify-between pt-3 border-t border-border-subtle/50 shrink-0">
+              {/* Back Button */}
+              <button
+                type="button"
+                onClick={handleBack}
+                disabled={isSaving}
+                className="flex items-center gap-2 px-4 sm:px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs sm:text-sm transition cursor-pointer active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                {/* Save Draft Button */}
                 <button
                   type="button"
-                  onClick={handleBack}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-border-subtle hover:bg-slate-100 text-slate-700 font-semibold text-xs sm:text-sm transition cursor-pointer active:scale-[0.98]"
+                  onClick={() => saveDraft(true)}
+                  disabled={isSaving || isCompleted}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border-subtle hover:bg-slate-50 text-slate-700 font-semibold text-xs sm:text-sm transition cursor-pointer active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Back</span>
+                  <span>Save Draft</span>
                 </button>
 
-                {/* Complete Setup Button */}
+                {/* Next / Complete Button */}
                 <button
-                  type="submit"
-                  disabled={isCompleted}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-action-dark hover:bg-black text-white font-semibold text-xs sm:text-sm transition shadow-md hover:shadow-lg cursor-pointer active:scale-[0.98]"
+                  type="button"
+                  onClick={handleNext}
+                  disabled={isSaving || isCompleted}
+                  className="flex items-center gap-2 px-5 sm:px-6 py-2 rounded-xl bg-action-dark hover:bg-black text-white font-semibold text-xs sm:text-sm transition shadow-md hover:shadow-lg cursor-pointer active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <span>{isCompleted ? 'Profile Created!' : 'Complete Setup'}</span>
-                  {isCompleted ? (
-                    <Sparkles className="w-4 h-4 text-brand-emerald" />
+                  {step < 3 ? (
+                    <>
+                      <span>Next</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
                   ) : (
-                    <ArrowRight className="w-4 h-4" />
+                    <>
+                      <span>{isCompleted ? 'Profile Created!' : 'Complete Setup'}</span>
+                      {isCompleted ? (
+                        <Sparkles className="w-4 h-4 text-brand-emerald" />
+                      ) : (
+                        <Sparkles className="w-4 h-4" />
+                      )}
+                    </>
                   )}
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       </main>
