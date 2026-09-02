@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={plusJakartaSans.variable}>
-      <body className="antialiased font-sans bg-white text-text-main min-h-screen flex flex-col">
+      <body className="antialiased font-sans bg-card text-text-main min-h-screen flex flex-col">
         {children}
       </body>
     </html>
