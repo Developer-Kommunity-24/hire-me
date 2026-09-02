@@ -2,27 +2,50 @@ import { eq } from 'drizzle-orm'
 import { recruiters, users } from '@repo/db'
 import type { Database, Recruiter, NewRecruiter } from '@repo/db'
 
-// ==========================================
-// TYPES
-// ==========================================
-
-/** Verified identity from a Neon Auth token. */
 export interface AuthUserInput {
   id: string
   email: string
   name: string | null
 }
 
-// ==========================================
-// READS
-// ==========================================
+export interface UpsertRecruiterInput {
+  fullName?: string
+  jobTitle?: string
+  companyName?: string
+  companyMail?: string
+  companyUrl?: string
+  headquartersLocation?: string
+  bio?: string
+  isComplete?: boolean
+}
 
-/**
- * Looks up a recruiter by user id.
- *
- * @param db - Request-scoped Drizzle client.
- * @param userId - User id (the JWT `sub`).
- */
+export function buildNewRecruiter(userId: string, data: UpsertRecruiterInput): NewRecruiter {
+  return {
+    userId,
+    companyName: data.companyName ?? '',
+    companyMail: data.companyMail ?? '',
+    companyUrl: data.companyUrl ?? null,
+    headquartersLocation: data.headquartersLocation ?? null,
+    jobTitle: data.jobTitle ?? null,
+    bio: data.bio ?? null,
+    isComplete: data.isComplete ?? false,
+    isDeleted: false,
+  }
+}
+
+export function buildRecruiterUpdateFields(data: UpsertRecruiterInput): Partial<NewRecruiter> {
+  const updateSet: Partial<NewRecruiter> = {}
+  if (data.companyName !== undefined) updateSet.companyName = data.companyName
+  if (data.companyMail !== undefined) updateSet.companyMail = data.companyMail
+  if (data.companyUrl !== undefined) updateSet.companyUrl = data.companyUrl
+  if (data.headquartersLocation !== undefined)
+    updateSet.headquartersLocation = data.headquartersLocation
+  if (data.jobTitle !== undefined) updateSet.jobTitle = data.jobTitle
+  if (data.bio !== undefined) updateSet.bio = data.bio
+  if (data.isComplete !== undefined) updateSet.isComplete = data.isComplete
+  return updateSet
+}
+
 export async function getRecruiterByUserId(
   db: Database,
   userId: string,
@@ -35,36 +58,11 @@ export async function getRecruiterByUserId(
   return recruiter ?? null
 }
 
-// ==========================================
-// WRITES
-// ==========================================
-
-/**
- * Upserts a recruiter profile.
- *
- * Creates a new recruiter row on first call, updates on subsequent calls.
- * Also updates users.fullName if provided in the payload.
- *
- * @param db - Request-scoped Drizzle client.
- * @param authUser - Verified identity from the token.
- * @param data - Recruiter profile data (all fields optional).
- * @returns The updated recruiter, or `null` if the user row disappeared.
- */
 export async function upsertRecruiter(
   db: Database,
   authUser: AuthUserInput,
-  data: Partial<{
-    fullName: string
-    jobTitle: string
-    companyName: string
-    companyMail: string
-    companyUrl: string
-    headquartersLocation: string
-    bio: string
-    isComplete: boolean
-  }>,
+  data: UpsertRecruiterInput,
 ): Promise<Recruiter | null> {
-  // If fullName is provided, update the users table
   if (data.fullName) {
     await db
       .update(users)
@@ -72,36 +70,15 @@ export async function upsertRecruiter(
       .where(eq(users.id, authUser.id))
   }
 
-  // Prepare recruiter data (exclude fullName as it's not a recruiter column)
-  const recruiterData: NewRecruiter = {
-    userId: authUser.id,
-    companyName: data.companyName ?? '',
-    companyMail: data.companyMail ?? '',
-    companyUrl: data.companyUrl ?? null,
-    headquartersLocation: data.headquartersLocation ?? null,
-    jobTitle: data.jobTitle ?? null,
-    bio: data.bio ?? null,
-    isComplete: data.isComplete ?? false,
-    isDeleted: false,
-  }
+  const recruiterData = buildNewRecruiter(authUser.id, data)
+  const updateSet = buildRecruiterUpdateFields(data)
 
-  // Upsert recruiter profile
   const [recruiter] = await db
     .insert(recruiters)
     .values(recruiterData)
     .onConflictDoUpdate({
       target: recruiters.userId,
-      set: {
-        ...(data.companyName !== undefined && { companyName: data.companyName }),
-        ...(data.companyMail !== undefined && { companyMail: data.companyMail }),
-        ...(data.companyUrl !== undefined && { companyUrl: data.companyUrl }),
-        ...(data.headquartersLocation !== undefined && {
-          headquartersLocation: data.headquartersLocation,
-        }),
-        ...(data.jobTitle !== undefined && { jobTitle: data.jobTitle }),
-        ...(data.bio !== undefined && { bio: data.bio }),
-        ...(data.isComplete !== undefined && { isComplete: data.isComplete }),
-      },
+      set: updateSet,
     })
     .returning()
 

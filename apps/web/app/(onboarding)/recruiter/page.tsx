@@ -15,183 +15,256 @@ import {
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { useQuery, useMutation } from '@tanstack/react-query'
+import { z } from 'zod'
 import { ApiError, apiFetch } from '@/lib/api-client'
+import { cn } from '@/lib/utils'
 import confetti from 'canvas-confetti'
+
+type OnboardingStep = 1 | 2 | 3
+
+// Base Schema matching backend recruiterUpdateSchema
+export const recruiterBaseSchema = z.object({
+  fullName: z.string().trim().min(1, 'Please fill in your full name.').optional(),
+  jobTitle: z.string().trim().min(1, 'Please fill in your job title.').optional(),
+  companyName: z.string().trim().min(1, 'Please fill in your company name.').optional(),
+  companyMail: z
+    .string()
+    .trim()
+    .email('Please enter a valid work email address.')
+    .optional()
+    .or(z.literal('')),
+  companyUrl: z
+    .string()
+    .trim()
+    .url('Please enter a valid website URL.')
+    .optional()
+    .or(z.literal('')),
+  headquartersLocation: z.string().trim().optional(),
+  bio: z.string().trim().optional(),
+})
+
+export type RecruiterFormData = z.infer<typeof recruiterBaseSchema>
+
+export const step1Schema = recruiterBaseSchema.pick({ fullName: true, jobTitle: true }).required()
+
+export const step2Schema = recruiterBaseSchema
+  .pick({ companyName: true, companyUrl: true, headquartersLocation: true })
+  .required({ companyName: true })
+  .extend({
+    companyMail: z
+      .string()
+      .trim()
+      .min(1, 'Please provide your work email.')
+      .email('Please enter a valid work email address.'),
+  })
+
+export const finalSubmitSchema = step1Schema.merge(step2Schema)
+
+function getSanitizedPayload(values: RecruiterFormData, isComplete = false) {
+  const payload: Record<string, string | boolean> = {}
+
+  for (const [key, value] of Object.entries(values)) {
+    if (typeof value === 'string' && value.trim()) {
+      payload[key] = value.trim()
+    }
+  }
+
+  if (isComplete) {
+    payload.isComplete = true
+  }
+
+  return payload
+}
+
+const getStepCircleClass = (currentStep: number, targetStep: number) => {
+  return cn(
+    'w-[34px] h-[34px] rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300',
+    currentStep > targetStep && 'bg-brand text-white shadow-xs',
+    currentStep === targetStep && 'bg-brand text-white shadow-[0_0_0_5px_var(--brand-green-glow)]',
+    currentStep < targetStep && 'bg-card border-2 border-border-subtle text-text-muted',
+    currentStep < targetStep && targetStep !== 3 && 'group-hover:border-slate-300',
+  )
+}
+
+const getStepTextClass = (currentStep: number, targetStep: number) => {
+  return cn(
+    'text-[11px] whitespace-nowrap transition-colors',
+    currentStep === targetStep && 'font-bold text-brand',
+    currentStep > targetStep && 'font-semibold text-slate-700',
+    currentStep < targetStep && 'font-medium text-text-muted',
+  )
+}
 
 export default function RecruiterOnboardingPage() {
   const router = useRouter()
-  const [step, setStep] = useState<1 | 2 | 3>(1)
+  const [step, setStep] = useState<OnboardingStep>(1)
   const [isCompleted, setIsCompleted] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
   const [draftSaved, setDraftSaved] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
-
-  // Step 1: About you
-  const [fullName, setFullName] = useState('')
-  const [jobTitle, setJobTitle] = useState('')
   const [step1Error, setStep1Error] = useState('')
-
-  // Step 2: Company
-  const [companyName, setCompanyName] = useState('')
-  const [companyMail, setCompanyMail] = useState('')
-  const [companyUrl, setCompanyUrl] = useState('')
-  const [headquartersLocation, setHeadquartersLocation] = useState('')
   const [step2Error, setStep2Error] = useState('')
 
-  // Step 3: Bio & review
-  const [bio, setBio] = useState('')
+  const { register, watch, reset, getValues } = useForm<RecruiterFormData>({
+    defaultValues: {
+      fullName: '',
+      jobTitle: '',
+      companyName: '',
+      companyMail: '',
+      companyUrl: '',
+      headquartersLocation: '',
+      bio: '',
+    },
+  })
 
-  // Load existing data on mount
+  // Data Loading using TanStack Query
+  const {
+    data: initialData,
+    isLoading,
+    error: queryError,
+  } = useQuery({
+    queryKey: ['recruiter-onboarding-init'],
+    retry: (failureCount, error) => {
+      if (error instanceof ApiError && error.status === 401) {
+        return false
+      }
+      return failureCount < 3
+    },
+    queryFn: async () => {
+      const userResponse = await apiFetch<{ user: { fullName: string } }>('/api/users/me')
+      const recruiterResponse = await apiFetch<{
+        recruiter: {
+          companyName: string
+          companyMail: string
+          companyUrl: string | null
+          headquartersLocation: string | null
+          jobTitle: string | null
+          bio: string | null
+          isComplete: boolean
+        } | null
+      }>('/api/recruiters/me')
+
+      return {
+        user: userResponse.user,
+        recruiter: recruiterResponse.recruiter,
+      }
+    },
+  })
+
+  // Handle Query Error (401 -> redirect to /login)
   useEffect(() => {
-    const loadRecruiterData = async () => {
-      try {
-        // First get user data for full name
-        const userResponse = await apiFetch<{ user: { fullName: string } }>('/api/users/me')
-        setFullName(userResponse.user.fullName || '')
-
-        // Then get recruiter data if exists
-        const recruiterResponse = await apiFetch<{
-          recruiter: {
-            companyName: string
-            companyMail: string
-            companyUrl: string | null
-            headquartersLocation: string | null
-            jobTitle: string | null
-            bio: string | null
-            isComplete: boolean
-          } | null
-        }>('/api/recruiters/me')
-
-        if (recruiterResponse.recruiter) {
-          const r = recruiterResponse.recruiter
-          setCompanyName(r.companyName || '')
-          setCompanyMail(r.companyMail || '')
-          setCompanyUrl(r.companyUrl || '')
-          setHeadquartersLocation(r.headquartersLocation || '')
-          setJobTitle(r.jobTitle || '')
-          setBio(r.bio || '')
-
-          // If already complete, redirect to landing
-          if (r.isComplete) {
-            router.push('/landing')
-            return
-          }
-        }
-      } catch (error) {
-        if (error instanceof ApiError && error.status === 401) {
-          router.push('/login')
-          return
-        }
-        console.error('Failed to load recruiter data:', error)
-      } finally {
-        setIsLoading(false)
+    if (queryError) {
+      if (queryError instanceof ApiError && queryError.status === 401) {
+        router.push('/login')
+      } else {
+        console.error('Failed to load recruiter data:', queryError)
       }
     }
+  }, [queryError, router])
 
-    loadRecruiterData()
-  }, [router])
-
-  // Save draft function
-  const saveDraft = async (showConfirmation = true) => {
-    setIsSaving(true)
-    setErrorMsg('')
-
-    try {
-      const payload: Record<string, string | boolean> = {}
-
-      if (fullName.trim()) payload.fullName = fullName.trim()
-      if (jobTitle.trim()) payload.jobTitle = jobTitle.trim()
-      if (companyName.trim()) payload.companyName = companyName.trim()
-      if (companyMail.trim()) payload.companyMail = companyMail.trim()
-      if (companyUrl.trim()) payload.companyUrl = companyUrl.trim()
-      if (headquartersLocation.trim()) payload.headquartersLocation = headquartersLocation.trim()
-      if (bio.trim()) payload.bio = bio.trim()
-
-      await apiFetch('/api/recruiters/me', { method: 'PATCH', body: payload })
-
-      if (showConfirmation) {
-        setDraftSaved(true)
-        setTimeout(() => setDraftSaved(false), 2000)
+  // Populate form on query success
+  useEffect(() => {
+    if (initialData) {
+      if (initialData.recruiter?.isComplete) {
+        router.push('/landing')
+        return
       }
-    } catch (error) {
+
+      const r = initialData.recruiter
+      reset({
+        fullName: initialData.user?.fullName || '',
+        jobTitle: r?.jobTitle || '',
+        companyName: r?.companyName || '',
+        companyMail: r?.companyMail || '',
+        companyUrl: r?.companyUrl || '',
+        headquartersLocation: r?.headquartersLocation || '',
+        bio: r?.bio || '',
+      })
+    }
+  }, [initialData, reset, router])
+
+  // Mutation using TanStack Query
+  const patchMutation = useMutation({
+    mutationFn: async (payload: Record<string, string | boolean>) => {
+      return apiFetch<{ recruiter: { isComplete: boolean } }>('/api/recruiters/me', {
+        method: 'PATCH',
+        body: payload,
+      })
+    },
+    onError: (error) => {
       if (error instanceof ApiError && error.status === 401) {
         router.push('/login')
         return
       }
-      setErrorMsg(
-        error instanceof ApiError ? error.message : 'Failed to save draft. Please try again.',
-      )
-    } finally {
-      setIsSaving(false)
+      setErrorMsg(error instanceof ApiError ? error.message : 'Operation failed. Please try again.')
+    },
+  })
+
+  const isSaving = patchMutation.isPending
+
+  // Save Draft logic
+  const saveDraft = async (showConfirmation = true) => {
+    setErrorMsg('')
+    const payload = getSanitizedPayload(getValues())
+
+    try {
+      await patchMutation.mutateAsync(payload)
+      if (showConfirmation) {
+        setDraftSaved(true)
+        setTimeout(() => setDraftSaved(false), 2000)
+      }
+    } catch {
+      // Error handled by mutation onError
     }
   }
 
-  // Stepper navigation
+  // Stepper navigation with safeParse validation
   const handleNext = async () => {
+    const values = getValues()
+
     if (step === 1) {
-      if (!fullName.trim() || !jobTitle.trim()) {
+      const validation = step1Schema.safeParse(values)
+      if (!validation.success) {
         setStep1Error('Please fill in your full name and job title.')
         return
       }
       setStep1Error('')
-
-      // Save step 1 data
       await saveDraft(false)
       setStep(2)
     } else if (step === 2) {
-      if (!companyName.trim() || !companyMail.trim()) {
+      const validation = step2Schema.safeParse(values)
+      if (!validation.success) {
         setStep2Error('Please provide your company name and work email.')
         return
       }
       setStep2Error('')
-
-      // Save step 2 data
       await saveDraft(false)
       setStep(3)
     } else if (step === 3) {
-      // Final submit
-      setIsSaving(true)
+      const validation = finalSubmitSchema.safeParse(values)
+      if (!validation.success) {
+        setErrorMsg('Please complete all required fields.')
+        return
+      }
       setErrorMsg('')
 
       try {
-        await apiFetch('/api/recruiters/me', {
-          method: 'PATCH',
-          body: {
-            fullName: fullName.trim(),
-            jobTitle: jobTitle.trim(),
-            companyName: companyName.trim(),
-            companyMail: companyMail.trim(),
-            companyUrl: companyUrl.trim(),
-            headquartersLocation: headquartersLocation.trim(),
-            bio: bio.trim(),
-            isComplete: true,
-          },
-        })
+        const payload = getSanitizedPayload(values, true)
 
+        await patchMutation.mutateAsync(payload)
         setIsCompleted(true)
 
-        confetti({
+        await confetti({
           particleCount: 90,
           spread: 75,
           origin: { y: 0.6 },
           colors: ['#00C26D', '#34D399', '#10B981', '#059669', '#3B82F6'],
         })
 
-        setTimeout(() => {
-          router.push('/landing')
-        }, 1400)
-      } catch (error) {
-        if (error instanceof ApiError && error.status === 401) {
-          router.push('/login')
-          return
-        }
-        setErrorMsg(
-          error instanceof ApiError
-            ? error.message
-            : 'Failed to complete profile. Please try again.',
-        )
-        setIsSaving(false)
+        router.push('/landing')
+      } catch {
+        // Error handled by mutation onError
       }
     }
   }
@@ -200,9 +273,11 @@ export default function RecruiterOnboardingPage() {
     if (step === 1) {
       router.push('/role-select')
     } else {
-      setStep((prev) => (prev - 1) as 1 | 2 | 3)
+      setStep((prev) => (prev - 1) as OnboardingStep)
     }
   }
+
+  const formValues = watch()
 
   if (isLoading) {
     return (
@@ -345,7 +420,7 @@ export default function RecruiterOnboardingPage() {
                   <g transform="translate(102, 122)">
                     <circle cx="9" cy="9" r="8" fill="var(--brand-green)" />
                     <circle cx="9" cy="7" r="3.2" fill="#FFFFFF" />
-                    <path d="M 4,14 C 4,11 6.5,10 9,10 C 11.5,10 14,11 14,14 Z" fill="#FFFFFF" />
+                    <path d="M 4,14 C 4,11 6.5,10 9,10 C 11.5,10 14,14 Z" fill="#FFFFFF" />
                     <rect x="24" y="4" width="70" height="4" rx="2" fill="#94A3B8" />
                     <rect x="24" y="11" width="45" height="3" rx="1.5" fill="var(--border-muted)" />
                   </g>
@@ -354,7 +429,7 @@ export default function RecruiterOnboardingPage() {
                   <g transform="translate(102, 147)">
                     <circle cx="9" cy="9" r="8" fill="var(--brand-green)" />
                     <circle cx="9" cy="7" r="3.2" fill="#FFFFFF" />
-                    <path d="M 4,14 C 4,11 6.5,10 9,10 C 11.5,10 14,14 14,14 Z" fill="#FFFFFF" />
+                    <path d="M 4,14 C 4,11 6.5,10 9,10 C 11.5,10 14,14 Z" fill="#FFFFFF" />
                     <rect x="24" y="4" width="80" height="4" rx="2" fill="#94A3B8" />
                     <rect x="24" y="11" width="55" height="3" rx="1.5" fill="var(--border-muted)" />
                   </g>
@@ -363,7 +438,7 @@ export default function RecruiterOnboardingPage() {
                   <g transform="translate(102, 172)">
                     <circle cx="9" cy="9" r="8" fill="var(--brand-green)" />
                     <circle cx="9" cy="7" r="3.2" fill="#FFFFFF" />
-                    <path d="M 4,14 C 4,11 6.5,10 9,10 C 11.5,10 14,14 14,14 Z" fill="#FFFFFF" />
+                    <path d="M 4,14 C 4,11 6.5,10 9,10 C 11.5,10 14,14 Z" fill="#FFFFFF" />
                     <rect x="24" y="4" width="65" height="4" rx="2" fill="#94A3B8" />
                     <rect x="24" y="11" width="40" height="3" rx="1.5" fill="var(--border-muted)" />
                   </g>
@@ -433,28 +508,10 @@ export default function RecruiterOnboardingPage() {
                   className="flex flex-col items-center gap-1.5 cursor-pointer group shrink-0"
                   onClick={() => setStep(1)}
                 >
-                  <div
-                    className={`w-[34px] h-[34px] rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
-                      step > 1
-                        ? 'bg-brand text-white shadow-xs'
-                        : step === 1
-                          ? 'bg-brand text-white shadow-[0_0_0_5px_var(--brand-green-glow)]'
-                          : 'bg-card border-2 border-border-subtle text-text-muted group-hover:border-slate-300'
-                    }`}
-                  >
+                  <div className={getStepCircleClass(step, 1)}>
                     {step > 1 ? <Check className="w-4 h-4 stroke-[3]" /> : '1'}
                   </div>
-                  <span
-                    className={`text-[11px] whitespace-nowrap transition-colors ${
-                      step === 1
-                        ? 'font-bold text-brand'
-                        : step > 1
-                          ? 'font-semibold text-slate-700'
-                          : 'font-medium text-text-muted'
-                    }`}
-                  >
-                    About you
-                  </span>
+                  <span className={getStepTextClass(step, 1)}>About you</span>
                 </div>
 
                 {/* Connector Line 1 -> 2 */}
@@ -470,28 +527,10 @@ export default function RecruiterOnboardingPage() {
                   className="flex flex-col items-center gap-1.5 cursor-pointer group shrink-0"
                   onClick={() => step > 1 && setStep(2)}
                 >
-                  <div
-                    className={`w-[34px] h-[34px] rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
-                      step > 2
-                        ? 'bg-brand text-white shadow-xs'
-                        : step === 2
-                          ? 'bg-brand text-white shadow-[0_0_0_5px_var(--brand-green-glow)]'
-                          : 'bg-card border-2 border-border-subtle text-text-muted group-hover:border-slate-300'
-                    }`}
-                  >
+                  <div className={getStepCircleClass(step, 2)}>
                     {step > 2 ? <Check className="w-4 h-4 stroke-[3]" /> : '2'}
                   </div>
-                  <span
-                    className={`text-[11px] whitespace-nowrap transition-colors ${
-                      step === 2
-                        ? 'font-bold text-brand'
-                        : step > 2
-                          ? 'font-semibold text-slate-700'
-                          : 'font-medium text-text-muted'
-                    }`}
-                  >
-                    Company
-                  </span>
+                  <span className={getStepTextClass(step, 2)}>Company</span>
                 </div>
 
                 {/* Connector Line 2 -> 3 */}
@@ -507,22 +546,10 @@ export default function RecruiterOnboardingPage() {
                   className="flex flex-col items-center gap-1.5 cursor-pointer group shrink-0"
                   onClick={() => step > 2 && setStep(3)}
                 >
-                  <div
-                    className={`w-[34px] h-[34px] rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
-                      step === 3
-                        ? 'bg-brand text-white shadow-[0_0_0_5px_var(--brand-green-glow)]'
-                        : 'bg-card border-2 border-border-subtle text-text-muted'
-                    }`}
-                  >
+                  <div className={getStepCircleClass(step, 3)}>
                     <span>3</span>
                   </div>
-                  <span
-                    className={`text-[11px] whitespace-nowrap transition-colors ${
-                      step === 3 ? 'font-bold text-brand' : 'font-medium text-text-muted'
-                    }`}
-                  >
-                    Bio &amp; review
-                  </span>
+                  <span className={getStepTextClass(step, 3)}>Bio &amp; review</span>
                 </div>
               </div>
             </div>
@@ -590,8 +617,7 @@ export default function RecruiterOnboardingPage() {
                         <User className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
                         <input
                           type="text"
-                          value={fullName}
-                          onChange={(e) => setFullName(e.target.value)}
+                          {...register('fullName')}
                           placeholder="e.g. Alex Chen"
                           className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
                         />
@@ -605,8 +631,7 @@ export default function RecruiterOnboardingPage() {
                       </label>
                       <input
                         type="text"
-                        value={jobTitle}
-                        onChange={(e) => setJobTitle(e.target.value)}
+                        {...register('jobTitle')}
                         placeholder="e.g. Senior Technical Recruiter"
                         className="w-full px-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
                       />
@@ -650,8 +675,7 @@ export default function RecruiterOnboardingPage() {
                         <Building2 className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
                         <input
                           type="text"
-                          value={companyName}
-                          onChange={(e) => setCompanyName(e.target.value)}
+                          {...register('companyName')}
                           placeholder="e.g. Acme Innovations Inc."
                           className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
                         />
@@ -667,8 +691,7 @@ export default function RecruiterOnboardingPage() {
                         <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
                         <input
                           type="email"
-                          value={companyMail}
-                          onChange={(e) => setCompanyMail(e.target.value)}
+                          {...register('companyMail')}
                           placeholder="recruiting@company.com"
                           className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
                         />
@@ -687,8 +710,7 @@ export default function RecruiterOnboardingPage() {
                         <Globe className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
                         <input
                           type="url"
-                          value={companyUrl}
-                          onChange={(e) => setCompanyUrl(e.target.value)}
+                          {...register('companyUrl')}
                           placeholder="https://acme.example.com"
                           className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
                         />
@@ -704,8 +726,7 @@ export default function RecruiterOnboardingPage() {
                         <MapPin className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
                         <input
                           type="text"
-                          value={headquartersLocation}
-                          onChange={(e) => setHeadquartersLocation(e.target.value)}
+                          {...register('headquartersLocation')}
                           placeholder="e.g. Bengaluru, India or San Francisco, CA"
                           className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
                         />
@@ -742,8 +763,7 @@ export default function RecruiterOnboardingPage() {
                       </label>
                       <textarea
                         rows={3}
-                        value={bio}
-                        onChange={(e) => setBio(e.target.value)}
+                        {...register('bio')}
                         placeholder="Tell candidates a bit about your company culture and what you're looking for..."
                         className="w-full px-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card resize-none placeholder:text-slate-400"
                       />
@@ -754,34 +774,37 @@ export default function RecruiterOnboardingPage() {
                       <h4 className="text-xs font-bold text-slate-800 mb-2">Profile Summary</h4>
                       <div className="space-y-1.5 text-xs text-slate-600">
                         <p>
-                          <span className="font-medium">Name:</span> {fullName || 'Not provided'}
+                          <span className="font-medium">Name:</span>{' '}
+                          {formValues.fullName || 'Not provided'}
                         </p>
                         <p>
                           <span className="font-medium">Job Title:</span>{' '}
-                          {jobTitle || 'Not provided'}
+                          {formValues.jobTitle || 'Not provided'}
                         </p>
                         <p>
                           <span className="font-medium">Company:</span>{' '}
-                          {companyName || 'Not provided'}
+                          {formValues.companyName || 'Not provided'}
                         </p>
                         <p>
                           <span className="font-medium">Email:</span>{' '}
-                          {companyMail || 'Not provided'}
+                          {formValues.companyMail || 'Not provided'}
                         </p>
-                        {companyUrl && (
+                        {formValues.companyUrl && (
                           <p>
-                            <span className="font-medium">Website:</span> {companyUrl}
+                            <span className="font-medium">Website:</span> {formValues.companyUrl}
                           </p>
                         )}
-                        {headquartersLocation && (
+                        {formValues.headquartersLocation && (
                           <p>
-                            <span className="font-medium">Location:</span> {headquartersLocation}
+                            <span className="font-medium">Location:</span>{' '}
+                            {formValues.headquartersLocation}
                           </p>
                         )}
-                        {bio && (
+                        {formValues.bio && (
                           <p>
-                            <span className="font-medium">Bio:</span> {bio.substring(0, 100)}
-                            {bio.length > 100 ? '...' : ''}
+                            <span className="font-medium">Bio:</span>{' '}
+                            {formValues.bio.substring(0, 100)}
+                            {formValues.bio.length > 100 ? '...' : ''}
                           </p>
                         )}
                       </div>
