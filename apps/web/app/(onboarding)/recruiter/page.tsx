@@ -1,23 +1,42 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import { ArrowLeft, ArrowRight, Building2, Globe, Mail, MapPin, Sparkles, X } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowRight,
+  Briefcase,
+  Building2,
+  Globe,
+  Mail,
+  MapPin,
+  Search,
+  Sparkles,
+  UserCheck,
+  Users,
+  X,
+} from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import confetti from 'canvas-confetti'
-
 import { useSaveRecruiterProfile } from '@/lib/hooks/use-onboarding'
 import {
   recruiterOnboardingSchema,
   type RecruiterOnboardingInput,
 } from '@/lib/schemas/recruiter-onboarding.schema'
+import { showConfetti, ONBOARDING_REDIRECT_DELAY_MS } from '@/lib/utils/confetti'
 
 export interface RecruiterProfileData {
   companyName: string
   companyMail: string
   companyUrl: string
   headquartersLocation: string
+}
+
+const DEFAULT_VALUES: RecruiterOnboardingInput = {
+  companyName: '',
+  companyMail: '',
+  companyUrl: '',
+  headquartersLocation: '',
 }
 
 export default function RecruiterOnboardingPage() {
@@ -33,12 +52,7 @@ export default function RecruiterOnboardingPage() {
     formState: { errors },
   } = useForm<RecruiterOnboardingInput>({
     resolver: zodResolver(recruiterOnboardingSchema),
-    defaultValues: {
-      companyName: '',
-      companyMail: '',
-      companyUrl: '',
-      headquartersLocation: '',
-    },
+    defaultValues: DEFAULT_VALUES,
   })
 
   const onSubmit = async (data: RecruiterOnboardingInput) => {
@@ -46,21 +60,11 @@ export default function RecruiterOnboardingPage() {
     try {
       await saveRecruiterMutation.mutateAsync(data)
       setIsCompleted(true)
-
-      try {
-        confetti({
-          particleCount: 90,
-          spread: 75,
-          origin: { y: 0.6 },
-          colors: ['#00C26D', '#34D399', '#10B981', '#059669', '#3B82F6'],
-        })
-      } catch {
-        // Confetti fallback
-      }
+      showConfetti()
 
       setTimeout(() => {
         router.push('/landing')
-      }, 1400)
+      }, ONBOARDING_REDIRECT_DELAY_MS)
     } catch (err: unknown) {
       if (err instanceof Error) {
         setErrorMsg(err.message)
@@ -95,175 +99,48 @@ export default function RecruiterOnboardingPage() {
           {/* LEFT COLUMN: HERO & RECRUITER TALENT SEARCH ILLUSTRATION */}
           {/* ========================================================================= */}
           <div className="lg:col-span-5 bg-gradient-to-b from-surface-hero-start to-surface-hero-end border-b lg:border-b-0 lg:border-r border-border-subtle/50 p-6 sm:p-8 lg:p-10 flex flex-col justify-between h-full relative overflow-hidden">
-            {/* Top Illustration Scene */}
-            <div className="w-full flex items-center justify-center py-4 select-none">
-              <svg
-                viewBox="0 0 380 260"
-                className="w-full max-w-[340px] h-auto overflow-visible"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <defs>
-                  <filter id="recruiterShadow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feDropShadow
-                      dx="0"
-                      dy="10"
-                      stdDeviation="12"
-                      floodColor="#0F172A"
-                      floodOpacity="0.12"
-                    />
-                  </filter>
-                  <linearGradient id="screenGrad" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor="#FFFFFF" />
-                    <stop offset="100%" stopColor="#F8FAFC" />
-                  </linearGradient>
-                  <linearGradient id="laptopChassis" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#E2E8F0" />
-                    <stop offset="100%" stopColor="#CBD5E1" />
-                  </linearGradient>
-                  <linearGradient id="glassGrad" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor="var(--brand-mint)" stopOpacity="0.4" />
-                    <stop offset="100%" stopColor="var(--brand-green)" stopOpacity="0.1" />
-                  </linearGradient>
-                </defs>
+            {/* Top Illustration Scene using Lucide Icons */}
+            <div className="w-full flex flex-col items-center justify-center py-6 select-none relative">
+              {/* Background Glow */}
+              <div className="absolute inset-0 bg-emerald-500/10 blur-3xl rounded-full max-w-[280px] mx-auto pointer-events-none" />
 
-                {/* Ground plane shadow */}
-                <ellipse cx="190" cy="228" rx="140" ry="10" fill="#0F172A" opacity="0.08" />
+              {/* Hero Icon Card Showcase */}
+              <div className="relative z-10 w-full max-w-[320px] bg-white/90 backdrop-blur-md rounded-2xl p-5 border border-slate-200/60 shadow-[0_10px_30px_-5px_rgba(0,0,0,0.08)] space-y-3.5">
+                {/* Candidate Row 1 */}
+                <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                  <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                    <UserCheck className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <div className="h-3 bg-slate-200 rounded-md w-3/4 animate-pulse" />
+                    <div className="h-2 bg-slate-100 rounded-md w-1/2" />
+                  </div>
+                  <Sparkles className="w-4 h-4 text-emerald-500 shrink-0" />
+                </div>
 
-                {/* 3 Green Team Members / Candidate Silhouettes in Background */}
-                <g id="candidate-silhouettes">
-                  {/* Left Candidate (Soft mint green) */}
-                  <g transform="translate(100, 110)">
-                    <circle cx="0" cy="-28" r="22" fill="var(--brand-green-mint)" />
-                    <path
-                      d="M -30,22 C -30,0 -16,-12 0,-12 C 16,-12 30,0 30,22 Z"
-                      fill="var(--brand-green-mint)"
-                    />
-                  </g>
+                {/* Candidate Row 2 */}
+                <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                  <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                    <Users className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <div className="h-3 bg-slate-200 rounded-md w-4/5" />
+                    <div className="h-2 bg-slate-100 rounded-md w-2/3" />
+                  </div>
+                </div>
 
-                  {/* Right Candidate (Soft mint green) */}
-                  <g transform="translate(260, 110)">
-                    <circle cx="0" cy="-28" r="22" fill="var(--brand-green-mint)" />
-                    <path
-                      d="M -30,22 C -30,0 -16,-12 0,-12 C 16,-12 30,0 30,22 Z"
-                      fill="var(--brand-green-mint)"
-                    />
-                  </g>
-
-                  {/* Center Main Candidate (Vibrant emerald green) */}
-                  <g transform="translate(180, 95)">
-                    <circle cx="0" cy="-34" r="28" fill="var(--brand-green)" />
-                    <path
-                      d="M -40,32 C -40,4 -22,-16 0,-16 C 22,-16 40,4 40,32 Z"
-                      fill="var(--brand-green)"
-                    />
-                  </g>
-
-                  {/* Sparkles / Radiating Accents */}
-                  <path
-                    d="M 52,90 L 58,82 L 64,90 L 72,96 L 64,102 L 58,110 L 52,102 L 44,96 Z"
-                    fill="var(--brand-green)"
-                    opacity="0.85"
-                    transform="scale(0.65) translate(30, 40)"
-                  />
-                  <path
-                    d="M 50,75 Q 55,65 60,75"
-                    stroke="var(--brand-green)"
-                    strokeWidth="3"
-                    fill="none"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M 38,88 Q 44,82 48,90"
-                    stroke="var(--brand-green)"
-                    strokeWidth="2.5"
-                    fill="none"
-                    strokeLinecap="round"
-                  />
-                </g>
-
-                {/* Laptop in Foreground with Candidate Search Screen */}
-                <g id="recruiter-laptop" filter="url(#recruiterShadow)">
-                  {/* Open Screen Body */}
-                  <rect
-                    x="85"
-                    y="102"
-                    width="190"
-                    height="115"
-                    rx="10"
-                    fill="#1E293B"
-                    stroke="var(--border-muted)"
-                    strokeWidth="1.5"
-                  />
-
-                  {/* Inner Display Screen */}
-                  <rect x="92" y="108" width="176" height="102" rx="6" fill="url(#screenGrad)" />
-
-                  {/* Candidate Row 1 */}
-                  <g transform="translate(102, 122)">
-                    <circle cx="9" cy="9" r="8" fill="var(--brand-green)" />
-                    <circle cx="9" cy="7" r="3.2" fill="#FFFFFF" />
-                    <path d="M 4,14 C 4,11 6.5,10 9,10 C 11.5,10 14,11 14,14 Z" fill="#FFFFFF" />
-                    <rect x="24" y="4" width="70" height="4" rx="2" fill="#94A3B8" />
-                    <rect x="24" y="11" width="45" height="3" rx="1.5" fill="var(--border-muted)" />
-                  </g>
-
-                  {/* Candidate Row 2 */}
-                  <g transform="translate(102, 147)">
-                    <circle cx="9" cy="9" r="8" fill="var(--brand-green)" />
-                    <circle cx="9" cy="7" r="3.2" fill="#FFFFFF" />
-                    <path d="M 4,14 C 4,11 6.5,10 9,10 C 11.5,10 14,11 14,14 Z" fill="#FFFFFF" />
-                    <rect x="24" y="4" width="80" height="4" rx="2" fill="#94A3B8" />
-                    <rect x="24" y="11" width="55" height="3" rx="1.5" fill="var(--border-muted)" />
-                  </g>
-
-                  {/* Candidate Row 3 */}
-                  <g transform="translate(102, 172)">
-                    <circle cx="9" cy="9" r="8" fill="var(--brand-green)" />
-                    <circle cx="9" cy="7" r="3.2" fill="#FFFFFF" />
-                    <path d="M 4,14 C 4,11 6.5,10 9,10 C 11.5,10 14,11 14,14 Z" fill="#FFFFFF" />
-                    <rect x="24" y="4" width="65" height="4" rx="2" fill="#94A3B8" />
-                    <rect x="24" y="11" width="40" height="3" rx="1.5" fill="var(--border-muted)" />
-                  </g>
-
-                  {/* Magnifying Glass Over Candidate Search Screen */}
-                  <g transform="translate(252, 168) rotate(35)">
-                    {/* Glass Circle */}
-                    <circle
-                      cx="0"
-                      cy="0"
-                      r="26"
-                      fill="url(#glassGrad)"
-                      stroke="var(--brand-green)"
-                      strokeWidth="5"
-                    />
-                    {/* Glass Specular Arc */}
-                    <path
-                      d="M -16,-12 A 20 20 0 0 1 12,-16"
-                      stroke="#FFFFFF"
-                      strokeWidth="2.8"
-                      fill="none"
-                      strokeLinecap="round"
-                    />
-                    {/* Handle */}
-                    <path
-                      d="M 0,26 L 0,46"
-                      stroke="var(--brand-green)"
-                      strokeWidth="6"
-                      strokeLinecap="round"
-                    />
-                  </g>
-
-                  {/* Laptop Base Keyboard Deck */}
-                  <path
-                    d="M 60,217 L 300,217 C 306,217 310,219 308,222 L 290,227 C 288,228 280,228 276,228 L 84,228 C 80,228 72,228 70,227 L 52,222 C 50,219 54,217 60,217 Z"
-                    fill="url(#laptopChassis)"
-                    stroke="#94A3B8"
-                    strokeWidth="1"
-                  />
-                  {/* Base Trackpad Notch */}
-                  <rect x="162" y="218" width="36" height="3" rx="1.5" fill="#94A3B8" />
-                </g>
-              </svg>
+                {/* Candidate Row 3 */}
+                <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                  <div className="w-9 h-9 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+                    <Briefcase className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <div className="h-3 bg-slate-200 rounded-md w-2/3" />
+                    <div className="h-2 bg-slate-100 rounded-md w-1/3" />
+                  </div>
+                  <Search className="w-4 h-4 text-slate-400 shrink-0" />
+                </div>
+              </div>
             </div>
 
             {/* Bottom Hero Text */}

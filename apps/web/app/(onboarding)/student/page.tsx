@@ -1,7 +1,6 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import confetti from 'canvas-confetti'
 import { motion, AnimatePresence } from 'motion/react'
 import { ArrowLeft, ArrowRight, Check, FileText, Globe, Plus, Sparkles, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -13,6 +12,7 @@ import {
   studentCompleteOnboardingSchema,
   type StudentOnboardingInput,
 } from '@/lib/schemas/student-onboarding.schema'
+import { showConfetti, ONBOARDING_REDIRECT_DELAY_MS } from '@/lib/utils/confetti'
 
 function GithubIcon({ className = 'w-4 h-4' }: { className?: string }) {
   return (
@@ -32,6 +32,25 @@ function LinkedinIcon({ className = 'w-4 h-4' }: { className?: string }) {
       <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z" />
     </svg>
   )
+}
+
+const DEFAULT_STUDENT_VALUES: StudentOnboardingInput = {
+  fullName: '',
+  headline: '',
+  bio: '',
+  school: '',
+  degree: '',
+  graduationYear: '2026',
+  gpa: '',
+  specialization: '',
+  skills: [],
+  experienceRole: '',
+  experienceCompany: '',
+  experienceSummary: '',
+  githubUrl: '',
+  linkedinUrl: '',
+  portfolioUrl: '',
+  resumeUrl: '',
 }
 
 export default function StudentOnboardingPage() {
@@ -54,24 +73,7 @@ export default function StudentOnboardingPage() {
   } = useForm<StudentOnboardingInput>({
     resolver: zodResolver(studentCompleteOnboardingSchema),
     mode: 'onTouched',
-    defaultValues: {
-      fullName: '',
-      headline: '',
-      bio: '',
-      school: '',
-      degree: '',
-      graduationYear: '2026',
-      gpa: '',
-      specialization: '',
-      skills: ['React', 'TypeScript', 'Next.js', 'Tailwind CSS'],
-      experienceRole: '',
-      experienceCompany: '',
-      experienceSummary: '',
-      githubUrl: '',
-      linkedinUrl: '',
-      portfolioUrl: '',
-      resumeUrl: '',
-    },
+    defaultValues: DEFAULT_STUDENT_VALUES,
   })
 
   const fullName = watch('fullName') || ''
@@ -130,21 +132,11 @@ export default function StudentOnboardingPage() {
     try {
       await saveStudentMutation.mutateAsync(data)
       setIsCompleted(true)
-
-      try {
-        confetti({
-          particleCount: 100,
-          spread: 80,
-          origin: { y: 0.6 },
-          colors: ['#00C26D', '#34D399', '#6366F1', '#3B82F6'],
-        })
-      } catch {
-        // Fallback
-      }
+      showConfetti()
 
       setTimeout(() => {
         router.push('/landing')
-      }, 1400)
+      }, ONBOARDING_REDIRECT_DELAY_MS)
     } catch {
       // Error handled in mutation
     }
@@ -900,21 +892,6 @@ export default function StudentOnboardingPage() {
                       </p>
                     </div>
 
-                    {(errors.githubUrl ||
-                      errors.linkedinUrl ||
-                      errors.portfolioUrl ||
-                      errors.resumeUrl) && (
-                      <div
-                        className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium"
-                        role="alert"
-                      >
-                        {errors.githubUrl?.message ||
-                          errors.linkedinUrl?.message ||
-                          errors.portfolioUrl?.message ||
-                          errors.resumeUrl?.message}
-                      </div>
-                    )}
-
                     <div className="space-y-2.5">
                       {/* GitHub */}
                       <div>
@@ -930,6 +907,11 @@ export default function StudentOnboardingPage() {
                             className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card"
                           />
                         </div>
+                        {errors.githubUrl && (
+                          <p role="alert" className="text-xs font-medium text-rose-500 mt-1">
+                            {errors.githubUrl.message}
+                          </p>
+                        )}
                       </div>
 
                       {/* LinkedIn */}
@@ -946,6 +928,11 @@ export default function StudentOnboardingPage() {
                             className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card"
                           />
                         </div>
+                        {errors.linkedinUrl && (
+                          <p role="alert" className="text-xs font-medium text-rose-500 mt-1">
+                            {errors.linkedinUrl.message}
+                          </p>
+                        )}
                       </div>
 
                       {/* Portfolio */}
@@ -962,6 +949,11 @@ export default function StudentOnboardingPage() {
                             className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card"
                           />
                         </div>
+                        {errors.portfolioUrl && (
+                          <p role="alert" className="text-xs font-medium text-rose-500 mt-1">
+                            {errors.portfolioUrl.message}
+                          </p>
+                        )}
                       </div>
 
                       {/* Resume */}
@@ -978,6 +970,11 @@ export default function StudentOnboardingPage() {
                             className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card"
                           />
                         </div>
+                        {errors.resumeUrl && (
+                          <p role="alert" className="text-xs font-medium text-rose-500 mt-1">
+                            {errors.resumeUrl.message}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </motion.div>

@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 
 import { FormField } from '@/components/ui/form-field'
+import { Input } from '@/components/ui/input'
 import { useSocialSignIn } from '@/lib/hooks/use-auth'
 import { loginSchema, type LoginInput } from '@/lib/schemas/auth.schema'
 import { CharactersScene, type CharacterSceneState } from './CharactersScene'
@@ -34,6 +35,11 @@ function GoogleIcon({ className = 'w-4 h-4' }: { className?: string }) {
   )
 }
 
+const DEFAULT_VALUES: LoginInput = {
+  name: '',
+  email: '',
+}
+
 export default function LoginPage() {
   const [state, setState] = useState<CharacterSceneState>({
     focusedField: 'none',
@@ -58,10 +64,7 @@ export default function LoginPage() {
     formState: { errors },
   } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
-    defaultValues: {
-      name: '',
-      email: '',
-    },
+    defaultValues: DEFAULT_VALUES,
   })
 
   const failWith = (message: string) => {
@@ -148,7 +151,7 @@ export default function LoginPage() {
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
                   {isSignUp && (
                     <FormField label="Name" htmlFor="name-input" error={errors.name?.message}>
-                      <input
+                      <Input
                         id="name-input"
                         type="text"
                         {...register('name')}
@@ -165,7 +168,7 @@ export default function LoginPage() {
 
                   {/* Email Field */}
                   <FormField label="Email" htmlFor="email-input" error={errors.email?.message}>
-                    <input
+                    <Input
                       id="email-input"
                       type="email"
                       {...register('email', {

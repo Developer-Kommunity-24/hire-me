@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { authClient } from '@/lib/auth/client'
 import { apiFetch } from '@/lib/api-client'
+import { type SelfAssignableRole } from '@/lib/schemas/auth.schema'
 import { ONBOARDING_QUERY_KEYS } from './use-onboarding'
 
 export interface SocialSignInOptions {
@@ -35,7 +36,7 @@ export function useSetUserRole() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (role: 'student' | 'recruiter') => {
+    mutationFn: async (role: SelfAssignableRole) => {
       const data = await apiFetch<{ user: unknown }>('/api/users/me/role', {
         method: 'PATCH',
         body: { role },
