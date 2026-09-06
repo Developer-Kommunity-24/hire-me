@@ -8,9 +8,9 @@ import { useForm } from 'react-hook-form'
 import { FormField } from '@/components/ui/form-field'
 import { Input } from '@/components/ui/input'
 import { useSocialSignIn } from '@/lib/hooks/use-auth'
+import { cn } from '@/lib/utils'
 import { loginSchema, type LoginInput } from '@/lib/schemas/auth.schema'
 import { CharactersScene, type CharacterSceneState } from './CharactersScene'
-import { sound } from './audio'
 
 function GoogleIcon({ className = 'w-4 h-4' }: { className?: string }) {
   return (
@@ -71,7 +71,6 @@ export default function LoginPage() {
     setIsRedirecting(false)
     setErrorMsg(message)
     setState((s) => ({ ...s, isError: true }))
-    sound.playError()
   }
 
   const onSubmit = () => {
@@ -82,7 +81,6 @@ export default function LoginPage() {
     setIsRedirecting(true)
     setErrorMsg('')
     setState((s) => ({ ...s, isError: false }))
-    sound.playPop(520)
 
     try {
       await socialSignInMutation.mutateAsync({
@@ -157,7 +155,6 @@ export default function LoginPage() {
                         {...register('name')}
                         onFocus={() => {
                           setState((s) => ({ ...s, focusedField: 'email' }))
-                          sound.playPop(380)
                         }}
                         onBlur={() => setState((s) => ({ ...s, focusedField: 'none' }))}
                         placeholder="Your full name"
@@ -175,21 +172,19 @@ export default function LoginPage() {
                         onChange: (e) => {
                           const val = e.target.value
                           setState((s) => ({ ...s, emailLength: val.length }))
-                          sound.playKeystroke(val.length)
                           setErrorMsg('')
                         },
                       })}
                       onFocus={() => {
                         setState((s) => ({ ...s, focusedField: 'email' }))
-                        sound.playPop(420)
                       }}
                       onBlur={() => setState((s) => ({ ...s, focusedField: 'none' }))}
                       placeholder="Enter your email"
-                      className={`w-full px-3.5 py-2.5 rounded-xl border text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none transition bg-zinc-50/40 hover:bg-zinc-50 ${
-                        state.focusedField === 'email'
-                          ? 'border-zinc-900 ring-2 ring-zinc-900/10 bg-white'
-                          : 'border-zinc-200'
-                      }`}
+                      className={cn(
+                        'w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none transition bg-zinc-50/40 hover:bg-zinc-50',
+                        state.focusedField === 'email' &&
+                          'border-zinc-900 ring-2 ring-zinc-900/10 bg-white',
+                      )}
                     />
                   </FormField>
 
@@ -244,7 +239,6 @@ export default function LoginPage() {
                         id="toggle-to-login-btn"
                         onClick={() => {
                           setIsSignUp(false)
-                          sound.playPop(400)
                         }}
                         className="font-semibold text-zinc-900 hover:underline cursor-pointer ml-1"
                       >
@@ -259,7 +253,6 @@ export default function LoginPage() {
                         id="toggle-to-signup-btn"
                         onClick={() => {
                           setIsSignUp(true)
-                          sound.playPop(400)
                         }}
                         className="font-semibold text-zinc-900 hover:underline cursor-pointer ml-1"
                       >
