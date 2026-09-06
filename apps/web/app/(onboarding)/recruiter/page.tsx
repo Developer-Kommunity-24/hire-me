@@ -1,9 +1,17 @@
 'use client'
 
+import { zodResolver } from '@hookform/resolvers/zod'
 import { ArrowLeft, ArrowRight, Building2, Globe, Mail, MapPin, Sparkles, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { useForm } from 'react-hook-form'
 import confetti from 'canvas-confetti'
+
+import { useSaveRecruiterProfile } from '@/lib/hooks/use-onboarding'
+import {
+  recruiterOnboardingSchema,
+  type RecruiterOnboardingInput,
+} from '@/lib/schemas/recruiter-onboarding.schema'
 
 export interface RecruiterProfileData {
   companyName: string
@@ -14,54 +22,50 @@ export interface RecruiterProfileData {
 
 export default function RecruiterOnboardingPage() {
   const router = useRouter()
-
-  const [companyName, setCompanyName] = useState('')
-  const [companyMail, setCompanyMail] = useState('')
-  const [companyUrl, setCompanyUrl] = useState('')
-  const [headquartersLocation, setHeadquartersLocation] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
   const [isCompleted, setIsCompleted] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const saveRecruiterMutation = useSaveRecruiterProfile()
 
-    if (!companyName.trim()) {
-      setErrorMsg('Please enter your company name.')
-      return
-    }
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<RecruiterOnboardingInput>({
+    resolver: zodResolver(recruiterOnboardingSchema),
+    defaultValues: {
+      companyName: '',
+      companyMail: '',
+      companyUrl: '',
+      headquartersLocation: '',
+    },
+  })
 
-    if (!companyMail.trim()) {
-      setErrorMsg('Please enter your company work email.')
-      return
-    }
-
+  const onSubmit = async (data: RecruiterOnboardingInput) => {
     setErrorMsg('')
-
-    const recruiterProfile: RecruiterProfileData = {
-      companyName: companyName.trim(),
-      companyMail: companyMail.trim(),
-      companyUrl: companyUrl.trim(),
-      headquartersLocation: headquartersLocation.trim(),
-    }
-
-    localStorage.setItem('recruiter_profile', JSON.stringify(recruiterProfile))
-    localStorage.setItem('user_role', 'recruiter')
-    setIsCompleted(true)
-
     try {
-      confetti({
-        particleCount: 90,
-        spread: 75,
-        origin: { y: 0.6 },
-        colors: ['#00C26D', '#34D399', '#10B981', '#059669', '#3B82F6'],
-      })
-    } catch {
-      // Confetti fallback
-    }
+      await saveRecruiterMutation.mutateAsync(data)
+      setIsCompleted(true)
 
-    setTimeout(() => {
-      router.push('/landing')
-    }, 1400)
+      try {
+        confetti({
+          particleCount: 90,
+          spread: 75,
+          origin: { y: 0.6 },
+          colors: ['#00C26D', '#34D399', '#10B981', '#059669', '#3B82F6'],
+        })
+      } catch {
+        // Confetti fallback
+      }
+
+      setTimeout(() => {
+        router.push('/landing')
+      }, 1400)
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setErrorMsg(err.message)
+      }
+    }
   }
 
   const handleBack = () => {
@@ -207,7 +211,7 @@ export default function RecruiterOnboardingPage() {
                   <g transform="translate(102, 147)">
                     <circle cx="9" cy="9" r="8" fill="var(--brand-green)" />
                     <circle cx="9" cy="7" r="3.2" fill="#FFFFFF" />
-                    <path d="M 4,14 C 4,11 6.5,10 9,10 C 11.5,10 14,14 14,14 Z" fill="#FFFFFF" />
+                    <path d="M 4,14 C 4,11 6.5,10 9,10 C 11.5,10 14,11 14,14 Z" fill="#FFFFFF" />
                     <rect x="24" y="4" width="80" height="4" rx="2" fill="#94A3B8" />
                     <rect x="24" y="11" width="55" height="3" rx="1.5" fill="var(--border-muted)" />
                   </g>
@@ -216,7 +220,7 @@ export default function RecruiterOnboardingPage() {
                   <g transform="translate(102, 172)">
                     <circle cx="9" cy="9" r="8" fill="var(--brand-green)" />
                     <circle cx="9" cy="7" r="3.2" fill="#FFFFFF" />
-                    <path d="M 4,14 C 4,11 6.5,10 9,10 C 11.5,10 14,14 14,14 Z" fill="#FFFFFF" />
+                    <path d="M 4,14 C 4,11 6.5,10 9,10 C 11.5,10 14,11 14,14 Z" fill="#FFFFFF" />
                     <rect x="24" y="4" width="65" height="4" rx="2" fill="#94A3B8" />
                     <rect x="24" y="11" width="40" height="3" rx="1.5" fill="var(--border-muted)" />
                   </g>
@@ -304,7 +308,8 @@ export default function RecruiterOnboardingPage() {
 
             {/* 4 Form Fields Form */}
             <form
-              onSubmit={handleSubmit}
+              onSubmit={handleSubmit(onSubmit)}
+              noValidate
               className="flex-1 py-3 flex flex-col justify-center space-y-4"
             >
               {/* Field 1: Company Name */}
@@ -316,13 +321,16 @@ export default function RecruiterOnboardingPage() {
                   <Building2 className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
                   <input
                     type="text"
-                    required
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
+                    {...register('companyName')}
                     placeholder="e.g. Acme Innovations Inc."
                     className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
                   />
                 </div>
+                {errors.companyName && (
+                  <p role="alert" className="text-xs font-medium text-rose-500 mt-1">
+                    {errors.companyName.message}
+                  </p>
+                )}
               </div>
 
               {/* Field 2: Company Work Email */}
@@ -334,16 +342,20 @@ export default function RecruiterOnboardingPage() {
                   <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
                   <input
                     type="email"
-                    required
-                    value={companyMail}
-                    onChange={(e) => setCompanyMail(e.target.value)}
+                    {...register('companyMail')}
                     placeholder="recruiting@company.com"
                     className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
                   />
                 </div>
-                <p className="text-[11px] text-text-muted mt-1">
-                  Official corporate email for candidate correspondence and verification.
-                </p>
+                {errors.companyMail ? (
+                  <p role="alert" className="text-xs font-medium text-rose-500 mt-1">
+                    {errors.companyMail.message}
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-text-muted mt-1">
+                    Official corporate email for candidate correspondence and verification.
+                  </p>
+                )}
               </div>
 
               {/* Field 3: Company Website URL */}
@@ -355,12 +367,16 @@ export default function RecruiterOnboardingPage() {
                   <Globe className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
                   <input
                     type="url"
-                    value={companyUrl}
-                    onChange={(e) => setCompanyUrl(e.target.value)}
+                    {...register('companyUrl')}
                     placeholder="https://acme.example.com"
                     className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
                   />
                 </div>
+                {errors.companyUrl && (
+                  <p role="alert" className="text-xs font-medium text-rose-500 mt-1">
+                    {errors.companyUrl.message}
+                  </p>
+                )}
               </div>
 
               {/* Field 4: Headquarters Location */}
@@ -372,12 +388,16 @@ export default function RecruiterOnboardingPage() {
                   <MapPin className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
                   <input
                     type="text"
-                    value={headquartersLocation}
-                    onChange={(e) => setHeadquartersLocation(e.target.value)}
+                    {...register('headquartersLocation')}
                     placeholder="e.g. Bengaluru, India or San Francisco, CA"
                     className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
                   />
                 </div>
+                {errors.headquartersLocation && (
+                  <p role="alert" className="text-xs font-medium text-rose-500 mt-1">
+                    {errors.headquartersLocation.message}
+                  </p>
+                )}
               </div>
 
               {/* Bottom Actions Bar */}
@@ -395,8 +415,8 @@ export default function RecruiterOnboardingPage() {
                 {/* Complete Setup Button */}
                 <button
                   type="submit"
-                  disabled={isCompleted}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-action-dark hover:bg-black text-white font-semibold text-xs sm:text-sm transition shadow-md hover:shadow-lg cursor-pointer active:scale-[0.98]"
+                  disabled={isCompleted || saveRecruiterMutation.isPending}
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-action-dark hover:bg-black text-white font-semibold text-xs sm:text-sm transition shadow-md hover:shadow-lg cursor-pointer active:scale-[0.98] disabled:opacity-70"
                 >
                   <span>{isCompleted ? 'Profile Created!' : 'Complete Setup'}</span>
                   {isCompleted ? (

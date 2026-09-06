@@ -4,7 +4,8 @@ import { motion } from 'motion/react'
 import { ArrowRight, Check } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
-import { ApiError, apiFetch } from '@/lib/api-client'
+import { ApiError } from '@/lib/api-client'
+import { useSetUserRole } from '@/lib/hooks/use-auth'
 
 export default function RoleSelectPage() {
   const router = useRouter()
@@ -37,6 +38,8 @@ export default function RoleSelectPage() {
     return () => clearInterval(interval)
   }, [])
 
+  const setRoleMutation = useSetUserRole()
+
   /**
    * Persists the chosen role, then moves on to the matching dashboard.
    *
@@ -51,7 +54,7 @@ export default function RoleSelectPage() {
     setErrorMsg('')
 
     try {
-      await apiFetch('/api/users/me/role', { method: 'PATCH', body: { role } })
+      await setRoleMutation.mutateAsync(role)
     } catch (error) {
       // An expired session cannot be recovered here — send them back to sign in.
       if (error instanceof ApiError && error.status === 401) {

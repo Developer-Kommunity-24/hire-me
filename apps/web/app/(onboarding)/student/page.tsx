@@ -1,9 +1,18 @@
 'use client'
 
+import { zodResolver } from '@hookform/resolvers/zod'
+import confetti from 'canvas-confetti'
 import { motion, AnimatePresence } from 'motion/react'
 import { ArrowLeft, ArrowRight, Check, FileText, Globe, Plus, Sparkles, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
+import { useForm } from 'react-hook-form'
+
+import { useSaveStudentProfile } from '@/lib/hooks/use-onboarding'
+import {
+  studentCompleteOnboardingSchema,
+  type StudentOnboardingInput,
+} from '@/lib/schemas/student-onboarding.schema'
 
 function GithubIcon({ className = 'w-4 h-4' }: { className?: string }) {
   return (
@@ -29,33 +38,48 @@ export default function StudentOnboardingPage() {
   const router = useRouter()
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1)
   const [isCompleted, setIsCompleted] = useState(false)
-
-  // Step 1: Basic Details
-  const [fullName, setFullName] = useState('')
-  const [headline, setHeadline] = useState('')
-  const [bio, setBio] = useState('')
+  const [newSkillInput, setNewSkillInput] = useState('')
   const [step1Error, setStep1Error] = useState('')
-
-  // Step 2: Education
-  const [school, setSchool] = useState('')
-  const [degree, setDegree] = useState('')
-  const [graduationYear, setGraduationYear] = useState('2026')
-  const [gpa, setGpa] = useState('')
-  const [specialization, setSpecialization] = useState('')
   const [step2Error, setStep2Error] = useState('')
 
-  // Step 3: Skills & Experience
-  const [skills, setSkills] = useState<string[]>(['React', 'TypeScript', 'Next.js', 'Tailwind CSS'])
-  const [newSkillInput, setNewSkillInput] = useState('')
-  const [experienceRole, setExperienceRole] = useState('')
-  const [experienceCompany, setExperienceCompany] = useState('')
-  const [experienceSummary, setExperienceSummary] = useState('')
+  const saveStudentMutation = useSaveStudentProfile()
 
-  // Step 4: Links & Finish
-  const [githubUrl, setGithubUrl] = useState('')
-  const [linkedinUrl, setLinkedinUrl] = useState('')
-  const [portfolioUrl, setPortfolioUrl] = useState('')
-  const [resumeUrl, setResumeUrl] = useState('')
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    trigger,
+    formState: { errors },
+  } = useForm<StudentOnboardingInput>({
+    resolver: zodResolver(studentCompleteOnboardingSchema),
+    mode: 'onTouched',
+    defaultValues: {
+      fullName: '',
+      headline: '',
+      bio: '',
+      school: '',
+      degree: '',
+      graduationYear: '2026',
+      gpa: '',
+      specialization: '',
+      skills: ['React', 'TypeScript', 'Next.js', 'Tailwind CSS'],
+      experienceRole: '',
+      experienceCompany: '',
+      experienceSummary: '',
+      githubUrl: '',
+      linkedinUrl: '',
+      portfolioUrl: '',
+      resumeUrl: '',
+    },
+  })
+
+  const fullName = watch('fullName') || ''
+  const headline = watch('headline') || ''
+  const bio = watch('bio') || ''
+  const school = watch('school') || ''
+  const degree = watch('degree') || ''
+  const skills = watch('skills') || []
 
   // Interactive Character Eye Tracking & Blinking
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
@@ -89,26 +113,56 @@ export default function StudentOnboardingPage() {
     const target = (skillToAdd || newSkillInput).trim()
     if (!target) return
     if (!skills.includes(target)) {
-      setSkills([...skills, target])
+      setValue('skills', [...skills, target], { shouldValidate: true })
     }
     setNewSkillInput('')
   }
 
   const handleRemoveSkill = (skillToRemove: string) => {
-    setSkills(skills.filter((s) => s !== skillToRemove))
+    setValue(
+      'skills',
+      skills.filter((s) => s !== skillToRemove),
+      { shouldValidate: true },
+    )
+  }
+
+  const onFinalSubmit = async (data: StudentOnboardingInput) => {
+    try {
+      await saveStudentMutation.mutateAsync(data)
+      setIsCompleted(true)
+
+      try {
+        confetti({
+          particleCount: 100,
+          spread: 80,
+          origin: { y: 0.6 },
+          colors: ['#00C26D', '#34D399', '#6366F1', '#3B82F6'],
+        })
+      } catch {
+        // Fallback
+      }
+
+      setTimeout(() => {
+        router.push('/landing')
+      }, 1400)
+    } catch {
+      // Error handled in mutation
+    }
   }
 
   // Stepper navigation
-  const handleNext = () => {
+  const handleNext = async () => {
     if (step === 1) {
-      if (!fullName.trim() || !headline.trim()) {
+      const valid = await trigger(['fullName', 'headline'])
+      if (!fullName.trim() || !headline.trim() || !valid) {
         setStep1Error('Please fill in your full name and headline.')
         return
       }
       setStep1Error('')
       setStep(2)
     } else if (step === 2) {
-      if (!school.trim() || !degree.trim()) {
+      const valid = await trigger(['school', 'degree'])
+      if (!school.trim() || !degree.trim() || !valid) {
         setStep2Error('Please provide your School/University and Degree.')
         return
       }
@@ -117,29 +171,7 @@ export default function StudentOnboardingPage() {
     } else if (step === 3) {
       setStep(4)
     } else if (step === 4) {
-      const studentProfile = {
-        name: fullName.trim(),
-        headline,
-        bio,
-        school,
-        degree,
-        graduationYear,
-        gpa,
-        specialization,
-        skills,
-        experienceRole,
-        experienceCompany,
-        experienceSummary,
-        githubUrl,
-        linkedinUrl,
-        portfolioUrl,
-        resumeUrl,
-      }
-      localStorage.setItem('student_profile', JSON.stringify(studentProfile))
-      setIsCompleted(true)
-      setTimeout(() => {
-        router.push('/student')
-      }, 1200)
+      void handleSubmit(onFinalSubmit)()
     }
   }
 
@@ -564,9 +596,12 @@ export default function StudentOnboardingPage() {
                       </p>
                     </div>
 
-                    {step1Error && (
-                      <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
-                        {step1Error}
+                    {(step1Error || errors.fullName || errors.headline) && (
+                      <div
+                        className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium"
+                        role="alert"
+                      >
+                        {step1Error || errors.fullName?.message || errors.headline?.message}
                       </div>
                     )}
 
@@ -577,8 +612,7 @@ export default function StudentOnboardingPage() {
                       </label>
                       <input
                         type="text"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
+                        {...register('fullName')}
                         placeholder="e.g. Alex Chen"
                         className="w-full px-3.5 py-2 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card"
                       />
@@ -597,8 +631,7 @@ export default function StudentOnboardingPage() {
                       <input
                         type="text"
                         maxLength={80}
-                        value={headline}
-                        onChange={(e) => setHeadline(e.target.value)}
+                        {...register('headline')}
                         placeholder="e.g. CS Student | Full-Stack Developer | Open to Internships"
                         className="w-full px-3.5 py-2 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card"
                       />
@@ -615,8 +648,7 @@ export default function StudentOnboardingPage() {
                       <textarea
                         rows={3}
                         maxLength={300}
-                        value={bio}
-                        onChange={(e) => setBio(e.target.value)}
+                        {...register('bio')}
                         placeholder="Tell recruiters a bit about yourself, your interests, and goals..."
                         className="w-full px-3.5 py-2 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card resize-none"
                       />
@@ -645,9 +677,12 @@ export default function StudentOnboardingPage() {
                       </p>
                     </div>
 
-                    {step2Error && (
-                      <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
-                        {step2Error}
+                    {(step2Error || errors.school || errors.degree) && (
+                      <div
+                        className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium"
+                        role="alert"
+                      >
+                        {step2Error || errors.school?.message || errors.degree?.message}
                       </div>
                     )}
 
@@ -658,8 +693,7 @@ export default function StudentOnboardingPage() {
                         </label>
                         <input
                           type="text"
-                          value={school}
-                          onChange={(e) => setSchool(e.target.value)}
+                          {...register('school')}
                           placeholder="e.g. Stanford University or MIT"
                           className="w-full px-3.5 py-2 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card"
                         />
@@ -672,8 +706,7 @@ export default function StudentOnboardingPage() {
                           </label>
                           <input
                             type="text"
-                            value={degree}
-                            onChange={(e) => setDegree(e.target.value)}
+                            {...register('degree')}
                             placeholder="e.g. B.S. Computer Science"
                             className="w-full px-3.5 py-2 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card"
                           />
@@ -684,8 +717,7 @@ export default function StudentOnboardingPage() {
                             Graduation Year <span className="text-red-500">*</span>
                           </label>
                           <select
-                            value={graduationYear}
-                            onChange={(e) => setGraduationYear(e.target.value)}
+                            {...register('graduationYear')}
                             className="w-full px-3.5 py-2 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card cursor-pointer"
                           >
                             {gradYearOptions.map((year) => (
@@ -704,8 +736,7 @@ export default function StudentOnboardingPage() {
                           </label>
                           <input
                             type="text"
-                            value={gpa}
-                            onChange={(e) => setGpa(e.target.value)}
+                            {...register('gpa')}
                             placeholder="e.g. 3.8 / 4.0"
                             className="w-full px-3.5 py-2 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card"
                           />
@@ -717,8 +748,7 @@ export default function StudentOnboardingPage() {
                           </label>
                           <input
                             type="text"
-                            value={specialization}
-                            onChange={(e) => setSpecialization(e.target.value)}
+                            {...register('specialization')}
                             placeholder="e.g. AI / Machine Learning"
                             className="w-full px-3.5 py-2 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card"
                           />
@@ -827,15 +857,13 @@ export default function StudentOnboardingPage() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         <input
                           type="text"
-                          value={experienceRole}
-                          onChange={(e) => setExperienceRole(e.target.value)}
+                          {...register('experienceRole')}
                           placeholder="Role (e.g. Frontend Intern)"
                           className="w-full px-3 py-1.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs transition bg-card"
                         />
                         <input
                           type="text"
-                          value={experienceCompany}
-                          onChange={(e) => setExperienceCompany(e.target.value)}
+                          {...register('experienceCompany')}
                           placeholder="Company (e.g. DK24 Labs)"
                           className="w-full px-3 py-1.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs transition bg-card"
                         />
@@ -843,8 +871,7 @@ export default function StudentOnboardingPage() {
 
                       <input
                         type="text"
-                        value={experienceSummary}
-                        onChange={(e) => setExperienceSummary(e.target.value)}
+                        {...register('experienceSummary')}
                         placeholder="Brief summary of achievements or projects..."
                         className="w-full px-3 py-1.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs transition bg-card"
                       />
@@ -873,6 +900,21 @@ export default function StudentOnboardingPage() {
                       </p>
                     </div>
 
+                    {(errors.githubUrl ||
+                      errors.linkedinUrl ||
+                      errors.portfolioUrl ||
+                      errors.resumeUrl) && (
+                      <div
+                        className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium"
+                        role="alert"
+                      >
+                        {errors.githubUrl?.message ||
+                          errors.linkedinUrl?.message ||
+                          errors.portfolioUrl?.message ||
+                          errors.resumeUrl?.message}
+                      </div>
+                    )}
+
                     <div className="space-y-2.5">
                       {/* GitHub */}
                       <div>
@@ -883,8 +925,7 @@ export default function StudentOnboardingPage() {
                           <GithubIcon className="w-4 h-4 text-slate-400 absolute left-3" />
                           <input
                             type="url"
-                            value={githubUrl}
-                            onChange={(e) => setGithubUrl(e.target.value)}
+                            {...register('githubUrl')}
                             placeholder="https://github.com/yourusername"
                             className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card"
                           />
@@ -900,8 +941,7 @@ export default function StudentOnboardingPage() {
                           <LinkedinIcon className="w-4 h-4 text-linkedin absolute left-3" />
                           <input
                             type="url"
-                            value={linkedinUrl}
-                            onChange={(e) => setLinkedinUrl(e.target.value)}
+                            {...register('linkedinUrl')}
                             placeholder="https://linkedin.com/in/yourusername"
                             className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card"
                           />
@@ -917,8 +957,7 @@ export default function StudentOnboardingPage() {
                           <Globe className="w-4 h-4 text-slate-400 absolute left-3" />
                           <input
                             type="url"
-                            value={portfolioUrl}
-                            onChange={(e) => setPortfolioUrl(e.target.value)}
+                            {...register('portfolioUrl')}
                             placeholder="https://yourportfolio.dev"
                             className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card"
                           />
@@ -934,8 +973,7 @@ export default function StudentOnboardingPage() {
                           <FileText className="w-4 h-4 text-slate-400 absolute left-3" />
                           <input
                             type="url"
-                            value={resumeUrl}
-                            onChange={(e) => setResumeUrl(e.target.value)}
+                            {...register('resumeUrl')}
                             placeholder="https://drive.google.com/... or resume URL"
                             className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card"
                           />
@@ -963,8 +1001,8 @@ export default function StudentOnboardingPage() {
               <button
                 type="button"
                 onClick={handleNext}
-                disabled={isCompleted}
-                className="flex items-center gap-2 px-5 sm:px-6 py-2 rounded-xl bg-action-dark hover:bg-black text-white font-semibold text-xs sm:text-sm transition shadow-md hover:shadow-lg cursor-pointer active:scale-[0.98]"
+                disabled={isCompleted || saveStudentMutation.isPending}
+                className="flex items-center gap-2 px-5 sm:px-6 py-2 rounded-xl bg-action-dark hover:bg-black text-white font-semibold text-xs sm:text-sm transition shadow-md hover:shadow-lg cursor-pointer active:scale-[0.98] disabled:opacity-70"
               >
                 {step < 4 ? (
                   <>

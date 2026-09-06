@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '@/lib/api-client'
+import { Providers } from '@/app/providers'
 import RoleSelectPage from './page'
 
 // ==========================================
@@ -23,6 +24,10 @@ vi.mock('@/lib/api-client', async (importOriginal) => {
   return { ...actual, apiFetch: apiFetchMock }
 })
 
+function renderWithProviders(ui: React.ReactElement) {
+  return render(<Providers>{ui}</Providers>)
+}
+
 // ==========================================
 // HELPERS
 // ==========================================
@@ -42,7 +47,7 @@ describe('RoleSelectPage', () => {
   })
 
   it('persists the student role before navigating', async () => {
-    render(<RoleSelectPage />)
+    renderWithProviders(<RoleSelectPage />)
 
     clickRole('student')
 
@@ -56,7 +61,7 @@ describe('RoleSelectPage', () => {
   })
 
   it('persists the recruiter role before navigating', async () => {
-    render(<RoleSelectPage />)
+    renderWithProviders(<RoleSelectPage />)
 
     clickRole('recruiter')
 
@@ -72,7 +77,7 @@ describe('RoleSelectPage', () => {
   it('sends an expired session back to sign in', async () => {
     apiFetchMock.mockRejectedValue(new ApiError(401, 'Your session has expired.'))
 
-    render(<RoleSelectPage />)
+    renderWithProviders(<RoleSelectPage />)
     clickRole('student')
 
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/login'))
@@ -82,7 +87,7 @@ describe('RoleSelectPage', () => {
   it('reports a failed save and stays put', async () => {
     apiFetchMock.mockRejectedValue(new ApiError(500, 'Something went wrong'))
 
-    render(<RoleSelectPage />)
+    renderWithProviders(<RoleSelectPage />)
     clickRole('student')
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong')
@@ -92,7 +97,7 @@ describe('RoleSelectPage', () => {
   it('reports a network failure in plain language', async () => {
     apiFetchMock.mockRejectedValue(new TypeError('Failed to fetch'))
 
-    render(<RoleSelectPage />)
+    renderWithProviders(<RoleSelectPage />)
     clickRole('student')
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/check your connection/i)
