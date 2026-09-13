@@ -1,10 +1,16 @@
 'use client'
 
+import { zodResolver } from '@hookform/resolvers/zod'
 import { ArrowRight, Loader2 } from 'lucide-react'
-import { useState, type ChangeEvent, type FormEvent } from 'react'
-import { authClient } from '@/lib/auth/client'
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+
+import { FormField } from '@/components/ui/form-field'
+import { Input } from '@/components/ui/input'
+import { useSocialSignIn } from '@/lib/hooks/use-auth'
+import { cn } from '@/lib/utils'
+import { loginSchema, type LoginInput } from '@/lib/schemas/auth.schema'
 import { CharactersScene, type CharacterSceneState } from './CharactersScene'
-import { sound } from './audio'
 
 function GoogleIcon({ className = 'w-4 h-4' }: { className?: string }) {
   return (
@@ -29,6 +35,11 @@ function GoogleIcon({ className = 'w-4 h-4' }: { className?: string }) {
   )
 }
 
+const DEFAULT_VALUES: LoginInput = {
+  name: '',
+  email: '',
+}
+
 export default function LoginPage() {
   const [state, setState] = useState<CharacterSceneState>({
     focusedField: 'none',
@@ -42,32 +53,27 @@ export default function LoginPage() {
   })
 
   const [isSignUp, setIsSignUp] = useState(false)
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
   const [isRedirecting, setIsRedirecting] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
-  const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value
-    setEmail(val)
-    setState((s) => ({ ...s, emailLength: val.length }))
-    sound.playKeystroke(val.length)
-    setErrorMsg('')
-  }
+  const socialSignInMutation = useSocialSignIn()
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: DEFAULT_VALUES,
+  })
 
   const failWith = (message: string) => {
     setIsRedirecting(false)
     setErrorMsg(message)
     setState((s) => ({ ...s, isError: true }))
-    sound.playError()
   }
 
-  /**
-   * Email sign-in is not wired up yet — Google is the only provider. The fields
-   * stay in place for a later change, but submitting must never fake a session.
-   */
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault()
+  const onSubmit = () => {
     failWith("Email sign-in isn't available yet — continue with Google.")
   }
 
@@ -75,17 +81,16 @@ export default function LoginPage() {
     setIsRedirecting(true)
     setErrorMsg('')
     setState((s) => ({ ...s, isError: false }))
-    sound.playPop(520)
 
-    const { error } = await authClient.signIn.social({
-      provider: 'google',
-      callbackURL: '/role-select',
-    })
-
-    // On success the browser navigates to Google, so this only runs when the
-    // handshake could not be started at all.
-    if (error) {
-      failWith(error.message ?? 'Could not start Google sign-in. Please try again.')
+    try {
+      await socialSignInMutation.mutateAsync({
+        provider: 'google',
+        callbackURL: '/role-select',
+      })
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : 'Could not start Google sign-in. Please try again.'
+      failWith(message)
     }
   }
 
@@ -141,59 +146,47 @@ export default function LoginPage() {
                 </div>
 
                 {/* Form */}
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
                   {isSignUp && (
-                    <div className="space-y-1.5 text-left">
-                      <label
-                        htmlFor="name-input"
-                        className="text-xs font-semibold text-zinc-700 block"
-                      >
-                        Name
-                      </label>
-                      <input
+                    <FormField label="Name" htmlFor="name-input" error={errors.name?.message}>
+                      <Input
                         id="name-input"
                         type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        {...register('name')}
                         onFocus={() => {
                           setState((s) => ({ ...s, focusedField: 'email' }))
-                          sound.playPop(380)
                         }}
                         onBlur={() => setState((s) => ({ ...s, focusedField: 'none' }))}
                         placeholder="Your full name"
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition bg-zinc-50/50 hover:bg-zinc-50"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition bg-zinc-50/50 hover:bg-zinc-50 text-zinc-900"
                       />
-                    </div>
+                    </FormField>
                   )}
 
                   {/* Email Field */}
-                  <div className="space-y-1.5 text-left">
-                    <label
-                      htmlFor="email-input"
-                      className="text-xs font-semibold text-zinc-700 block"
-                    >
-                      Email
-                    </label>
-                    <div className="relative">
-                      <input
-                        id="email-input"
-                        type="email"
-                        value={email}
-                        onChange={handleEmailChange}
-                        onFocus={() => {
-                          setState((s) => ({ ...s, focusedField: 'email' }))
-                          sound.playPop(420)
-                        }}
-                        onBlur={() => setState((s) => ({ ...s, focusedField: 'none' }))}
-                        placeholder="Enter your email"
-                        className={`w-full px-3.5 py-2.5 rounded-xl border text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none transition bg-zinc-50/40 hover:bg-zinc-50 ${
-                          state.focusedField === 'email'
-                            ? 'border-zinc-900 ring-2 ring-zinc-900/10 bg-white'
-                            : 'border-zinc-200'
-                        }`}
-                      />
-                    </div>
-                  </div>
+                  <FormField label="Email" htmlFor="email-input" error={errors.email?.message}>
+                    <Input
+                      id="email-input"
+                      type="email"
+                      {...register('email', {
+                        onChange: (e) => {
+                          const val = e.target.value
+                          setState((s) => ({ ...s, emailLength: val.length }))
+                          setErrorMsg('')
+                        },
+                      })}
+                      onFocus={() => {
+                        setState((s) => ({ ...s, focusedField: 'email' }))
+                      }}
+                      onBlur={() => setState((s) => ({ ...s, focusedField: 'none' }))}
+                      placeholder="Enter your email"
+                      className={cn(
+                        'w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none transition bg-zinc-50/40 hover:bg-zinc-50',
+                        state.focusedField === 'email' &&
+                          'border-zinc-900 ring-2 ring-zinc-900/10 bg-white',
+                      )}
+                    />
+                  </FormField>
 
                   {/* Error banner */}
                   {errorMsg && (
@@ -246,7 +239,6 @@ export default function LoginPage() {
                         id="toggle-to-login-btn"
                         onClick={() => {
                           setIsSignUp(false)
-                          sound.playPop(400)
                         }}
                         className="font-semibold text-zinc-900 hover:underline cursor-pointer ml-1"
                       >
@@ -261,7 +253,6 @@ export default function LoginPage() {
                         id="toggle-to-signup-btn"
                         onClick={() => {
                           setIsSignUp(true)
-                          sound.playPop(400)
                         }}
                         className="font-semibold text-zinc-900 hover:underline cursor-pointer ml-1"
                       >
