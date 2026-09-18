@@ -468,7 +468,14 @@ export default function StudentOnboardingPage() {
                 {/* Step 2: Education */}
                 <div
                   className="flex flex-col items-center gap-1.5 cursor-pointer group shrink-0"
-                  onClick={() => step > 1 && setStep(2)}
+                  onClick={async () => {
+                    if (step > 1) {
+                      setStep(2)
+                    } else {
+                      const isValid = await trigger(['fullName', 'headline'])
+                      if (isValid) setStep(2)
+                    }
+                  }}
                 >
                   <div
                     className={`w-[34px] h-[34px] rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
@@ -505,7 +512,16 @@ export default function StudentOnboardingPage() {
                 {/* Step 3: Skills & Exp */}
                 <div
                   className="flex flex-col items-center gap-1.5 cursor-pointer group shrink-0"
-                  onClick={() => step > 2 && setStep(3)}
+                  onClick={async () => {
+                    if (step > 2) {
+                      setStep(3)
+                    } else {
+                      const valid1 = await trigger(['fullName', 'headline'])
+                      if (!valid1) return
+                      const valid2 = await trigger(['school', 'degree', 'graduationYear'])
+                      if (valid2) setStep(3)
+                    }
+                  }}
                 >
                   <div
                     className={`w-[34px] h-[34px] rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
@@ -542,7 +558,18 @@ export default function StudentOnboardingPage() {
                 {/* Step 4: Links & Finish */}
                 <div
                   className="flex flex-col items-center gap-1.5 cursor-pointer group shrink-0"
-                  onClick={() => step > 3 && setStep(4)}
+                  onClick={async () => {
+                    if (step > 3) {
+                      setStep(4)
+                    } else {
+                      const valid1 = await trigger(['fullName', 'headline'])
+                      if (!valid1) return
+                      const valid2 = await trigger(['school', 'degree', 'graduationYear'])
+                      if (!valid2) return
+                      const valid3 = await trigger(['skills'])
+                      if (valid3 && skills.length > 0) setStep(4)
+                    }
+                  }}
                 >
                   <div
                     className={`w-[34px] h-[34px] rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
