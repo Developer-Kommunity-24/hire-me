@@ -274,7 +274,17 @@ describe('GET /api/postings/mine', () => {
 })
 
 describe('PATCH /api/postings/:id', () => {
-  const id = '00000000-0000-0000-0000-000000000001'
+  const id = '11111111-1111-4111-8111-111111111111'
+
+  it('returns 404 for a non-UUID id without calling the controller', async () => {
+    const res = await request('/api/postings/not-a-uuid', {
+      method: 'PATCH',
+      body: JSON.stringify({ location: 'Bengaluru' }),
+    })
+
+    expect(res.status).toBe(404)
+    expect(updatePosting).not.toHaveBeenCalled()
+  })
 
   it('returns 200 with the updated posting', async () => {
     const updated = makePosting({ location: 'Bengaluru' })
@@ -300,6 +310,7 @@ describe('PATCH /api/postings/:id', () => {
       method: 'PATCH',
       body: JSON.stringify({ location: 'Bengaluru' }),
     })
+
     expect(res.status).toBe(404)
   })
 
@@ -308,6 +319,7 @@ describe('PATCH /api/postings/:id', () => {
       method: 'PATCH',
       body: JSON.stringify({}),
     })
+
     expect(res.status).toBe(400)
     expect(updatePosting).not.toHaveBeenCalled()
   })
@@ -315,8 +327,11 @@ describe('PATCH /api/postings/:id', () => {
   it('rejects a deadline before today with 400', async () => {
     const res = await request(`/api/postings/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify({ deadline: '2020-01-01' }),
+      body: JSON.stringify({
+        deadline: '2020-01-01',
+      }),
     })
+
     expect(res.status).toBe(400)
     expect(updatePosting).not.toHaveBeenCalled()
   })
@@ -328,13 +343,23 @@ describe('PATCH /api/postings/:id', () => {
       method: 'PATCH',
       body: JSON.stringify({ location: 'Bengaluru' }),
     })
+
     expect(res.status).toBe(403)
     expect(updatePosting).not.toHaveBeenCalled()
   })
 })
 
 describe('POST /api/postings/:id/close', () => {
-  const id = '00000000-0000-0000-0000-000000000001'
+  const id = '11111111-1111-4111-8111-111111111111'
+
+  it('returns 404 for a non-UUID id without calling the controller', async () => {
+    const res = await request('/api/postings/not-a-uuid/close', {
+      method: 'POST',
+    })
+
+    expect(res.status).toBe(404)
+    expect(closePosting).not.toHaveBeenCalled()
+  })
 
   it('returns 200 with status closed', async () => {
     const closed = makePosting({ status: 'closed' })

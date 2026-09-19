@@ -17,6 +17,8 @@ import {
 import { buildPaginationMeta, PAGINATION_DEFAULTS } from '../utils/pagination.js'
 import { createPostingSchema, updatePostingSchema } from './postings.schemas.js'
 
+const uuidSchema = z.uuid()
+
 const listPostingsSchema = z.object({
   page: z
     .string()
@@ -110,12 +112,13 @@ postingsRouter.patch(
   requireRecruiter,
   zValidator('json', updatePostingSchema),
   async (c) => {
-    const updated = await updatePosting(
-      c.var.db,
-      c.req.param('id'),
-      c.var.recruiterId,
-      c.req.valid('json'),
-    )
+    const rawId = c.req.param('id')
+
+    if (!uuidSchema.safeParse(rawId).success) {
+      return c.json({ error: 'Posting not found' }, 404)
+    }
+
+    const updated = await updatePosting(c.var.db, rawId, c.var.recruiterId, c.req.valid('json'))
     if (!updated) {
       return c.json({ error: 'Posting not found' }, 404)
     }
@@ -124,7 +127,13 @@ postingsRouter.patch(
 )
 
 postingsRouter.post('/:id/close', requireAuth, requireRecruiter, async (c) => {
-  const closed = await closePosting(c.var.db, c.req.param('id'), c.var.recruiterId)
+  const rawId = c.req.param('id')
+
+  if (!uuidSchema.safeParse(rawId).success) {
+    return c.json({ error: 'Posting not found' }, 404)
+  }
+
+  const closed = await closePosting(c.var.db, rawId, c.var.recruiterId)
   if (!closed) {
     return c.json({ error: 'Posting not found' }, 404)
   }
@@ -133,15 +142,14 @@ postingsRouter.post('/:id/close', requireAuth, requireRecruiter, async (c) => {
 
 /** Registered last so parameterized routes don't swallow specific paths. */
 postingsRouter.get('/:id', async (c) => {
-  const id = c.req.param('id')
+  const rawId = c.req.param('id')
   const db = c.var.db
 
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-  if (!uuidRegex.test(id)) {
+  if (!uuidSchema.safeParse(rawId).success) {
     return c.json({ error: 'Posting not found' }, 404)
   }
 
-  const posting = await getPostingById(db, id)
+  const posting = await getPostingById(db, rawId)
   if (!posting) {
     return c.json({ error: 'Posting not found' }, 404)
   }
