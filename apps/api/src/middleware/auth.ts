@@ -2,6 +2,8 @@ import { createMiddleware } from 'hono/factory'
 import { env } from 'hono/adapter'
 import { createRemoteJWKSet, decodeJwt, errors, jwtVerify } from 'jose'
 import type { JWTVerifyGetKey } from 'jose'
+import { eq } from 'drizzle-orm'
+import { users, userRoleEnum } from '@repo/db'
 
 // ==========================================
 // TYPES
@@ -186,3 +188,65 @@ export function createAuthMiddleware(options: { resolveKeySet?: KeySetResolver }
 
 /** Rejects any request without a valid Neon Auth bearer token. */
 export const requireAuth = createAuthMiddleware()
+
+// ==========================================
+// STUDENT PROFILE / ROLE AUTH
+// ==========================================
+
+export type UserRole = (typeof userRoleEnum.enumValues)[number]
+
+export interface AuthedUser {
+  id: string
+  fullName: string | null
+  email: string
+  role: UserRole
+}
+
+declare module 'hono' {
+  interface ContextVariableMap {
+    user: AuthedUser
+  }
+}
+
+/**
+ * Hono middleware that checks the caller is a student.
+ *  - Expects `requireAuth` to have already run (reads `authUser` from context).
+ *  - 401 if the user does not exist in the database.
+ *  - 403 if the user exists but does not have the `student` role.
+ * On success, sets `user` on the context for downstream handlers.
+ *
+ * Usage: `router.use('*', requireAuth, requireStudentRole())`
+ */
+export function requireStudentRole() {
+  return createMiddleware<{
+    Bindings: AuthBindings & { DATABASE_URL: string }
+    Variables: AuthVariables & { user: AuthedUser }
+  }>(async (c, next) => {
+    const authUser = c.get('authUser')
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = (c as any).var?.db
+    if (!db) {
+      return c.json({ error: 'Internal Server Error', message: 'Database not available.' }, 500)
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [user] = await (db as any).select().from(users).where(eq(users.id, authUser.id)).limit(1)
+
+    if (!user) {
+      return c.json({ error: 'Unauthorized', message: 'User record not found.' }, 401)
+    }
+
+    if (!user.roles.includes('student')) {
+      return c.json({ error: 'Forbidden', message: 'Only students can access this resource.' }, 403)
+    }
+
+    c.set('user', {
+      id: user.id,
+      fullName: user.fullName,
+      email: user.email,
+      role: 'student',
+    })
+
+    await next()
+  })
+}
