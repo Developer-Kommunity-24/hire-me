@@ -2,15 +2,22 @@ import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import type { DbVariables } from '../middleware/db.js'
-import { listActivePostings, getPostingById } from '../controllers/postings.controller.js'
+import type { AuthVariables } from '../middleware/auth.js'
+import { requireAuth } from '../middleware/auth.js'
+import { requireRecruiter } from '../middleware/requireRecruiter.js'
+import { requireRecruiterOrAdmin } from '../middleware/requireRecruiterOrAdmin.js'
+import {
+  listActivePostings,
+  getPostingById,
+  createPosting,
+  listOwnPostings,
+  updatePosting,
+  closePosting,
+} from '../controllers/postings.controller.js'
 import { buildPaginationMeta, PAGINATION_DEFAULTS } from '../utils/pagination.js'
-
-// ==========================================
-// QUERY PARAM SCHEMAS
-// ==========================================
+import { createPostingSchema, updatePostingSchema } from './postings.schemas.js'
 
 const listPostingsSchema = z.object({
-  // Pagination
   page: z
     .string()
     .optional()
@@ -22,10 +29,8 @@ const listPostingsSchema = z.object({
       Math.min(PAGINATION_DEFAULTS.maxLimit, Math.max(1, parseInt(v ?? '20', 10) || 20)),
     ),
 
-  // Text search
   q: z.string().optional(),
 
-  // Array filter: ?stack=react&stack=typescript
   stack: z
     .union([z.string(), z.array(z.string())])
     .optional()
@@ -34,14 +39,11 @@ const listPostingsSchema = z.object({
       return Array.isArray(v) ? v : [v]
     }),
 
-  // Enum filters
   employmentType: z.enum(['internship', 'full_time', 'part_time', 'contract']).optional(),
   workArrangement: z.enum(['in_person', 'remote', 'hybrid']).optional(),
 
-  // Partial-match filters
   location: z.string().optional(),
 
-  // Date range (ISO 8601 date strings)
   deadlineBefore: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'must be YYYY-MM-DD')
@@ -51,36 +53,15 @@ const listPostingsSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'must be YYYY-MM-DD')
     .optional(),
 
-  // Sorting
   sortBy: z.enum(['createdAt', 'deadline', 'title']).optional().default('createdAt'),
   order: z.enum(['asc', 'desc']).optional().default('desc'),
 })
 
-// ==========================================
-// ROUTER
-// ==========================================
-
 export const postingsRouter = new Hono<{
   Bindings: { DATABASE_URL: string }
-  Variables: DbVariables
+  Variables: DbVariables & AuthVariables & { recruiterId: string }
 }>()
 
-/**
- * GET /api/postings
- * Returns a paginated list of active job postings with optional filters.
- *
- * Query params:
- *   page, limit         — pagination (default: 1, 20; max limit: 100)
- *   q                   — text search (title + description, case-insensitive)
- *   stack               — repeatable tag filter (e.g. ?stack=react&stack=ts)
- *   employmentType      — internship | full_time | part_time | contract
- *   workArrangement     — in_person | remote | hybrid
- *   location            — partial location match
- *   deadlineBefore      — YYYY-MM-DD upper bound on deadline
- *   deadlineAfter       — YYYY-MM-DD lower bound on deadline
- *   sortBy              — createdAt | deadline | title  (default: createdAt)
- *   order               — asc | desc  (default: desc)
- */
 postingsRouter.get('/', zValidator('query', listPostingsSchema), async (c) => {
   const query = c.req.valid('query')
   const db = c.var.db
@@ -104,16 +85,57 @@ postingsRouter.get('/', zValidator('query', listPostingsSchema), async (c) => {
   return c.json({ data: rows, meta })
 })
 
-/**
- * GET /api/postings/:id
- * Returns full details for a single active posting.
- * Responds with 404 if the posting doesn't exist, is closed, or is expired.
- */
+/** Admins must provide the recruiter they are creating for. */
+postingsRouter.post(
+  '/',
+  requireAuth,
+  zValidator('json', createPostingSchema),
+  requireRecruiterOrAdmin,
+  async (c) => {
+    const { onBehalfOfRecruiterId: _onBehalfOfRecruiterId, ...input } = c.req.valid('json')
+    const posting = await createPosting(c.var.db, c.var.recruiterId, input)
+    return c.json({ data: posting }, 201)
+  },
+)
+
+/** Registered before '/:id' so "mine" is not treated as a posting ID. */
+postingsRouter.get('/mine', requireAuth, requireRecruiter, async (c) => {
+  const rows = await listOwnPostings(c.var.db, c.var.recruiterId)
+  return c.json({ data: rows })
+})
+
+postingsRouter.patch(
+  '/:id',
+  requireAuth,
+  requireRecruiter,
+  zValidator('json', updatePostingSchema),
+  async (c) => {
+    const updated = await updatePosting(
+      c.var.db,
+      c.req.param('id'),
+      c.var.recruiterId,
+      c.req.valid('json'),
+    )
+    if (!updated) {
+      return c.json({ error: 'Posting not found' }, 404)
+    }
+    return c.json({ data: updated })
+  },
+)
+
+postingsRouter.post('/:id/close', requireAuth, requireRecruiter, async (c) => {
+  const closed = await closePosting(c.var.db, c.req.param('id'), c.var.recruiterId)
+  if (!closed) {
+    return c.json({ error: 'Posting not found' }, 404)
+  }
+  return c.json({ data: closed })
+})
+
+/** Registered last so parameterized routes don't swallow specific paths. */
 postingsRouter.get('/:id', async (c) => {
   const id = c.req.param('id')
   const db = c.var.db
 
-  // Basic UUID format guard — avoids a DB round-trip for obviously bad IDs
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
   if (!uuidRegex.test(id)) {
     return c.json({ error: 'Posting not found' }, 404)
