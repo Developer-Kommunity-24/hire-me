@@ -1,6 +1,6 @@
 import { createMiddleware } from 'hono/factory'
-import { createDb } from '@repo/db'
 import type { Database } from '@repo/db'
+import { createDb } from '@repo/db'
 import { env } from 'hono/adapter'
 
 /**

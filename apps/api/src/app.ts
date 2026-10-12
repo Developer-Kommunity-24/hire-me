@@ -4,6 +4,7 @@ import { env } from 'hono/adapter'
 import { logger } from 'hono/logger'
 import { dbMiddleware } from './middleware/db.js'
 import { postingsRouter } from './routes/postings.js'
+import { studentRouter } from './routes/student.js'
 import { usersRouter } from './routes/users.js'
 import { clubMembersRouter } from './routes/club-members.js'
 
@@ -22,7 +23,7 @@ app.use(
   '*',
   cors({
     origin: (_origin, c) => env<{ WEB_ORIGIN?: string }>(c).WEB_ORIGIN ?? 'http://localhost:3000',
-    allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowHeaders: ['authorization', 'content-type'],
     maxAge: 86400,
   }),
@@ -36,6 +37,7 @@ app.get('/api/hello', (c) => c.json({ message: 'Hello from Hono' }))
 
 // Student job discovery
 app.route('/api/postings', postingsRouter)
+app.route('/api/student', studentRouter)
 
 // Authenticated user record and role selection
 app.route('/api/users', usersRouter)
