@@ -235,7 +235,7 @@ export default function ExperienceEditSection({
 
   const handleAddExperience = () => {
     const newExp: Experience = {
-      id: `exp-${Date.now()}`,
+      id: `exp-${crypto.randomUUID()}`,
       title: '',
       company: '',
       location: '',
