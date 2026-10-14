@@ -23,12 +23,7 @@ export const requireCoreAdmin = createMiddleware<{
   const [adminUser] = await db
     .select({ id: users.id })
     .from(users)
-    .where(
-      and(
-        eq(users.id, authUser.id),
-        sql`${users.roles} @> ARRAY['core_admin']::user_role[]`,
-      ),
-    )
+    .where(and(eq(users.id, authUser.id), sql`${users.roles} @> ARRAY['core_admin']::user_role[]`))
     .limit(1)
 
   if (!adminUser) {
