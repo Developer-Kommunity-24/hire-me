@@ -7,6 +7,7 @@ import { postingsRouter } from './routes/postings.js'
 import { usersRouter } from './routes/users.js'
 import { clubMembersRouter } from './routes/club-members.js'
 import { recruitersRouter } from './routes/recruiters.js'
+import { adminRouter } from './routes/admin.js'
 
 const app = new Hono<{
   Bindings: { DATABASE_URL: string; NEON_AUTH_BASE_URL: string; WEB_ORIGIN: string }
@@ -46,6 +47,9 @@ app.route('/api/clubs/members', clubMembersRouter)
 
 // Recruiter onboarding and company profile management
 app.route('/api/recruiters', recruitersRouter)
+
+// Core-admin role administration
+app.route('/api/admin', adminRouter)
 
 export { app }
 export type AppType = typeof app
