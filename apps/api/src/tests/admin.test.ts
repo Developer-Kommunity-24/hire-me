@@ -43,16 +43,24 @@ vi.mock('../middleware/core-admin.ts', () => ({
 vi.mock('../controllers/admin.controller.ts', () => ({
   appointClubAdmin: vi.fn(),
   appointCoreAdmin: vi.fn(),
+  createClub: vi.fn(),
+  deactivateClub: vi.fn(),
+  listClubs: vi.fn(),
   removeClubAdmin: vi.fn(),
   removeCoreAdmin: vi.fn(),
+  updateClub: vi.fn(),
 }))
 
 import { app } from '../app.js'
 import {
   appointClubAdmin,
   appointCoreAdmin,
+  createClub,
+  deactivateClub,
+  listClubs,
   removeClubAdmin,
   removeCoreAdmin,
+  updateClub,
 } from '../controllers/admin.controller.js'
 
 const targetUserId = '22222222-2222-4222-8222-222222222222'
@@ -258,5 +266,137 @@ describe('Club-admin role API', () => {
     })
 
     expect(res.status).toBe(404)
+  })
+})
+
+describe('Club management API', () => {
+  const clubId = '33333333-3333-4333-8333-333333333333'
+  const club = {
+    id: clubId,
+    name: 'Google Developer Student Club',
+    slug: 'gdsc',
+    isActive: true,
+    createdAt: new Date('2025-01-01T00:00:00Z'),
+  }
+
+  it('requires the caller to be a core admin', async () => {
+    middlewareState.coreAdmin = false
+
+    const res = await request('/api/admin/clubs')
+
+    expect(res.status).toBe(403)
+    expect(listClubs).not.toHaveBeenCalled()
+  })
+
+  it('lists active and inactive clubs', async () => {
+    vi.mocked(listClubs).mockResolvedValue({
+      ok: true,
+      clubs: [club, { ...club, id: '44444444-4444-4444-8444-444444444444', isActive: false }],
+    })
+
+    const res = await request('/api/admin/clubs')
+
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toMatchObject({ data: { length: 2 } })
+  })
+
+  it('creates a club', async () => {
+    vi.mocked(createClub).mockResolvedValue({ ok: true, club })
+
+    const res = await request('/api/admin/clubs', {
+      method: 'POST',
+      body: JSON.stringify({ name: ' Google Developer Student Club ', slug: 'GDSC' }),
+    })
+
+    expect(res.status).toBe(201)
+    await expect(res.json()).resolves.toMatchObject({ data: { id: clubId, slug: 'gdsc' } })
+    expect(createClub).toHaveBeenCalledWith(expect.anything(), {
+      name: 'Google Developer Student Club',
+      slug: 'gdsc',
+    })
+  })
+
+  it.each([
+    ['duplicate_name', 'Club name already exists'],
+    ['duplicate_slug', 'Club slug already exists'],
+  ] as const)('returns 409 for %s', async (reason, message) => {
+    vi.mocked(createClub).mockResolvedValue({ ok: false, reason })
+
+    const res = await request('/api/admin/clubs', {
+      method: 'POST',
+      body: JSON.stringify({ name: club.name, slug: club.slug }),
+    })
+
+    expect(res.status).toBe(409)
+    await expect(res.json()).resolves.toEqual({ error: message })
+  })
+
+  it('updates a club name', async () => {
+    vi.mocked(updateClub).mockResolvedValue({
+      ok: true,
+      club: { ...club, name: 'Updated Club' },
+    })
+
+    const res = await request(`/api/admin/clubs/${clubId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name: ' Updated Club ' }),
+    })
+
+    expect(res.status).toBe(200)
+    expect(updateClub).toHaveBeenCalledWith(expect.anything(), clubId, { name: 'Updated Club' })
+  })
+
+  it('updates a club slug', async () => {
+    vi.mocked(updateClub).mockResolvedValue({
+      ok: true,
+      club: { ...club, slug: 'updated-club' },
+    })
+
+    const res = await request(`/api/admin/clubs/${clubId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ slug: 'UPDATED-CLUB' }),
+    })
+
+    expect(res.status).toBe(200)
+    expect(updateClub).toHaveBeenCalledWith(expect.anything(), clubId, { slug: 'updated-club' })
+  })
+
+  it('returns 404 when updating a missing club', async () => {
+    vi.mocked(updateClub).mockResolvedValue({ ok: false, reason: 'not_found' })
+
+    const res = await request(`/api/admin/clubs/${clubId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name: 'Missing Club' }),
+    })
+
+    expect(res.status).toBe(404)
+  })
+
+  it('deactivates a club', async () => {
+    vi.mocked(deactivateClub).mockResolvedValue({
+      ok: true,
+      club: { ...club, isActive: false },
+    })
+
+    const res = await request(`/api/admin/clubs/${clubId}`, { method: 'DELETE' })
+
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toMatchObject({ data: { isActive: false } })
+    expect(deactivateClub).toHaveBeenCalledWith(expect.anything(), clubId)
+  })
+
+  it('returns 409 when deactivating an already inactive club', async () => {
+    vi.mocked(deactivateClub).mockResolvedValue({ ok: false, reason: 'already_inactive' })
+
+    const res = await request(`/api/admin/clubs/${clubId}`, { method: 'DELETE' })
+
+    expect(res.status).toBe(409)
+  })
+
+  it('returns 404 for an invalid club id', async () => {
+    const res = await request('/api/admin/clubs/not-a-uuid', { method: 'PATCH', body: '{}' })
+
+    expect(res.status).toBe(404)
+    expect(updateClub).not.toHaveBeenCalled()
   })
 })

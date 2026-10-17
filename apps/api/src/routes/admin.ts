@@ -4,8 +4,12 @@ import { z } from 'zod'
 import {
   appointClubAdmin,
   appointCoreAdmin,
+  createClub,
+  deactivateClub,
+  listClubs,
   removeClubAdmin,
   removeCoreAdmin,
+  updateClub,
 } from '../controllers/admin.controller.js'
 import { requireAuth } from '../middleware/auth.js'
 import { requireCoreAdmin } from '../middleware/core-admin.js'
@@ -33,6 +37,32 @@ const appointClubAdminSchema = z.object({
   userId: z.uuid(),
   clubId: z.uuid(),
 })
+
+const createClubSchema = z.object({
+  name: z.string().trim().min(1, 'Club name is required').max(255),
+  slug: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must contain lowercase letters, numbers, and hyphens'),
+})
+
+const updateClubSchema = z
+  .object({
+    name: z.string().trim().min(1, 'Club name cannot be empty').max(255).optional(),
+    slug: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .regex(
+        /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+        'Slug must contain lowercase letters, numbers, and hyphens',
+      )
+      .optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'At least one field must be provided',
+  })
 
 const uuidSchema = z.uuid()
 
@@ -132,4 +162,95 @@ adminRouter.delete('/club-admins/:userId', async (c) => {
   }
 
   return c.json({ data: { user: result.user, clubAdmin: result.clubAdmin } })
+})
+
+/**
+ * GET /api/admin/clubs
+ *
+ * Lists every club, including inactive clubs, ordered by name.
+ */
+adminRouter.get('/clubs', async (c) => {
+  const result = await listClubs(c.var.db)
+  return c.json({ data: result.clubs })
+})
+
+/**
+ * POST /api/admin/clubs
+ *
+ * Creates an active club after normalizing and validating its name and slug.
+ */
+adminRouter.post('/clubs', zValidator('json', createClubSchema), async (c) => {
+  const result = await createClub(c.var.db, c.req.valid('json'))
+
+  if (!result.ok) {
+    return c.json(
+      { error: result.reason === 'duplicate_name' ? 'Club name already exists' : 'Club slug already exists' },
+      409,
+    )
+  }
+
+  return c.json({ data: result.club }, 201)
+})
+
+/**
+ * PATCH /api/admin/clubs/:id
+ *
+ * Updates either club field independently while preserving omitted fields.
+ */
+adminRouter.patch(
+  '/clubs/:id',
+  async (c, next) => {
+    if (!uuidSchema.safeParse(c.req.param('id')).success) {
+      return c.json({ error: 'Club not found' }, 404)
+    }
+
+    await next()
+  },
+  zValidator('json', updateClubSchema),
+  async (c) => {
+    const id = c.req.param('id')
+    const result = await updateClub(c.var.db, id, c.req.valid('json'))
+
+    if (!result.ok) {
+      if (result.reason === 'not_found') {
+        return c.json({ error: 'Club not found' }, 404)
+      }
+
+      return c.json(
+        {
+          error:
+            result.reason === 'duplicate_name'
+              ? 'Club name already exists'
+              : 'Club slug already exists',
+        },
+        409,
+      )
+    }
+
+    return c.json({ data: result.club })
+  },
+)
+
+/**
+ * DELETE /api/admin/clubs/:id
+ *
+ * Soft-deactivates a club and retains its database row.
+ */
+adminRouter.delete('/clubs/:id', async (c) => {
+  const id = c.req.param('id')
+
+  if (!uuidSchema.safeParse(id).success) {
+    return c.json({ error: 'Club not found' }, 404)
+  }
+
+  const result = await deactivateClub(c.var.db, id)
+
+  if (!result.ok) {
+    return c.json(
+      { error: result.reason === 'already_inactive' ? 'Club is already inactive' : 'Club not found' },
+      result.reason === 'already_inactive' ? 409 : 404,
+    )
+  }
+
+  return c.json({ data: result.club })
 })

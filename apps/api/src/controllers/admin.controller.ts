@@ -1,6 +1,6 @@
-import { eq } from 'drizzle-orm'
+import { and, asc, eq, ne } from 'drizzle-orm'
 import { clubAdmins, clubs, users } from '@repo/db'
-import type { ClubAdmin, Database, User } from '@repo/db'
+import type { Club, ClubAdmin, Database, User } from '@repo/db'
 
 // ==========================================
 // TYPES
@@ -17,6 +17,22 @@ export type ClubAdminWriteResult =
 export type ClubAdminRemovalResult =
   | { ok: true; user: User; clubAdmin: ClubAdmin }
   | { ok: false; reason: 'not_found' }
+
+export interface ClubInput {
+  name: string
+  slug: string
+}
+
+export interface ClubUpdateInput {
+  name?: string
+  slug?: string
+}
+
+export type ClubWriteResult =
+  | { ok: true; club: Club }
+  | { ok: false; reason: 'not_found' | 'duplicate_name' | 'duplicate_slug' }
+
+export type ClubListResult = { ok: true; clubs: Club[] }
 
 // ==========================================
 // WRITES
@@ -193,4 +209,179 @@ export async function removeClubAdmin(
   }
 
   return { ok: true, user: updated, clubAdmin: deleted }
+}
+
+// ==========================================
+// CLUB MANAGEMENT
+// ==========================================
+
+function classifyClubConstraintError(err: unknown): 'duplicate_name' | 'duplicate_slug' | null {
+  if (
+    typeof err === 'object' &&
+    err !== null &&
+    'message' in err &&
+    typeof (err as { message: unknown }).message === 'string'
+  ) {
+    const message = (err as { message: string }).message
+
+    if (message.includes('clubs_name_unique')) {
+      return 'duplicate_name'
+    }
+
+    if (message.includes('clubs_slug_unique')) {
+      return 'duplicate_slug'
+    }
+  }
+
+  return null
+}
+
+/**
+ * Lists all clubs, including inactive clubs, ordered by name ascending.
+ *
+ * @param db - Request-scoped Drizzle client.
+ * @returns All clubs ordered by their display name.
+ */
+export async function listClubs(db: Database): Promise<ClubListResult> {
+  const rows = await db.select().from(clubs).orderBy(asc(clubs.name))
+  return { ok: true, clubs: rows }
+}
+
+/**
+ * Creates a new active club with a unique name and slug.
+ *
+ * @param db - Request-scoped Drizzle client.
+ * @param input - Normalized club name and slug.
+ * @returns The created club or a duplicate-field error.
+ */
+export async function createClub(db: Database, input: ClubInput): Promise<ClubWriteResult> {
+  const [sameName] = await db.select({ id: clubs.id }).from(clubs).where(eq(clubs.name, input.name)).limit(1)
+
+  if (sameName) {
+    return { ok: false, reason: 'duplicate_name' }
+  }
+
+  const [sameSlug] = await db.select({ id: clubs.id }).from(clubs).where(eq(clubs.slug, input.slug)).limit(1)
+
+  if (sameSlug) {
+    return { ok: false, reason: 'duplicate_slug' }
+  }
+
+  try {
+    const [club] = await db.insert(clubs).values(input).returning()
+
+    if (!club) {
+      throw new Error('Failed to create club')
+    }
+
+    return { ok: true, club }
+  } catch (err) {
+    const reason = classifyClubConstraintError(err)
+
+    if (reason) {
+      return { ok: false, reason }
+    }
+
+    throw err
+  }
+}
+
+/**
+ * Updates one or both unique club fields while preserving omitted fields.
+ *
+ * @param db - Request-scoped Drizzle client.
+ * @param id - Club identifier.
+ * @param input - Normalized fields to update.
+ * @returns The updated club or a not-found/duplicate-field error.
+ */
+export async function updateClub(
+  db: Database,
+  id: string,
+  input: ClubUpdateInput,
+): Promise<ClubWriteResult> {
+  const [existing] = await db.select().from(clubs).where(eq(clubs.id, id)).limit(1)
+
+  if (!existing) {
+    return { ok: false, reason: 'not_found' }
+  }
+
+  if (input.name !== undefined) {
+    const [sameName] = await db
+      .select({ id: clubs.id })
+      .from(clubs)
+      .where(and(eq(clubs.name, input.name), ne(clubs.id, id)))
+      .limit(1)
+
+    if (sameName) {
+      return { ok: false, reason: 'duplicate_name' }
+    }
+  }
+
+  if (input.slug !== undefined) {
+    const [sameSlug] = await db
+      .select({ id: clubs.id })
+      .from(clubs)
+      .where(and(eq(clubs.slug, input.slug), ne(clubs.id, id)))
+      .limit(1)
+
+    if (sameSlug) {
+      return { ok: false, reason: 'duplicate_slug' }
+    }
+  }
+
+  try {
+    const [updated] = await db
+      .update(clubs)
+      .set(input)
+      .where(eq(clubs.id, id))
+      .returning()
+
+    if (!updated) {
+      return { ok: false, reason: 'not_found' }
+    }
+
+    return { ok: true, club: updated }
+  } catch (err) {
+    const reason = classifyClubConstraintError(err)
+
+    if (reason) {
+      return { ok: false, reason }
+    }
+
+    throw err
+  }
+}
+
+/**
+ * Soft-deactivates an existing active club without deleting its row.
+ *
+ * @param db - Request-scoped Drizzle client.
+ * @param id - Club identifier.
+ * @returns The deactivated club or a not-found/already-inactive error.
+ */
+export async function deactivateClub(
+  db: Database,
+  id: string,
+): Promise<{ ok: true; club: Club } | { ok: false; reason: 'not_found' | 'already_inactive' }> {
+  const [existing] = await db.select().from(clubs).where(eq(clubs.id, id)).limit(1)
+
+  if (!existing) {
+    return { ok: false, reason: 'not_found' }
+  }
+
+  if (!existing.isActive) {
+    return { ok: false, reason: 'already_inactive' }
+  }
+
+  const [updated] = await db
+    .update(clubs)
+    .set({ isActive: false })
+    .where(eq(clubs.id, id))
+    .returning()
+
+  if (!updated) {
+    return { ok: false, reason: 'not_found' }
+  }
+
+  return { ok: true, club: updated }
 }
