@@ -2,7 +2,7 @@
 
 class SoundEffects {
   private ctx: AudioContext | null = null
-  public enabled = true
+  public enabled = false
 
   private initCtx() {
     if (!this.ctx && typeof window !== 'undefined') {

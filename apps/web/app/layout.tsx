@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from 'next/font/google'
 import type { ReactNode } from 'react'
 
 import './globals.css'
+import { Providers } from './providers'
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -19,7 +20,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={plusJakartaSans.variable}>
       <body className="antialiased font-sans bg-white text-text-main min-h-screen flex flex-col">
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   )

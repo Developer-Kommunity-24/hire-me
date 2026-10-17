@@ -4,12 +4,14 @@ import { motion } from 'motion/react'
 import { ArrowRight, Check } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
-import { ApiError, apiFetch } from '@/lib/api-client'
+import { ApiError } from '@/lib/api-client'
+import { useSetUserRole } from '@/lib/hooks/use-auth'
+import { type SelfAssignableRole } from '@/lib/schemas/auth.schema'
 
 export default function RoleSelectPage() {
   const router = useRouter()
-  const [selectedRole, setSelectedRole] = useState<'student' | 'recruiter' | null>(null)
-  const [hoveredRole, setHoveredRole] = useState<'student' | 'recruiter' | null>(null)
+  const [selectedRole, setSelectedRole] = useState<SelfAssignableRole | null>(null)
+  const [hoveredRole, setHoveredRole] = useState<SelfAssignableRole | null>(null)
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
   const [blink, setBlink] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -37,13 +39,15 @@ export default function RoleSelectPage() {
     return () => clearInterval(interval)
   }, [])
 
+  const setRoleMutation = useSetUserRole()
+
   /**
    * Persists the chosen role, then moves on to the matching dashboard.
    *
    * The role is authorization state, so it lives in Postgres rather than
    * `localStorage` — navigation only happens once the API confirms the write.
    */
-  const handleSelect = async (role: 'student' | 'recruiter') => {
+  const handleSelect = async (role: SelfAssignableRole) => {
     if (isSaving) return
 
     setSelectedRole(role)
@@ -51,7 +55,7 @@ export default function RoleSelectPage() {
     setErrorMsg('')
 
     try {
-      await apiFetch('/api/users/me/role', { method: 'PATCH', body: { role } })
+      await setRoleMutation.mutateAsync(role)
     } catch (error) {
       // An expired session cannot be recovered here — send them back to sign in.
       if (error instanceof ApiError && error.status === 401) {
