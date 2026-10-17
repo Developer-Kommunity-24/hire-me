@@ -41,12 +41,19 @@ vi.mock('../middleware/core-admin.ts', () => ({
 }))
 
 vi.mock('../controllers/admin.controller.ts', () => ({
+  appointClubAdmin: vi.fn(),
   appointCoreAdmin: vi.fn(),
+  removeClubAdmin: vi.fn(),
   removeCoreAdmin: vi.fn(),
 }))
 
 import { app } from '../app.js'
-import { appointCoreAdmin, removeCoreAdmin } from '../controllers/admin.controller.js'
+import {
+  appointClubAdmin,
+  appointCoreAdmin,
+  removeClubAdmin,
+  removeCoreAdmin,
+} from '../controllers/admin.controller.js'
 
 const targetUserId = '22222222-2222-4222-8222-222222222222'
 
@@ -156,6 +163,97 @@ describe('Core-admin role API', () => {
     vi.mocked(removeCoreAdmin).mockResolvedValue({ ok: false, reason: 'not_found' })
 
     const res = await request(`/api/admin/core-admins/${targetUserId}`, {
+      method: 'DELETE',
+    })
+
+    expect(res.status).toBe(404)
+  })
+})
+
+describe('Club-admin role API', () => {
+  const clubId = '33333333-3333-4333-8333-333333333333'
+
+  it('requires the caller to be a core admin', async () => {
+    middlewareState.coreAdmin = false
+
+    const res = await request('/api/admin/club-admins', {
+      method: 'POST',
+      body: JSON.stringify({ userId: targetUserId, clubId }),
+    })
+
+    expect(res.status).toBe(403)
+    expect(appointClubAdmin).not.toHaveBeenCalled()
+  })
+
+  it('appoints a club admin and returns the assignment', async () => {
+    const user = makeUser({ roles: ['student', 'club_admin'] })
+    const clubAdmin = { userId: targetUserId, clubId }
+    vi.mocked(appointClubAdmin).mockResolvedValue({ ok: true, user, clubAdmin })
+
+    const res = await request('/api/admin/club-admins', {
+      method: 'POST',
+      body: JSON.stringify({ userId: targetUserId, clubId }),
+    })
+
+    expect(res.status).toBe(201)
+    await expect(res.json()).resolves.toMatchObject({
+      data: {
+        user: { id: targetUserId, roles: ['student', 'club_admin'] },
+        clubAdmin,
+      },
+    })
+    expect(appointClubAdmin).toHaveBeenCalledWith(expect.anything(), targetUserId, clubId)
+  })
+
+  it('returns 409 for a duplicate club-admin appointment', async () => {
+    vi.mocked(appointClubAdmin).mockResolvedValue({ ok: false, reason: 'already_assigned' })
+
+    const res = await request('/api/admin/club-admins', {
+      method: 'POST',
+      body: JSON.stringify({ userId: targetUserId, clubId }),
+    })
+
+    expect(res.status).toBe(409)
+  })
+
+  it.each([
+    ['user_not_found', 'User not found'],
+    ['club_not_found', 'Club not found'],
+  ] as const)('returns 404 when %s', async (reason, message) => {
+    vi.mocked(appointClubAdmin).mockResolvedValue({ ok: false, reason })
+
+    const res = await request('/api/admin/club-admins', {
+      method: 'POST',
+      body: JSON.stringify({ userId: targetUserId, clubId }),
+    })
+
+    expect(res.status).toBe(404)
+    await expect(res.json()).resolves.toEqual({ error: message })
+  })
+
+  it('removes a club admin and returns the updated assignment', async () => {
+    const user = makeUser({ roles: ['student', 'recruiter'] })
+    const clubAdmin = { userId: targetUserId, clubId }
+    vi.mocked(removeClubAdmin).mockResolvedValue({ ok: true, user, clubAdmin })
+
+    const res = await request(`/api/admin/club-admins/${targetUserId}`, {
+      method: 'DELETE',
+    })
+
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toMatchObject({
+      data: {
+        user: { id: targetUserId, roles: ['student', 'recruiter'] },
+        clubAdmin,
+      },
+    })
+    expect(removeClubAdmin).toHaveBeenCalledWith(expect.anything(), targetUserId)
+  })
+
+  it('returns 404 when removing a non-existent club admin', async () => {
+    vi.mocked(removeClubAdmin).mockResolvedValue({ ok: false, reason: 'not_found' })
+
+    const res = await request(`/api/admin/club-admins/${targetUserId}`, {
       method: 'DELETE',
     })
 

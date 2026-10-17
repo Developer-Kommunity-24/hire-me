@@ -1,7 +1,12 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { appointCoreAdmin, removeCoreAdmin } from '../controllers/admin.controller.js'
+import {
+  appointClubAdmin,
+  appointCoreAdmin,
+  removeClubAdmin,
+  removeCoreAdmin,
+} from '../controllers/admin.controller.js'
 import { requireAuth } from '../middleware/auth.js'
 import { requireCoreAdmin } from '../middleware/core-admin.js'
 import type { AuthVariables } from '../middleware/auth.js'
@@ -22,6 +27,11 @@ type AdminEnv = {
 
 const appointCoreAdminSchema = z.object({
   userId: z.uuid(),
+})
+
+const appointClubAdminSchema = z.object({
+  userId: z.uuid(),
+  clubId: z.uuid(),
 })
 
 const uuidSchema = z.uuid()
@@ -77,4 +87,49 @@ adminRouter.delete('/core-admins/:userId', async (c) => {
   }
 
   return c.json({ user: result.user })
+})
+
+/**
+ * POST /api/admin/club-admins
+ *
+ * Assigns an existing user to administer an existing club. The mapping and
+ * role are kept synchronized, and a user can administer only one club.
+ */
+adminRouter.post('/club-admins', zValidator('json', appointClubAdminSchema), async (c) => {
+  const { userId, clubId } = c.req.valid('json')
+  const result = await appointClubAdmin(c.var.db, userId, clubId)
+
+  if (!result.ok) {
+    if (result.reason === 'already_assigned') {
+      return c.json({ error: 'User is already assigned as a club admin' }, 409)
+    }
+
+    return c.json(
+      { error: result.reason === 'user_not_found' ? 'User not found' : 'Club not found' },
+      404,
+    )
+  }
+
+  return c.json({ data: { user: result.user, clubAdmin: result.clubAdmin } }, 201)
+})
+
+/**
+ * DELETE /api/admin/club-admins/:userId
+ *
+ * Removes the user's club-admin mapping and role. Other roles are preserved.
+ */
+adminRouter.delete('/club-admins/:userId', async (c) => {
+  const userId = c.req.param('userId')
+
+  if (!uuidSchema.safeParse(userId).success) {
+    return c.json({ error: 'Club admin not found' }, 404)
+  }
+
+  const result = await removeClubAdmin(c.var.db, userId)
+
+  if (!result.ok) {
+    return c.json({ error: 'Club admin not found' }, 404)
+  }
+
+  return c.json({ data: { user: result.user, clubAdmin: result.clubAdmin } })
 })
