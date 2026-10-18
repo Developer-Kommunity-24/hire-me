@@ -13,7 +13,7 @@ export const JobDetails = ({ job }: { job: Job }) => {
       <CardHeader className="pb-2">
         <CardTitle className="text-lg font-bold">About the Role</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2 text-sm text-muted-foreground leading-relaxed">
+      <CardContent className="space-y-2 text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
         {aboutRole.map((paragraph: string, idx: number) => (
           <p key={idx}>{paragraph}</p>
         ))}
@@ -25,7 +25,7 @@ export const JobDetails = ({ job }: { job: Job }) => {
           <CardHeader className="pb-2 pt-0">
             <CardTitle className="text-lg font-bold">Key Responsibilities</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="whitespace-pre-line">
             <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
               {responsibilities.map((item: string, idx: number) => (
                 <li key={idx}>{item}</li>
@@ -41,7 +41,7 @@ export const JobDetails = ({ job }: { job: Job }) => {
           <CardHeader className="pb-2 pt-0">
             <CardTitle className="text-lg font-bold">Qualifications</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="whitespace-pre-line">
             <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
               {qualifications.map((item: string, idx: number) => (
                 <li key={idx}>{item}</li>

@@ -2,125 +2,94 @@
 'use client'
 
 import React, { useState } from 'react'
-import Link from 'next/link'
-import { ArrowLeft, Share2, MapPin, DollarSign, Clock, Bookmark, Flag } from 'lucide-react'
 import { Job } from '../../types/job'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { apiFetch } from '@/lib/api-client'
+import { Bookmark, Share2, MapPin, Building2 } from 'lucide-react'
 
-interface JobHeaderProps {
-  job: Job
-}
-
-export const JobHeader = ({ job }: JobHeaderProps) => {
+export const JobHeader = ({ job }: { job: Job }) => {
   const [isSaved, setIsSaved] = useState(false)
-  const [isApplying, setIsApplying] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [copied, setCopied] = useState(false)
 
-  const handleSave = async () => {
-    try {
-      setIsSaved((prev) => !prev)
-      await apiFetch(`/api/jobs/${job.id}/save`, { method: 'POST' })
-    } catch (err) {
-      // Gracefully log error if auth session is offline/expired locally
-      console.warn('Could not persist save action to backend:', err)
-    }
-  }
+  // 1. Handle Save Toggle with Optimistic Updates & Rollback
+  const handleToggleSave = async () => {
+    if (isSaving) return
 
-  const handleApply = async () => {
+    const previousState = isSaved
+    // Optimistically toggle UI state
+    setIsSaved(!previousState)
+    setIsSaving(true)
+
     try {
-      setIsApplying(true)
-      await apiFetch(`/api/jobs/${job.id}/apply`, { method: 'POST' })
-      alert('Application submitted successfully!')
+      const res = await fetch(`/api/postings/${job.id}/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      if (!res.ok) {
+        // Rollback state if backend returns an error
+        setIsSaved(previousState)
+      }
     } catch (err) {
-      console.warn('Could not submit application to backend:', err)
-      alert('Action logged (Auth session expired or backend offline).')
+      console.error('Failed to save job:', err)
+      // Rollback state if network request fails / running without backend
+      setIsSaved(previousState)
     } finally {
-      setIsApplying(false)
+      setIsSaving(false)
     }
   }
 
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({ title: job.title, url: window.location.href })
-    } else {
-      navigator.clipboard.writeText(window.location.href)
-      alert('Link copied to clipboard!')
+  // 2. Safe Share / Copy Link Handler
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy URL:', err)
     }
   }
 
   return (
-    <div className="space-y-4 mb-6">
-      <div className="flex items-center justify-between">
-        <Link
-          href="/jobs"
-          className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Feed
-        </Link>
-        <div className="flex items-center gap-2">
-          <Button
-            variant={isSaved ? 'secondary' : 'outline'}
-            size="sm"
-            onClick={handleSave}
-            className={
-              isSaved
-                ? 'text-emerald-600 border-emerald-500 bg-emerald-50 hover:bg-emerald-100'
-                : ''
-            }
-          >
-            <Bookmark className={`w-4 h-4 mr-2 ${isSaved ? 'fill-emerald-600' : ''}`} />
-            {isSaved ? 'Saved' : 'Save'}
-          </Button>
-          <Button variant="outline" size="icon" onClick={handleShare} title="Share">
-            <Share2 className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => alert('Job posting reported.')}
-            className="hover:text-red-600 hover:bg-red-50"
-            title="Report Job"
-          >
-            <Flag className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
-
-      <div className="bg-card text-card-foreground p-6 border rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm">
-        <div className="space-y-2">
-          <Badge
-            variant="secondary"
-            className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 font-semibold"
-          >
-            {job.category}
-          </Badge>
+    <div className="bg-card border rounded-2xl p-6 space-y-4 shadow-sm">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
           <h1 className="text-2xl font-bold tracking-tight">{job.title}</h1>
-
-          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground pt-1">
-            <span className="flex items-center gap-1">
-              <MapPin className="w-4 h-4" />
-              {job.location}
-            </span>
-            <span className="flex items-center gap-1">
-              <DollarSign className="w-4 h-4" />
-              {job.salaryRange}
-            </span>
-            <span className="flex items-center gap-1">
-              <Clock className="w-4 h-4" />
-              {job.type}
-            </span>
+          <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+            {job.company && (
+              <span className="flex items-center gap-1">
+                <Building2 className="w-4 h-4" />
+                {job.company}
+              </span>
+            )}
+            {job.location && (
+              <span className="flex items-center gap-1">
+                <MapPin className="w-4 h-4" />
+                {job.location}
+              </span>
+            )}
           </div>
         </div>
 
-        <div className="sticky bottom-4 md:static z-10 bg-background md:bg-transparent p-3 md:p-0 border md:border-none rounded-xl shadow-lg md:shadow-none">
+        {/* Action Buttons */}
+        <div className="flex items-center gap-3 w-full sm:w-auto">
           <Button
-            onClick={handleApply}
-            disabled={isApplying}
-            className="w-full md:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl"
+            variant={isSaved ? 'default' : 'outline'}
+            onClick={handleToggleSave}
+            disabled={isSaving}
+            className="flex-1 sm:flex-initial items-center gap-2"
           >
-            {isApplying ? 'Applying...' : 'Apply Now'}
+            <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
+            {isSaved ? 'Saved' : 'Save'}
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={handleShare}
+            className="flex-1 sm:flex-initial items-center gap-2"
+          >
+            <Share2 className="w-4 h-4" />
+            {copied ? 'Copied!' : 'Share'}
           </Button>
         </div>
       </div>

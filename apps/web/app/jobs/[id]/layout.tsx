@@ -1,4 +1,5 @@
 import { Metadata } from 'next'
+import { AppLayout } from '../../components/layout/AppLayout'
 import { getJobServer } from './get-job'
 
 interface Props {
@@ -20,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = `${job.title} at ${job.company ?? 'Hire Me'}`
   const description = job.description
     ? job.description.slice(0, 160)
-    : `Apply for the ${job.title} position in ${job.location}.`
+    : `Apply for the ${job.title} position in ${job.location ?? 'Remote'}.`
 
   return {
     title: `${title} | Hire Me`,
@@ -40,5 +41,5 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default function JobLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>
+  return <AppLayout>{children}</AppLayout>
 }
