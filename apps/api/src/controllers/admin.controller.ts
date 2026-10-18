@@ -6,17 +6,21 @@ import type { Club, ClubAdmin, Database, User } from '@repo/db'
 // TYPES
 // ==========================================
 
-export type CoreAdminRoleResult =
-  | { ok: true; user: User }
-  | { ok: false; reason: 'not_found' }
+export type CoreAdminRoleResult = { ok: true; user: User } | { ok: false; reason: 'not_found' }
 
 export type ClubAdminWriteResult =
   | { ok: true; user: User; clubAdmin: ClubAdmin }
   | { ok: false; reason: 'user_not_found' | 'club_not_found' | 'already_assigned' }
 
-export type ClubAdminRemovalResult =
+export type ClubAdminAssignmentResult =
   | { ok: true; user: User; clubAdmin: ClubAdmin }
-  | { ok: false; reason: 'not_found' }
+  | {
+      ok: false
+      reason: 'user_not_found' | 'missing_role' | 'club_not_found' | 'inactive_club'
+    }
+
+export type ClubAdminRemovalResult =
+  { ok: true; user: User; clubAdmin: ClubAdmin } | { ok: false; reason: 'not_found' }
 
 export interface ClubInput {
   name: string
@@ -45,10 +49,7 @@ export type ClubListResult = { ok: true; clubs: Club[] }
  * @param userId - The user receiving the core-admin role.
  * @returns The updated user, or a `not_found` result when no user exists.
  */
-export async function appointCoreAdmin(
-  db: Database,
-  userId: string,
-): Promise<CoreAdminRoleResult> {
+export async function appointCoreAdmin(db: Database, userId: string): Promise<CoreAdminRoleResult> {
   const [existing] = await db.select().from(users).where(eq(users.id, userId)).limit(1)
 
   if (!existing) {
@@ -79,10 +80,7 @@ export async function appointCoreAdmin(
  * @param userId - The user losing the core-admin role.
  * @returns The updated user, or a `not_found` result when no user exists.
  */
-export async function removeCoreAdmin(
-  db: Database,
-  userId: string,
-): Promise<CoreAdminRoleResult> {
+export async function removeCoreAdmin(db: Database, userId: string): Promise<CoreAdminRoleResult> {
   const [existing] = await db.select().from(users).where(eq(users.id, userId)).limit(1)
 
   if (!existing) {
@@ -160,6 +158,55 @@ export async function appointClubAdmin(
 }
 
 /**
+ * Assigns an existing club admin to an active club.
+ *
+ * @param db - Request-scoped Drizzle client.
+ * @param userId - The club admin receiving the assignment.
+ * @param clubId - The active club the user will administer.
+ * @returns The user and assignment, or a domain error.
+ */
+export async function assignClubAdmin(
+  db: Database,
+  userId: string,
+  clubId: string,
+): Promise<ClubAdminAssignmentResult> {
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1)
+
+  if (!user) {
+    return { ok: false, reason: 'user_not_found' }
+  }
+
+  if (!user.roles.includes('club_admin')) {
+    return { ok: false, reason: 'missing_role' }
+  }
+
+  const [club] = await db.select().from(clubs).where(eq(clubs.id, clubId)).limit(1)
+
+  if (!club) {
+    return { ok: false, reason: 'club_not_found' }
+  }
+
+  if (!club.isActive) {
+    return { ok: false, reason: 'inactive_club' }
+  }
+
+  const [assignment] = await db
+    .insert(clubAdmins)
+    .values({ userId, clubId })
+    .onConflictDoUpdate({
+      target: clubAdmins.userId,
+      set: { clubId },
+    })
+    .returning()
+
+  if (!assignment) {
+    throw new Error('Failed to assign club admin')
+  }
+
+  return { ok: true, user, clubAdmin: assignment }
+}
+
+/**
  * Removes a user's club-admin assignment and the `club_admin` role.
  *
  * @param db - Request-scoped Drizzle client.
@@ -186,10 +233,7 @@ export async function removeClubAdmin(
     throw new Error('Club admin assignment references a missing user')
   }
 
-  const [deleted] = await db
-    .delete(clubAdmins)
-    .where(eq(clubAdmins.userId, userId))
-    .returning()
+  const [deleted] = await db.delete(clubAdmins).where(eq(clubAdmins.userId, userId)).returning()
 
   if (!deleted) {
     return { ok: false, reason: 'not_found' }
@@ -255,13 +299,21 @@ export async function listClubs(db: Database): Promise<ClubListResult> {
  * @returns The created club or a duplicate-field error.
  */
 export async function createClub(db: Database, input: ClubInput): Promise<ClubWriteResult> {
-  const [sameName] = await db.select({ id: clubs.id }).from(clubs).where(eq(clubs.name, input.name)).limit(1)
+  const [sameName] = await db
+    .select({ id: clubs.id })
+    .from(clubs)
+    .where(eq(clubs.name, input.name))
+    .limit(1)
 
   if (sameName) {
     return { ok: false, reason: 'duplicate_name' }
   }
 
-  const [sameSlug] = await db.select({ id: clubs.id }).from(clubs).where(eq(clubs.slug, input.slug)).limit(1)
+  const [sameSlug] = await db
+    .select({ id: clubs.id })
+    .from(clubs)
+    .where(eq(clubs.slug, input.slug))
+    .limit(1)
 
   if (sameSlug) {
     return { ok: false, reason: 'duplicate_slug' }
@@ -330,11 +382,7 @@ export async function updateClub(
   }
 
   try {
-    const [updated] = await db
-      .update(clubs)
-      .set(input)
-      .where(eq(clubs.id, id))
-      .returning()
+    const [updated] = await db.update(clubs).set(input).where(eq(clubs.id, id)).returning()
 
     if (!updated) {
       return { ok: false, reason: 'not_found' }

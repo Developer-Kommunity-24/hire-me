@@ -4,6 +4,7 @@ import { z } from 'zod'
 import {
   appointClubAdmin,
   appointCoreAdmin,
+  assignClubAdmin,
   createClub,
   deactivateClub,
   listClubs,
@@ -44,7 +45,10 @@ const createClubSchema = z.object({
     .string()
     .trim()
     .toLowerCase()
-    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must contain lowercase letters, numbers, and hyphens'),
+    .regex(
+      /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+      'Slug must contain lowercase letters, numbers, and hyphens',
+    ),
 })
 
 const updateClubSchema = z
@@ -82,20 +86,16 @@ adminRouter.use('*', requireCoreAdmin)
  * Appoints the core-admin role to an existing user. Existing roles are
  * preserved, and appointing an existing core admin is idempotent.
  */
-adminRouter.post(
-  '/core-admins',
-  zValidator('json', appointCoreAdminSchema),
-  async (c) => {
-    const { userId } = c.req.valid('json')
-    const result = await appointCoreAdmin(c.var.db, userId)
+adminRouter.post('/core-admins', zValidator('json', appointCoreAdminSchema), async (c) => {
+  const { userId } = c.req.valid('json')
+  const result = await appointCoreAdmin(c.var.db, userId)
 
-    if (!result.ok) {
-      return c.json({ error: 'User not found' }, 404)
-    }
+  if (!result.ok) {
+    return c.json({ error: 'User not found' }, 404)
+  }
 
-    return c.json({ user: result.user })
-  },
-)
+  return c.json({ user: result.user })
+})
 
 /**
  * DELETE /api/admin/core-admins/:userId
@@ -144,6 +144,47 @@ adminRouter.post('/club-admins', zValidator('json', appointClubAdminSchema), asy
 })
 
 /**
+ * PATCH /api/admin/club-admins/:userId
+ *
+ * Assigns an existing club admin to an active club, replacing any existing
+ * assignment for that user.
+ */
+adminRouter.patch(
+  '/club-admins/:userId',
+  async (c, next) => {
+    if (!uuidSchema.safeParse(c.req.param('userId')).success) {
+      return c.json({ error: 'User not found' }, 400)
+    }
+
+    await next()
+  },
+  zValidator('json', z.object({ clubId: z.uuid() })),
+  async (c) => {
+    const userId = c.req.param('userId')
+    const { clubId } = c.req.valid('json')
+    const result = await assignClubAdmin(c.var.db, userId, clubId)
+
+    if (!result.ok) {
+      if (result.reason === 'user_not_found' || result.reason === 'club_not_found') {
+        return c.json(
+          { error: result.reason === 'user_not_found' ? 'User not found' : 'Club not found' },
+          404,
+        )
+      }
+
+      return c.json(
+        {
+          error: result.reason === 'missing_role' ? 'User is not a club admin' : 'Club is inactive',
+        },
+        400,
+      )
+    }
+
+    return c.json({ data: { user: result.user, clubAdmin: result.clubAdmin } })
+  },
+)
+
+/**
  * DELETE /api/admin/club-admins/:userId
  *
  * Removes the user's club-admin mapping and role. Other roles are preserved.
@@ -184,7 +225,12 @@ adminRouter.post('/clubs', zValidator('json', createClubSchema), async (c) => {
 
   if (!result.ok) {
     return c.json(
-      { error: result.reason === 'duplicate_name' ? 'Club name already exists' : 'Club slug already exists' },
+      {
+        error:
+          result.reason === 'duplicate_name'
+            ? 'Club name already exists'
+            : 'Club slug already exists',
+      },
       409,
     )
   }
@@ -247,7 +293,9 @@ adminRouter.delete('/clubs/:id', async (c) => {
 
   if (!result.ok) {
     return c.json(
-      { error: result.reason === 'already_inactive' ? 'Club is already inactive' : 'Club not found' },
+      {
+        error: result.reason === 'already_inactive' ? 'Club is already inactive' : 'Club not found',
+      },
       result.reason === 'already_inactive' ? 409 : 404,
     )
   }

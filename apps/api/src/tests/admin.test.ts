@@ -43,6 +43,7 @@ vi.mock('../middleware/core-admin.ts', () => ({
 vi.mock('../controllers/admin.controller.ts', () => ({
   appointClubAdmin: vi.fn(),
   appointCoreAdmin: vi.fn(),
+  assignClubAdmin: vi.fn(),
   createClub: vi.fn(),
   deactivateClub: vi.fn(),
   listClubs: vi.fn(),
@@ -55,6 +56,7 @@ import { app } from '../app.js'
 import {
   appointClubAdmin,
   appointCoreAdmin,
+  assignClubAdmin,
   createClub,
   deactivateClub,
   listClubs,
@@ -222,6 +224,91 @@ describe('Club-admin role API', () => {
     })
 
     expect(res.status).toBe(409)
+  })
+
+  it('assigns an existing club admin to a club', async () => {
+    const user = makeUser({ roles: ['student', 'club_admin'] })
+    const clubAdmin = { userId: targetUserId, clubId }
+    vi.mocked(assignClubAdmin).mockResolvedValue({ ok: true, user, clubAdmin })
+
+    const res = await request(`/api/admin/club-admins/${targetUserId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ clubId }),
+    })
+
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toMatchObject({
+      data: {
+        user: { id: targetUserId, roles: ['student', 'club_admin'] },
+        clubAdmin,
+      },
+    })
+    expect(assignClubAdmin).toHaveBeenCalledWith(expect.anything(), targetUserId, clubId)
+  })
+
+  it('updates an existing club-admin assignment', async () => {
+    const newClubId = '44444444-4444-4444-8444-444444444444'
+    const user = makeUser({ roles: ['club_admin'] })
+    const clubAdmin = { userId: targetUserId, clubId: newClubId }
+    vi.mocked(assignClubAdmin).mockResolvedValue({ ok: true, user, clubAdmin })
+
+    const res = await request(`/api/admin/club-admins/${targetUserId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ clubId: newClubId }),
+    })
+
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toMatchObject({ data: { clubAdmin } })
+    expect(assignClubAdmin).toHaveBeenCalledWith(expect.anything(), targetUserId, newClubId)
+  })
+
+  it.each([
+    ['user_not_found', 404, 'User not found'],
+    ['club_not_found', 404, 'Club not found'],
+    ['missing_role', 400, 'User is not a club admin'],
+    ['inactive_club', 400, 'Club is inactive'],
+  ] as const)('returns the expected status when %s', async (reason, status, message) => {
+    vi.mocked(assignClubAdmin).mockResolvedValue({ ok: false, reason })
+
+    const res = await request(`/api/admin/club-admins/${targetUserId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ clubId }),
+    })
+
+    expect(res.status).toBe(status)
+    await expect(res.json()).resolves.toEqual({ error: message })
+  })
+
+  it('rejects a non-core-admin assignment request', async () => {
+    middlewareState.coreAdmin = false
+
+    const res = await request(`/api/admin/club-admins/${targetUserId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ clubId }),
+    })
+
+    expect(res.status).toBe(403)
+    expect(assignClubAdmin).not.toHaveBeenCalled()
+  })
+
+  it('rejects an invalid user UUID', async () => {
+    const res = await request('/api/admin/club-admins/not-a-uuid', {
+      method: 'PATCH',
+      body: JSON.stringify({ clubId }),
+    })
+
+    expect(res.status).toBe(400)
+    expect(assignClubAdmin).not.toHaveBeenCalled()
+  })
+
+  it('rejects an invalid club UUID', async () => {
+    const res = await request(`/api/admin/club-admins/${targetUserId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ clubId: 'not-a-uuid' }),
+    })
+
+    expect(res.status).toBe(400)
+    expect(assignClubAdmin).not.toHaveBeenCalled()
   })
 
   it.each([
