@@ -1,5 +1,5 @@
-import { and, asc, eq, ne } from 'drizzle-orm'
-import { clubAdmins, clubs, users } from '@repo/db'
+import { and, asc, eq, ne, sql } from 'drizzle-orm'
+import { applications, clubAdmins, clubs, postings, recruiters, users } from '@repo/db'
 import type { Club, ClubAdmin, Database, User } from '@repo/db'
 
 // ==========================================
@@ -38,9 +38,47 @@ export type ClubWriteResult =
 
 export type ClubListResult = { ok: true; clubs: Club[] }
 
+export interface AdminStats {
+  students: number
+  recruiters: number
+  postings: number
+  applications: number
+}
+
 // ==========================================
 // WRITES
 // ==========================================
+
+/**
+ * Counts the active platform records shown on the core-admin dashboard.
+ *
+ * @param db - Request-scoped Drizzle client.
+ * @returns Platform-wide dashboard statistics.
+ */
+export async function getAdminStats(db: Database): Promise<AdminStats> {
+  const [studentResult, recruiterResult, postingResult, applicationResult] = await Promise.all([
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(users)
+      .where(sql`${users.roles} @> ARRAY['student']::user_role[]`),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(recruiters)
+      .where(eq(recruiters.isDeleted, false)),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(postings)
+      .where(eq(postings.status, 'active')),
+    db.select({ count: sql<number>`count(*)::int` }).from(applications),
+  ])
+
+  return {
+    students: studentResult[0]?.count ?? 0,
+    recruiters: recruiterResult[0]?.count ?? 0,
+    postings: postingResult[0]?.count ?? 0,
+    applications: applicationResult[0]?.count ?? 0,
+  }
+}
 
 /**
  * Adds the `core_admin` role to a user without changing any existing roles.

@@ -13,6 +13,7 @@ const { authUser, fakeDb, middlewareState } = vi.hoisted(() => ({
   },
   fakeDb: {},
   middlewareState: {
+    authenticated: true,
     coreAdmin: true,
   },
 }))
@@ -26,6 +27,9 @@ vi.mock('../middleware/db.ts', () => ({
 
 vi.mock('../middleware/auth.ts', () => ({
   requireAuth: async (c: Context, next: Next) => {
+    if (!middlewareState.authenticated) {
+      return c.json({ error: 'Unauthorized' }, 401)
+    }
     c.set('authUser', authUser)
     await next()
   },
@@ -46,6 +50,7 @@ vi.mock('../controllers/admin.controller.ts', () => ({
   assignClubAdmin: vi.fn(),
   createClub: vi.fn(),
   deactivateClub: vi.fn(),
+  getAdminStats: vi.fn(),
   listClubs: vi.fn(),
   removeClubAdmin: vi.fn(),
   removeCoreAdmin: vi.fn(),
@@ -59,6 +64,7 @@ import {
   assignClubAdmin,
   createClub,
   deactivateClub,
+  getAdminStats,
   listClubs,
   removeClubAdmin,
   removeCoreAdmin,
@@ -92,7 +98,97 @@ function request(path: string, init: RequestInit = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  middlewareState.authenticated = true
   middlewareState.coreAdmin = true
+})
+
+describe('Admin statistics API', () => {
+  it('returns platform-wide statistics', async () => {
+    vi.mocked(getAdminStats).mockResolvedValue({
+      students: 154,
+      recruiters: 32,
+      postings: 67,
+      applications: 482,
+    })
+
+    const res = await request('/api/admin/stats')
+
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toEqual({
+      data: {
+        students: 154,
+        recruiters: 32,
+        postings: 67,
+        applications: 482,
+      },
+    })
+    expect(getAdminStats).toHaveBeenCalledWith(expect.anything())
+  })
+
+  it('returns zero counts for an empty database', async () => {
+    vi.mocked(getAdminStats).mockResolvedValue({
+      students: 0,
+      recruiters: 0,
+      postings: 0,
+      applications: 0,
+    })
+
+    const res = await request('/api/admin/stats')
+
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toEqual({
+      data: { students: 0, recruiters: 0, postings: 0, applications: 0 },
+    })
+  })
+
+  it('returns counts for multiple records', async () => {
+    vi.mocked(getAdminStats).mockResolvedValue({
+      students: 3,
+      recruiters: 2,
+      postings: 4,
+      applications: 7,
+    })
+
+    const res = await request('/api/admin/stats')
+
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toEqual({
+      data: { students: 3, recruiters: 2, postings: 4, applications: 7 },
+    })
+  })
+
+  it('excludes soft-deleted recruiters and postings from the returned counts', async () => {
+    vi.mocked(getAdminStats).mockResolvedValue({
+      students: 1,
+      recruiters: 1,
+      postings: 2,
+      applications: 3,
+    })
+
+    const res = await request('/api/admin/stats')
+
+    await expect(res.json()).resolves.toEqual({
+      data: { students: 1, recruiters: 1, postings: 2, applications: 3 },
+    })
+  })
+
+  it('returns 401 when unauthenticated', async () => {
+    middlewareState.authenticated = false
+
+    const res = await request('/api/admin/stats')
+
+    expect(res.status).toBe(401)
+    expect(getAdminStats).not.toHaveBeenCalled()
+  })
+
+  it('returns 403 for a non-core-admin', async () => {
+    middlewareState.coreAdmin = false
+
+    const res = await request('/api/admin/stats')
+
+    expect(res.status).toBe(403)
+    expect(getAdminStats).not.toHaveBeenCalled()
+  })
 })
 
 describe('Core-admin role API', () => {

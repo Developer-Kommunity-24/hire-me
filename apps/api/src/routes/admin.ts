@@ -7,6 +7,7 @@ import {
   assignClubAdmin,
   createClub,
   deactivateClub,
+  getAdminStats,
   listClubs,
   removeClubAdmin,
   removeCoreAdmin,
@@ -79,6 +80,16 @@ export const adminRouter = new Hono<AdminEnv>()
 // Every route requires an authenticated core administrator.
 adminRouter.use('*', requireAuth)
 adminRouter.use('*', requireCoreAdmin)
+
+/**
+ * GET /api/admin/stats
+ *
+ * Returns platform-wide counts for the core-admin dashboard.
+ */
+adminRouter.get('/stats', async (c) => {
+  const stats = await getAdminStats(c.var.db)
+  return c.json({ data: stats })
+})
 
 /**
  * POST /api/admin/core-admins
