@@ -40,6 +40,9 @@ vi.mock('../middleware/auth.ts', () => ({
     })
     await next()
   },
+}))
+
+vi.mock('../middleware/student.ts', () => ({
   requireStudentRole: () => async (c: Context, next: Next) => {
     const userIdHeader = c.req.header('x-user-id')
     const authHeader = c.req.header('Authorization')

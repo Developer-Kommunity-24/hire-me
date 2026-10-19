@@ -25,15 +25,6 @@ vi.mock('../middleware/auth.ts', () => ({
     c.set('authUser', authUser)
     await next()
   },
-  requireStudentRole: () => async (c: Context, next: Next) => {
-    c.set('user', {
-      id: authUser.id,
-      fullName: authUser.name,
-      email: authUser.email,
-      role: 'student',
-    })
-    await next()
-  },
 }))
 
 // ==========================================
