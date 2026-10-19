@@ -1,5 +1,5 @@
 import { Calendar } from 'lucide-react'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { defaultAcademics } from './ProfileContext'
 import type { AcademicData } from './types'
 
@@ -25,26 +25,28 @@ export default function AcademicsCard({
   ]
 
   return (
-    <Card className="p-6 sm:p-7">
-      <h2 className="text-lg font-bold text-text-main tracking-tight mb-4">Academics</h2>
+    <Card>
+      <CardContent>
+        <h2 className="text-lg font-bold text-text-main tracking-tight mb-4">Academics</h2>
 
-      <dl className="divide-y divide-border-subtle">
-        {rows.map((row) => (
-          <AcademicRow key={row.label} label={row.label} value={row.value} />
-        ))}
-      </dl>
+        <dl className="divide-y divide-border-subtle">
+          {rows.map((row) => (
+            <AcademicRow key={row.label} label={row.label} value={row.value} />
+          ))}
+        </dl>
 
-      <div className="mt-4 bg-brand-light/80 rounded-2xl p-4 text-center border border-brand-mint/50 transition-all hover:bg-brand-light">
-        <div className="flex items-center justify-center gap-2 mb-1">
-          <Calendar className="w-4 h-4 text-brand-dark" />
-          <span className="text-xs font-bold text-brand-dark uppercase tracking-wider">
-            Expected Graduation
-          </span>
+        <div className="mt-4 bg-brand-light/80 rounded-2xl p-4 text-center border border-brand-mint/50 transition-all hover:bg-brand-light">
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <Calendar className="w-4 h-4 text-brand-dark" />
+            <span className="text-xs font-bold text-brand-dark uppercase tracking-wider">
+              Expected Graduation
+            </span>
+          </div>
+          <p className="text-sm font-bold text-text-main">
+            <time>{academics.expectedGraduation}</time>
+          </p>
         </div>
-        <p className="text-sm font-bold text-text-main">
-          <time>{academics.expectedGraduation}</time>
-        </p>
-      </div>
+      </CardContent>
     </Card>
   )
 }

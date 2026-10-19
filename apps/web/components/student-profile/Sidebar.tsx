@@ -21,16 +21,17 @@ export default function Sidebar() {
 
   return (
     <>
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed top-3 left-3 z-50 rounded-xl shadow-md"
-        aria-label="Open navigation menu"
-      >
-        <Menu className="w-5 h-5 text-text-main" />
-      </Button>
+      <div className="lg:hidden fixed top-3 left-3 z-50">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={() => setMobileOpen(true)}
+          aria-label="Open navigation menu"
+        >
+          <Menu className="w-5 h-5 text-text-main" />
+        </Button>
+      </div>
 
       {mobileOpen && (
         <div
@@ -53,16 +54,17 @@ export default function Sidebar() {
             <span className="text-sm font-extrabold tracking-tight text-text-main">CareerLink</span>
           </Link>
 
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => setMobileOpen(false)}
-            className="lg:hidden h-7 w-7 rounded-lg text-text-muted hover:text-text-main hover:bg-bg-page p-1"
-            aria-label="Close navigation menu"
-          >
-            <X className="w-4 h-4" />
-          </Button>
+          <div className="lg:hidden">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setMobileOpen(false)}
+              aria-label="Close navigation menu"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
 
         <nav className="flex-1 px-2.5 py-3.5" aria-label="Sidebar navigation">

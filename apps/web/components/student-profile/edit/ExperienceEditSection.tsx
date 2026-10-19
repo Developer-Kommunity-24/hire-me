@@ -8,7 +8,7 @@ import {
   type Control,
   type FieldValues,
 } from 'react-hook-form'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { formatDuration } from '../utils'
@@ -180,36 +180,33 @@ function ExperienceItemEditor({ index, itemErrors, onDelete }: ExperienceItemEdi
           {achievementFields.map((achField, aIdx) => (
             <div key={achField.id} className="flex items-center gap-2">
               <span className="text-text-muted/60 text-sm font-bold select-none">•</span>
-              <Input
-                type="text"
-                {...register(`experiences.${index}.achievements.${aIdx}`)}
-                placeholder="e.g. Developed scalable microservices in Go, improving latency by 25%..."
-                className="flex-1 py-1.5"
-              />
-              <Button
+              <div className="flex-1">
+                <Input
+                  type="text"
+                  {...register(`experiences.${index}.achievements.${aIdx}`)}
+                  placeholder="e.g. Developed scalable microservices in Go, improving latency by 25%..."
+                />
+              </div>
+              <button
                 type="button"
-                variant="ghost"
-                size="icon"
                 onClick={() => removeAchievement(aIdx)}
-                className="h-8 w-8 p-1.5 text-text-muted hover:text-red-500 hover:bg-red-50 rounded-lg"
+                className="h-8 w-8 p-1.5 text-text-muted hover:text-red-500 hover:bg-red-50 rounded-lg flex items-center justify-center transition-colors"
                 title="Remove bullet point"
                 aria-label={`Remove achievement bullet ${aIdx + 1}`}
               >
                 <X className="w-4 h-4" />
-              </Button>
+              </button>
             </div>
           ))}
 
-          <Button
+          <button
             type="button"
-            variant="ghost"
-            size="xs"
             onClick={() => appendAchievement('')}
-            className="gap-1 p-0 h-auto font-semibold text-brand-dark hover:text-brand hover:bg-transparent"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-brand-dark hover:text-brand transition-colors"
           >
             <Plus className="w-3.5 h-3.5" />
             Add Bullet Point
-          </Button>
+          </button>
         </div>
       </div>
     </div>
@@ -260,40 +257,42 @@ export default function ExperienceEditSection({
   }
 
   return (
-    <Card className="p-6 sm:p-7">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border-subtle pb-4 mb-6">
-        <div>
-          <h2 className="text-xl font-bold tracking-tight text-text-main">Work Experience</h2>
-          <p className="text-xs text-text-muted mt-1">
-            Showcase your internships, full-time roles, or part-time work with key achievements.
-          </p>
-        </div>
-        <Button onClick={handleAddExperience} size="sm" className="shrink-0">
-          <Plus className="w-3.5 h-3.5" />
-          Add Experience
-        </Button>
-      </div>
-
-      <div className="space-y-6">
-        {fields.length === 0 ? (
-          <div className="text-center py-8 bg-bg-page rounded-2xl border border-dashed border-border-muted">
-            <p className="text-sm text-text-muted mb-3">No work experience added yet.</p>
-            <Button onClick={handleAddExperience} variant="secondary" size="xs">
-              <Plus className="w-3.5 h-3.5" />
-              Add First Experience
-            </Button>
+    <Card>
+      <CardContent>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border-subtle pb-4 mb-6">
+          <div>
+            <h2 className="text-xl font-bold tracking-tight text-text-main">Work Experience</h2>
+            <p className="text-xs text-text-muted mt-1">
+              Showcase your internships, full-time roles, or part-time work with key achievements.
+            </p>
           </div>
-        ) : (
-          fields.map((field, idx) => (
-            <ExperienceItemEditor
-              key={field.id || idx}
-              index={idx}
-              itemErrors={errors?.[idx]}
-              onDelete={handleDeleteExperience}
-            />
-          ))
-        )}
-      </div>
+          <Button onClick={handleAddExperience} size="sm">
+            <Plus className="w-3.5 h-3.5" />
+            Add Experience
+          </Button>
+        </div>
+
+        <div className="space-y-6">
+          {fields.length === 0 ? (
+            <div className="text-center py-8 bg-bg-page rounded-2xl border border-dashed border-border-muted">
+              <p className="text-sm text-text-muted mb-3">No work experience added yet.</p>
+              <Button onClick={handleAddExperience} variant="secondary" size="xs">
+                <Plus className="w-3.5 h-3.5" />
+                Add First Experience
+              </Button>
+            </div>
+          ) : (
+            fields.map((field, idx) => (
+              <ExperienceItemEditor
+                key={field.id || idx}
+                index={idx}
+                itemErrors={errors?.[idx]}
+                onDelete={handleDeleteExperience}
+              />
+            ))
+          )}
+        </div>
+      </CardContent>
     </Card>
   )
 }

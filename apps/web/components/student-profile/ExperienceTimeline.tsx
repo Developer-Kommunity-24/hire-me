@@ -1,5 +1,5 @@
 import { MapPin } from 'lucide-react'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { defaultExperiences } from './ProfileContext'
@@ -59,16 +59,18 @@ export default function ExperienceTimeline({
       <h2 className="text-lg sm:text-xl font-bold tracking-tight text-text-main mb-3.5">
         <span id="experience-heading">Experience</span>
       </h2>
-      <Card className="p-6 sm:p-7">
-        <div className="space-y-0">
-          {experiences.map((exp, idx) => (
-            <TimelineEntry
-              key={exp.id || `${exp.company}-${exp.title}-${idx}`}
-              experience={exp}
-              isLast={idx === experiences.length - 1}
-            />
-          ))}
-        </div>
+      <Card>
+        <CardContent>
+          <div className="space-y-0">
+            {experiences.map((exp, idx) => (
+              <TimelineEntry
+                key={exp.id || `${exp.company}-${exp.title}-${idx}`}
+                experience={exp}
+                isLast={idx === experiences.length - 1}
+              />
+            ))}
+          </div>
+        </CardContent>
       </Card>
     </section>
   )

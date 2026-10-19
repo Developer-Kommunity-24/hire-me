@@ -1,4 +1,4 @@
-import { Card } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { defaultSkillCategories } from './ProfileContext'
 import { getCategoryIcon } from './utils'
@@ -32,13 +32,17 @@ export default function SkillsCard({
   categories?: SkillCategory[]
 }) {
   return (
-    <Card className="p-6 sm:p-7">
-      <h2 className="text-lg font-bold text-text-main tracking-tight mb-4">Skills Architecture</h2>
-      <div className="space-y-4">
-        {categories.map((category) => (
-          <SkillGroup key={category.label} category={category} />
-        ))}
-      </div>
+    <Card>
+      <CardContent>
+        <h2 className="text-lg font-bold text-text-main tracking-tight mb-4">
+          Skills Architecture
+        </h2>
+        <div className="space-y-4">
+          {categories.map((category) => (
+            <SkillGroup key={category.label} category={category} />
+          ))}
+        </div>
+      </CardContent>
     </Card>
   )
 }

@@ -9,7 +9,7 @@ import {
   type Control,
   type FieldValues,
 } from 'react-hook-form'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { getCategoryIcon } from '../utils'
@@ -150,29 +150,27 @@ function SkillCategoryEditor({
                   key={skillField.id}
                   className="inline-flex items-center gap-1 bg-card border-2 border-brand rounded-lg px-1.5 py-0.5 shadow-xs"
                 >
-                  <Input
+                  <input
                     type="text"
                     value={editingValue}
                     onChange={(e) => setEditingValue(e.target.value)}
                     onKeyDown={(e) => handleEditKeyDown(e, sIdx)}
                     onBlur={() => handleSaveEdit(sIdx)}
                     autoFocus
-                    className="h-auto border-0 bg-transparent p-0 px-1 text-xs font-mono shadow-none focus-visible:ring-0 rounded-none w-24"
+                    className="h-auto border-0 bg-transparent p-0 px-1 text-xs font-mono shadow-none outline-none focus:outline-none rounded-none w-24 text-text-main"
                   />
-                  <Button
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="icon"
                     onMouseDown={(e) => {
                       e.preventDefault()
                       handleSaveEdit(sIdx)
                     }}
-                    className="h-6 w-6 p-1 text-brand-dark hover:text-brand hover:bg-brand-light rounded-lg"
+                    className="h-6 w-6 p-1 text-brand-dark hover:text-brand hover:bg-brand-light rounded-lg flex items-center justify-center transition-colors"
                     title="Save skill"
                     aria-label={`Save ${skill}`}
                   >
                     <Check className="w-3.5 h-3.5" />
-                  </Button>
+                  </button>
                 </div>
               )
             }
@@ -184,29 +182,25 @@ function SkillCategoryEditor({
               >
                 <span>{skill}</span>
 
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  size="icon"
                   onClick={() => handleStartEdit(sIdx, skill)}
-                  className="h-5 w-5 p-0.5 opacity-60 hover:opacity-100 text-text-muted hover:text-brand-dark hover:bg-bg-page rounded"
+                  className="h-5 w-5 p-0.5 opacity-60 hover:opacity-100 text-text-muted hover:text-brand-dark hover:bg-bg-page rounded flex items-center justify-center transition-colors"
                   title="Edit skill"
                   aria-label={`Edit ${skill}`}
                 >
                   <Pencil className="w-3 h-3" />
-                </Button>
+                </button>
 
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  size="icon"
                   onClick={() => handleRemoveSkill(sIdx)}
-                  className="h-5 w-5 p-0.5 opacity-60 hover:opacity-100 text-text-muted hover:text-red-500 hover:bg-red-50 rounded"
+                  className="h-5 w-5 p-0.5 opacity-60 hover:opacity-100 text-text-muted hover:text-red-500 hover:bg-red-50 rounded flex items-center justify-center transition-colors"
                   title="Remove skill"
                   aria-label={`Remove ${skill}`}
                 >
                   <X className="w-3 h-3" />
-                </Button>
+                </button>
               </div>
             )
           })
@@ -220,29 +214,27 @@ function SkillCategoryEditor({
                   key={sIdx}
                   className="inline-flex items-center gap-1 bg-card border-2 border-brand rounded-lg px-1.5 py-0.5 shadow-xs"
                 >
-                  <Input
+                  <input
                     type="text"
                     value={editingValue}
                     onChange={(e) => setEditingValue(e.target.value)}
                     onKeyDown={(e) => handleEditKeyDown(e, sIdx)}
                     onBlur={() => handleSaveEdit(sIdx)}
                     autoFocus
-                    className="h-auto border-0 bg-transparent p-0 px-1 text-xs font-mono shadow-none focus-visible:ring-0 rounded-none w-24"
+                    className="h-auto border-0 bg-transparent p-0 px-1 text-xs font-mono shadow-none outline-none focus:outline-none rounded-none w-24 text-text-main"
                   />
-                  <Button
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="icon"
                     onMouseDown={(e) => {
                       e.preventDefault()
                       handleSaveEdit(sIdx)
                     }}
-                    className="h-6 w-6 p-1 text-brand-dark hover:text-brand hover:bg-brand-light rounded-lg"
+                    className="h-6 w-6 p-1 text-brand-dark hover:text-brand hover:bg-brand-light rounded-lg flex items-center justify-center transition-colors"
                     title="Save skill"
                     aria-label={`Save ${skill}`}
                   >
                     <Check className="w-3.5 h-3.5" />
-                  </Button>
+                  </button>
                 </div>
               )
             }
@@ -254,29 +246,25 @@ function SkillCategoryEditor({
               >
                 <span>{skill}</span>
 
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  size="icon"
                   onClick={() => handleStartEdit(sIdx, skill)}
-                  className="h-5 w-5 p-0.5 opacity-60 hover:opacity-100 text-text-muted hover:text-brand-dark hover:bg-bg-page rounded"
+                  className="h-5 w-5 p-0.5 opacity-60 hover:opacity-100 text-text-muted hover:text-brand-dark hover:bg-bg-page rounded flex items-center justify-center transition-colors"
                   title="Edit skill"
                   aria-label={`Edit ${skill}`}
                 >
                   <Pencil className="w-3 h-3" />
-                </Button>
+                </button>
 
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  size="icon"
                   onClick={() => handleRemoveSkill(sIdx)}
-                  className="h-5 w-5 p-0.5 opacity-60 hover:opacity-100 text-text-muted hover:text-red-500 hover:bg-red-50 rounded"
+                  className="h-5 w-5 p-0.5 opacity-60 hover:opacity-100 text-text-muted hover:text-red-500 hover:bg-red-50 rounded flex items-center justify-center transition-colors"
                   title="Remove skill"
                   aria-label={`Remove ${skill}`}
                 >
                   <X className="w-3 h-3" />
-                </Button>
+                </button>
               </div>
             )
           })
@@ -291,7 +279,6 @@ function SkillCategoryEditor({
             onChange={(e) => setNewSkillText(e.target.value)}
             onKeyDown={handleAddKeyDown}
             placeholder={`Add a skill to ${category.label.toLowerCase()} (e.g. Next.js)...`}
-            className="text-xs"
           />
         </div>
         <Button onClick={handleAddSkill} disabled={!newSkillText.trim()} size="sm">
@@ -328,24 +315,27 @@ export default function SkillsEditSection({
   }
 
   return (
-    <Card className="p-6 sm:p-7">
-      <div className="border-b border-border-subtle pb-4 mb-6">
-        <h2 className="text-xl font-bold tracking-tight text-text-main">Skills Architecture</h2>
-        <p className="text-xs text-text-muted mt-1">
-          Add, edit, or remove technical skills across Languages, Frameworks & Tools, and Databases.
-        </p>
-      </div>
+    <Card>
+      <CardContent>
+        <div className="border-b border-border-subtle pb-4 mb-6">
+          <h2 className="text-xl font-bold tracking-tight text-text-main">Skills Architecture</h2>
+          <p className="text-xs text-text-muted mt-1">
+            Add, edit, or remove technical skills across Languages, Frameworks & Tools, and
+            Databases.
+          </p>
+        </div>
 
-      <div className="space-y-4">
-        {categories.map((cat, idx) => (
-          <SkillCategoryEditor
-            key={'id' in cat ? (cat.id as string) : cat.label || idx}
-            category={cat}
-            categoryIndex={idx}
-            onUpdateCategory={handleUpdateCategory}
-          />
-        ))}
-      </div>
+        <div className="space-y-4">
+          {categories.map((cat, idx) => (
+            <SkillCategoryEditor
+              key={'id' in cat ? (cat.id as string) : cat.label || idx}
+              category={cat}
+              categoryIndex={idx}
+              onUpdateCategory={handleUpdateCategory}
+            />
+          ))}
+        </div>
+      </CardContent>
     </Card>
   )
 }

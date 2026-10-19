@@ -9,7 +9,7 @@ import {
   type Control,
   type FieldValues,
 } from 'react-hook-form'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
@@ -182,17 +182,15 @@ function ProjectCardEditor({ index, onDelete, errors }: ProjectCardEditorProps) 
                     className="inline-flex items-center gap-1.5 bg-card text-text-main text-xs font-mono px-2.5 py-1 rounded-lg border border-border-subtle shadow-xs"
                   >
                     {tag}
-                    <Button
+                    <button
                       type="button"
-                      variant="ghost"
-                      size="icon"
                       onClick={() => handleRemoveTag(tIdx)}
-                      className="h-4 w-4 p-0.5 text-text-muted hover:text-red-500 hover:bg-red-50 rounded"
+                      className="h-4 w-4 p-0.5 text-text-muted hover:text-red-500 hover:bg-red-50 rounded flex items-center justify-center transition-colors"
                       title="Remove tag"
                       aria-label={`Remove tag ${tag}`}
                     >
                       <X className="w-3 h-3" />
-                    </Button>
+                    </button>
                   </span>
                 )
               })
@@ -200,13 +198,13 @@ function ProjectCardEditor({ index, onDelete, errors }: ProjectCardEditorProps) 
           </div>
 
           <div className="flex items-center gap-2">
-            <Input
+            <input
               type="text"
               value={newTag}
               onChange={(e) => setNewTag(e.target.value)}
               onKeyDown={handleTagKeyDown}
               placeholder="Add tech tag (e.g. REACT, PYTHON)..."
-              className="flex-1 uppercase font-mono text-xs"
+              className="h-9 flex-1 min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-xs uppercase font-mono shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
             />
             <Button onClick={handleAddTag} disabled={!newTag.trim()} size="sm">
               <Plus className="w-3.5 h-3.5" />
@@ -261,40 +259,42 @@ export default function ProjectsEditSection({
   }
 
   return (
-    <Card className="p-6 sm:p-7">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border-subtle pb-4 mb-6">
-        <div>
-          <h2 className="text-xl font-bold tracking-tight text-text-main">Featured Projects</h2>
-          <p className="text-xs text-text-muted mt-1">
-            Highlight your top software projects, architectures, and technical accomplishments.
-          </p>
-        </div>
-        <Button onClick={handleAddProject} size="sm" className="shrink-0">
-          <Plus className="w-3.5 h-3.5" />
-          Add Project
-        </Button>
-      </div>
-
-      <div className="space-y-6">
-        {fields.length === 0 ? (
-          <div className="text-center py-8 bg-bg-page rounded-2xl border border-dashed border-border-muted">
-            <p className="text-sm text-text-muted mb-3">No projects added yet.</p>
-            <Button onClick={handleAddProject} variant="secondary" size="xs">
-              <Plus className="w-3.5 h-3.5" />
-              Add First Project
-            </Button>
+    <Card>
+      <CardContent>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border-subtle pb-4 mb-6">
+          <div>
+            <h2 className="text-xl font-bold tracking-tight text-text-main">Featured Projects</h2>
+            <p className="text-xs text-text-muted mt-1">
+              Highlight your top software projects, architectures, and technical accomplishments.
+            </p>
           </div>
-        ) : (
-          fields.map((field, idx) => (
-            <ProjectCardEditor
-              key={field.id || idx}
-              index={idx}
-              onDelete={handleDeleteProject}
-              errors={errors?.[idx]}
-            />
-          ))
-        )}
-      </div>
+          <Button onClick={handleAddProject} size="sm">
+            <Plus className="w-3.5 h-3.5" />
+            Add Project
+          </Button>
+        </div>
+
+        <div className="space-y-6">
+          {fields.length === 0 ? (
+            <div className="text-center py-8 bg-bg-page rounded-2xl border border-dashed border-border-muted">
+              <p className="text-sm text-text-muted mb-3">No projects added yet.</p>
+              <Button onClick={handleAddProject} variant="secondary" size="xs">
+                <Plus className="w-3.5 h-3.5" />
+                Add First Project
+              </Button>
+            </div>
+          ) : (
+            fields.map((field, idx) => (
+              <ProjectCardEditor
+                key={field.id || idx}
+                index={idx}
+                onDelete={handleDeleteProject}
+                errors={errors?.[idx]}
+              />
+            ))
+          )}
+        </div>
+      </CardContent>
     </Card>
   )
 }
