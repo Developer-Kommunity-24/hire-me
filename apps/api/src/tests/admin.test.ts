@@ -109,6 +109,20 @@ describe('Admin statistics API', () => {
       recruiters: 32,
       postings: 67,
       applications: 482,
+      applicationsByStatus: {
+        applied: 190,
+        under_review: 120,
+        shortlisted: 90,
+        accepted: 50,
+        rejected: 32,
+      },
+      applicationStatusCounts: {
+        applied: 190,
+        under_review: 120,
+        shortlisted: 90,
+        accepted: 50,
+        rejected: 32,
+      },
     })
 
     const res = await request('/api/admin/stats')
@@ -120,6 +134,20 @@ describe('Admin statistics API', () => {
         recruiters: 32,
         postings: 67,
         applications: 482,
+        applicationsByStatus: {
+          applied: 190,
+          under_review: 120,
+          shortlisted: 90,
+          accepted: 50,
+          rejected: 32,
+        },
+        applicationStatusCounts: {
+          applied: 190,
+          under_review: 120,
+          shortlisted: 90,
+          accepted: 50,
+          rejected: 32,
+        },
       },
     })
     expect(getAdminStats).toHaveBeenCalledWith(expect.anything())
@@ -131,13 +159,46 @@ describe('Admin statistics API', () => {
       recruiters: 0,
       postings: 0,
       applications: 0,
+      applicationsByStatus: {
+        applied: 0,
+        under_review: 0,
+        shortlisted: 0,
+        accepted: 0,
+        rejected: 0,
+      },
+      applicationStatusCounts: {
+        applied: 0,
+        under_review: 0,
+        shortlisted: 0,
+        accepted: 0,
+        rejected: 0,
+      },
     })
 
     const res = await request('/api/admin/stats')
 
     expect(res.status).toBe(200)
     await expect(res.json()).resolves.toEqual({
-      data: { students: 0, recruiters: 0, postings: 0, applications: 0 },
+      data: {
+        students: 0,
+        recruiters: 0,
+        postings: 0,
+        applications: 0,
+        applicationsByStatus: {
+          applied: 0,
+          under_review: 0,
+          shortlisted: 0,
+          accepted: 0,
+          rejected: 0,
+        },
+        applicationStatusCounts: {
+          applied: 0,
+          under_review: 0,
+          shortlisted: 0,
+          accepted: 0,
+          rejected: 0,
+        },
+      },
     })
   })
 
@@ -147,13 +208,46 @@ describe('Admin statistics API', () => {
       recruiters: 2,
       postings: 4,
       applications: 7,
+      applicationsByStatus: {
+        applied: 2,
+        under_review: 1,
+        shortlisted: 2,
+        accepted: 1,
+        rejected: 1,
+      },
+      applicationStatusCounts: {
+        applied: 2,
+        under_review: 1,
+        shortlisted: 2,
+        accepted: 1,
+        rejected: 1,
+      },
     })
 
     const res = await request('/api/admin/stats')
 
     expect(res.status).toBe(200)
     await expect(res.json()).resolves.toEqual({
-      data: { students: 3, recruiters: 2, postings: 4, applications: 7 },
+      data: {
+        students: 3,
+        recruiters: 2,
+        postings: 4,
+        applications: 7,
+        applicationsByStatus: {
+          applied: 2,
+          under_review: 1,
+          shortlisted: 2,
+          accepted: 1,
+          rejected: 1,
+        },
+        applicationStatusCounts: {
+          applied: 2,
+          under_review: 1,
+          shortlisted: 2,
+          accepted: 1,
+          rejected: 1,
+        },
+      },
     })
   })
 
@@ -163,12 +257,45 @@ describe('Admin statistics API', () => {
       recruiters: 1,
       postings: 2,
       applications: 3,
+      applicationsByStatus: {
+        applied: 1,
+        under_review: 1,
+        shortlisted: 0,
+        accepted: 1,
+        rejected: 0,
+      },
+      applicationStatusCounts: {
+        applied: 1,
+        under_review: 1,
+        shortlisted: 0,
+        accepted: 1,
+        rejected: 0,
+      },
     })
 
     const res = await request('/api/admin/stats')
 
     await expect(res.json()).resolves.toEqual({
-      data: { students: 1, recruiters: 1, postings: 2, applications: 3 },
+      data: {
+        students: 1,
+        recruiters: 1,
+        postings: 2,
+        applications: 3,
+        applicationsByStatus: {
+          applied: 1,
+          under_review: 1,
+          shortlisted: 0,
+          accepted: 1,
+          rejected: 0,
+        },
+        applicationStatusCounts: {
+          applied: 1,
+          under_review: 1,
+          shortlisted: 0,
+          accepted: 1,
+          rejected: 0,
+        },
+      },
     })
   })
 

@@ -38,11 +38,21 @@ export type ClubWriteResult =
 
 export type ClubListResult = { ok: true; clubs: Club[] }
 
+export type ApplicationStatusCounts = {
+  applied: number
+  under_review: number
+  shortlisted: number
+  accepted: number
+  rejected: number
+}
+
 export interface AdminStats {
   students: number
   recruiters: number
   postings: number
   applications: number
+  applicationsByStatus: ApplicationStatusCounts
+  applicationStatusCounts: ApplicationStatusCounts
 }
 
 // ==========================================
@@ -56,27 +66,52 @@ export interface AdminStats {
  * @returns Platform-wide dashboard statistics.
  */
 export async function getAdminStats(db: Database): Promise<AdminStats> {
-  const [studentResult, recruiterResult, postingResult, applicationResult] = await Promise.all([
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(users)
-      .where(sql`${users.roles} @> ARRAY['student']::user_role[]`),
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(recruiters)
-      .where(eq(recruiters.isDeleted, false)),
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(postings)
-      .where(eq(postings.status, 'active')),
-    db.select({ count: sql<number>`count(*)::int` }).from(applications),
-  ])
+  const [studentResult, recruiterResult, postingResult, applicationResult, statusResult] =
+    await Promise.all([
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(users)
+        .where(sql`${users.roles} @> ARRAY['student']::user_role[]`),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(recruiters)
+        .where(eq(recruiters.isDeleted, false)),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(postings)
+        .where(eq(postings.status, 'active')),
+      db.select({ count: sql<number>`count(*)::int` }).from(applications),
+      db
+        .select({
+          status: applications.status,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(applications)
+        .groupBy(applications.status),
+    ])
+
+  const applicationsByStatus: ApplicationStatusCounts = {
+    applied: 0,
+    under_review: 0,
+    shortlisted: 0,
+    accepted: 0,
+    rejected: 0,
+  }
+
+  for (const row of statusResult) {
+    const status = row.status as keyof ApplicationStatusCounts
+    if (status in applicationsByStatus) {
+      applicationsByStatus[status] = Number(row.count)
+    }
+  }
 
   return {
     students: studentResult[0]?.count ?? 0,
     recruiters: recruiterResult[0]?.count ?? 0,
     postings: postingResult[0]?.count ?? 0,
     applications: applicationResult[0]?.count ?? 0,
+    applicationsByStatus,
+    applicationStatusCounts: applicationsByStatus,
   }
 }
 

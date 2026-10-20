@@ -84,11 +84,42 @@ adminRouter.use('*', requireCoreAdmin)
 /**
  * GET /api/admin/stats
  *
- * Returns platform-wide counts for the core-admin dashboard.
+ * Returns platform-wide counts for the core-admin dashboard, including
+ * application totals broken down by status.
  */
 adminRouter.get('/stats', async (c) => {
   const stats = await getAdminStats(c.var.db)
   return c.json({ data: stats })
+})
+
+/**
+ * GET /api/admin/application-statuses
+ *
+ * Returns application counts grouped by status for dashboard charts.
+ */
+adminRouter.get('/application-statuses', async (c) => {
+  const stats = await getAdminStats(c.var.db)
+  return c.json({
+    data: {
+      applicationsByStatus: stats.applicationsByStatus,
+      applicationStatusCounts: stats.applicationStatusCounts,
+    },
+  })
+})
+
+/**
+ * GET /api/admin/application-stats
+ *
+ * Backward-compatible alias for application status counts.
+ */
+adminRouter.get('/application-stats', async (c) => {
+  const stats = await getAdminStats(c.var.db)
+  return c.json({
+    data: {
+      applicationsByStatus: stats.applicationsByStatus,
+      applicationStatusCounts: stats.applicationStatusCounts,
+    },
+  })
 })
 
 /**
