@@ -46,40 +46,40 @@ export function StepBioReview({ register, errors, values }: StepBioReviewProps) 
           />
         </FormField>
 
-        <div className="rounded-xl border border-border-subtle bg-slate-50/80 p-3.5 space-y-2">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+        <div className="rounded-xl border border-border-subtle bg-card/90 p-3.5 space-y-2">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-text-main">
             Profile Summary
           </h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-slate-600">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-text-muted">
             <div>
-              <span className="font-semibold text-slate-800">Name:</span> {values.fullName || '—'}
+              <span className="font-semibold text-text-main">Name:</span> {values.fullName || '—'}
             </div>
             <div>
-              <span className="font-semibold text-slate-800">Job Title:</span>{' '}
+              <span className="font-semibold text-text-main">Job Title:</span>{' '}
               {values.jobTitle || '—'}
             </div>
             <div>
-              <span className="font-semibold text-slate-800">Company:</span>{' '}
+              <span className="font-semibold text-text-main">Company:</span>{' '}
               {values.companyName || '—'}
             </div>
             <div>
-              <span className="font-semibold text-slate-800">Email:</span>{' '}
+              <span className="font-semibold text-text-main">Email:</span>{' '}
               {values.companyMail || '—'}
             </div>
             {values.companyUrl && (
               <div className="sm:col-span-2">
-                <span className="font-semibold text-slate-800">Website:</span> {values.companyUrl}
+                <span className="font-semibold text-text-main">Website:</span> {values.companyUrl}
               </div>
             )}
             {values.headquartersLocation && (
               <div className="sm:col-span-2">
-                <span className="font-semibold text-slate-800">Location:</span>{' '}
+                <span className="font-semibold text-text-main">Location:</span>{' '}
                 {values.headquartersLocation}
               </div>
             )}
             {bioExcerpt && (
-              <div className="sm:col-span-2 pt-1 border-t border-slate-200/60">
-                <span className="font-semibold text-slate-800">Bio:</span> {bioExcerpt}
+              <div className="sm:col-span-2 pt-1 border-t border-border-subtle">
+                <span className="font-semibold text-text-main">Bio:</span> {bioExcerpt}
               </div>
             )}
           </div>

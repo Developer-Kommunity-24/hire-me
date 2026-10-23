@@ -41,13 +41,13 @@ export function RecruiterOnboardingStepper({
             isCurrent && 'bg-brand text-white ring-4 ring-brand/25',
             !isPassed &&
               !isCurrent &&
-              'bg-card border-2 border-border-subtle text-text-muted group-hover:border-slate-300',
+              'bg-card border-2 border-border-subtle text-text-muted group-hover:border-border-muted',
           )
 
           const labelClasses = cn(
             'text-xs whitespace-nowrap transition-colors',
             isCurrent && 'font-bold text-brand',
-            isPassed && 'font-semibold text-slate-700',
+            isPassed && 'font-semibold text-text-main',
             !isPassed && !isCurrent && 'font-medium text-text-muted',
           )
 
@@ -60,6 +60,7 @@ export function RecruiterOnboardingStepper({
                 role="tab"
                 aria-selected={isCurrent}
                 aria-label={`Step ${step.id}: ${step.label}`}
+                disabled={step.id > currentStep}
                 onClick={() => onStepClick(step.id)}
                 className="flex flex-col items-center gap-1.5 cursor-pointer group shrink-0 bg-transparent border-0 outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-lg transition-transform active:scale-95"
               >

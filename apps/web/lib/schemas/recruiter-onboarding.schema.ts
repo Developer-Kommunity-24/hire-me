@@ -9,21 +9,38 @@ const optionalUrl = z
 
 // Maintained for backward-compatibility with existing backend API shapes and hooks
 export const recruiterOnboardingSchema = z.object({
-  companyName: z.string().trim().min(2, 'Please enter your company name'),
+  companyName: z
+    .string()
+    .trim()
+    .min(2, 'Please enter your company name')
+    .max(100, 'Company name cannot exceed 100 characters'),
   companyMail: z
     .string()
     .trim()
     .min(1, 'Please enter your company work email')
+    .max(255, 'Work email cannot exceed 255 characters')
     .email('Please enter a valid work email address'),
   companyUrl: optionalUrl,
-  headquartersLocation: z.string().trim().optional(),
+  headquartersLocation: z
+    .string()
+    .trim()
+    .max(150, 'Location cannot exceed 150 characters')
+    .optional(),
 })
 
 export type RecruiterOnboardingInput = z.infer<typeof recruiterOnboardingSchema>
 
 export const stepAboutYouSchema = z.object({
-  fullName: z.string().trim().min(1, 'Please enter your full name'),
-  jobTitle: z.string().trim().min(1, 'Please enter your job title'),
+  fullName: z
+    .string()
+    .trim()
+    .min(1, 'Please enter your full name')
+    .max(100, 'Full name cannot exceed 100 characters'),
+  jobTitle: z
+    .string()
+    .trim()
+    .min(1, 'Please enter your job title')
+    .max(100, 'Job title cannot exceed 100 characters'),
 })
 
 export type StepAboutYouInput = z.infer<typeof stepAboutYouSchema>
@@ -32,7 +49,7 @@ export const stepCompanySchema = recruiterOnboardingSchema
 export type StepCompanyInput = RecruiterOnboardingInput
 
 export const stepBioReviewSchema = z.object({
-  bio: z.string().trim().optional(),
+  bio: z.string().trim().max(500, 'Bio cannot exceed 500 characters').optional(),
 })
 
 export type StepBioReviewInput = z.infer<typeof stepBioReviewSchema>

@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 
 import { Button } from '@/components/ui/button'
 import { RecruiterHero } from '@/components/onboarding/recruiter/recruiter-hero'
@@ -78,15 +78,15 @@ export default function RecruiterOnboardingPage() {
     getValues,
     setValue,
     reset,
-    control,
-    formState: { errors, dirtyFields },
+    getFieldState,
+    formState: { errors },
   } = useForm<RecruiterWizardInput>({
     resolver: zodResolver(recruiterWizardSchema),
     mode: 'onTouched',
     defaultValues: DEFAULT_RECRUITER_WIZARD_VALUES,
   })
 
-  const formValues = useWatch({ control }) as RecruiterWizardInput
+  // Removed useWatch to avoid excessive re-renders
 
   // Redirect to landing only when a completed profile is confirmed by the server
   useEffect(() => {
@@ -113,12 +113,12 @@ export default function RecruiterOnboardingPage() {
     } else if (user.name) {
       // Late-arriving name only populates if user has not typed and field is not dirty
       const currentFullName = getValues('fullName')
-      const isDirty = Boolean(dirtyFields.fullName)
+      const isDirty = getFieldState('fullName').isDirty
       if (!currentFullName && !isDirty) {
         setValue('fullName', user.name)
       }
     }
-  }, [user?.id, user?.name, loadDraft, reset, setValue, getValues, dirtyFields.fullName])
+  }, [user?.id, user?.name, loadDraft, reset, setValue, getValues, getFieldState])
 
   const onFinalSubmit = async (data: RecruiterWizardInput) => {
     try {
@@ -169,19 +169,34 @@ export default function RecruiterOnboardingPage() {
   }
 
   const handleStepClick = async (targetStep: RecruiterStepNumber) => {
+    if (targetStep === step) return
+
     if (targetStep < step) {
       setStep(targetStep)
       return
     }
 
-    if (step === FIRST_STEP && targetStep > FIRST_STEP) {
-      const isValid = await trigger(STEP_1_FIELDS)
-      if (!isValid) return
-    }
+    if (targetStep === SECOND_STEP) {
+      const isStep1Valid = await trigger(STEP_1_FIELDS)
+      if (!isStep1Valid) {
+        if (step !== FIRST_STEP) setStep(FIRST_STEP)
+        return
+      }
+    } else if (targetStep === FINAL_STEP) {
+      const isStep1Valid = await trigger(STEP_1_FIELDS)
+      if (!isStep1Valid) {
+        if (step !== FIRST_STEP) setStep(FIRST_STEP)
+        return
+      }
 
-    if (step === SECOND_STEP && targetStep === FINAL_STEP) {
-      const isValid = await trigger(STEP_2_FIELDS)
-      if (!isValid) return
+      const isStep2Valid = await trigger(STEP_2_FIELDS)
+      if (!isStep2Valid) {
+        if (step !== SECOND_STEP) {
+          saveDraft(SECOND_STEP, getValues(), false)
+          setStep(SECOND_STEP)
+        }
+        return
+      }
     }
 
     saveDraft(targetStep, getValues(), false)
@@ -262,11 +277,7 @@ export default function RecruiterOnboardingPage() {
                     exit={STEP_ANIM_EXIT}
                     transition={STEP_TRANSITION}
                   >
-                    <StepBioReview
-                      register={register}
-                      errors={errors}
-                      values={formValues || DEFAULT_RECRUITER_WIZARD_VALUES}
-                    />
+                    <StepBioReview register={register} errors={errors} values={getValues()} />
                   </motion.div>
                 )}
               </AnimatePresence>
