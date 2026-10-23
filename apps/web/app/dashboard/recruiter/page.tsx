@@ -1,16 +1,26 @@
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
-
+import RecruiterProfileForm from './components/RecruiterProfileForm'
 import CandidateRow from './components/CandidateRow'
 import MetricCard from './components/MetricCard'
 import PipelineTabs from './components/PipelineTabs'
 import Sidebar from './components/Sidebar'
 import Topbar from './components/Topbar'
 
-import { candidates, dashboardMetrics, type Candidate, type CandidateStatus } from './data'
+import { type Candidate, type CandidateStatus } from './data'
 
 export default function RecruiterDashboard() {
+  const candidates: Candidate[] = []
+  const dashboardMetrics = {
+    activeJobs: 0,
+    activeJobsDelta: '',
+    totalApplicants: 0,
+    applicantsDelta: '',
+    pendingReviews: 0,
+    pendingReviewsDelta: '',
+  }
+  const [isProfileFormOpen, setIsProfileFormOpen] = useState(false)
   useEffect(() => {
     const savedProfile = localStorage.getItem('recruiter_profile')
 
@@ -69,26 +79,31 @@ export default function RecruiterDashboard() {
             </p>
 
             <h1 className="text-3xl font-bold tracking-tight text-text-main">Welcome back!</h1>
-
+            <button
+              type="button"
+              onClick={() => setIsProfileFormOpen(true)}
+              className="rounded-lg bg-brand px-4 py-2 font-semibold text-white"
+            >
+              Edit Company Profile
+            </button>
             <p className="mt-2 text-text-muted">
               Here's an overview of your recruitment activity
               {profile?.companyName ? ` at ${profile.companyName}` : ''}.
             </p>
           </div>
 
-          <section className="grid gap-5 md:grid-cols-3">
+          <section id="applicant-pipeline" className="mt-10 scroll-mt-6">
+            {' '}
             <MetricCard
               title="Active Jobs"
               value={dashboardMetrics.activeJobs}
               delta={dashboardMetrics.activeJobsDelta}
             />
-
             <MetricCard
               title="Total Applicants"
               value={dashboardMetrics.totalApplicants}
               delta={dashboardMetrics.applicantsDelta}
             />
-
             <MetricCard
               title="Pending Reviews"
               value={dashboardMetrics.pendingReviews}
@@ -230,6 +245,23 @@ export default function RecruiterDashboard() {
                 Send Email
               </a>
             </div>
+          </div>
+        </div>
+      )}
+      {isProfileFormOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+            <h2 className="mb-5 text-xl font-bold text-text-main">Company Profile</h2>
+
+            <RecruiterProfileForm
+              initialValues={profile ?? undefined}
+              onCancel={() => setIsProfileFormOpen(false)}
+              onSave={(values) => {
+                localStorage.setItem('recruiter_profile', JSON.stringify(values))
+                setProfile(values)
+                setIsProfileFormOpen(false)
+              }}
+            />
           </div>
         </div>
       )}

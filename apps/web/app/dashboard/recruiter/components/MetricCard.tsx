@@ -1,32 +1,32 @@
 import { BriefcaseBusiness, Users, Clock3 } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+
 type MetricCardProps = {
   title: string
   value: number
   delta: string
 }
 
+const icons = {
+  'Active Jobs': BriefcaseBusiness,
+  'Total Applicants': Users,
+  'Pending Reviews': Clock3,
+}
+
 export default function MetricCard({ title, value, delta }: MetricCardProps) {
+  const Icon = icons[title as keyof typeof icons]
+
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm font-medium text-text-muted">{title}</p>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+      </CardHeader>
 
-          <p className="mt-3 text-3xl font-bold tracking-tight text-text-main">
-            {value.toLocaleString()}
-          </p>
-        </div>
-
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-bg-page text-lg">
-          {title === 'Active Jobs' && <BriefcaseBusiness />}
-          {title === 'Total Applicants' && <Users />}
-          {title === 'Pending Reviews' && <Clock3 />}
-        </div>
-      </div>
-
-      <p className="mt-4 text-sm">
-        <span className="font-semibold text-brand-green">{delta}</span>
-      </p>
-    </div>
+      <CardContent>
+        <div className="text-2xl font-bold">{(value ?? 0).toLocaleString()}</div>
+        {delta && <p className="text-xs text-muted-foreground">{delta}</p>}
+      </CardContent>
+    </Card>
   )
 }
