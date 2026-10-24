@@ -22,5 +22,4 @@ export function createDb(url: string) {
 
 export type Database = ReturnType<typeof createDb>
 
-// Re-export schema types for convenience
 export * from './schema/index'

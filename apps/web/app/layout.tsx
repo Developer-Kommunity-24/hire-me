@@ -3,9 +3,13 @@ import { Geist } from 'next/font/google'
 import type { ReactNode } from 'react'
 import Providers from './providers'
 import './globals.css'
-import { cn } from '@/lib/utils'
+import { Providers } from './providers'
 
-const geist = Geist({ subsets: ['latin'], variable: '--font-sans' })
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-sans',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'CareerLink - DK24 Community',
@@ -14,8 +18,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={cn('font-sans', geist.variable)}>
-      <body className="antialiased font-sans bg-white text-[#0f1f09] min-h-screen flex flex-col">
+    <html lang="en" className={plusJakartaSans.variable}>
+      <body className="antialiased font-sans bg-white text-text-main min-h-screen flex flex-col">
         <Providers>{children}</Providers>
       </body>
     </html>

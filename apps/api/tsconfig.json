@@ -2,7 +2,15 @@
   "extends": "@repo/typescript-config/node.json",
   "compilerOptions": {
     "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json",
-    "types": ["@cloudflare/workers-types"]
+    "types": ["@cloudflare/workers-types"],
+    // Wrangler bundles the output, so bundler module resolution is appropriate
+    // and also lets @repo/db (which uses bundler-style imports) type-check correctly.
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "paths": {
+      "@repo/db": ["../../packages/db/dist/src/index.d.ts"],
+      "@repo/db/*": ["../../packages/db/dist/src/*.d.ts"]
+    }
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"]

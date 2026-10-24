@@ -9,7 +9,14 @@ import tseslint from 'typescript-eslint'
  */
 export const config = [
   {
-    ignores: ['**/node_modules/**', '**/dist/**', '**/.next/**', '**/.turbo/**', '**/coverage/**'],
+    ignores: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/.next/**',
+      '**/.turbo/**',
+      '**/coverage/**',
+      '**/.wrangler/**',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

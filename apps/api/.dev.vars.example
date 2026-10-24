@@ -1,0 +1,11 @@
+# Copy this file to `.dev.vars` (gitignored) and fill in real values.
+#   cp apps/api/.dev.vars.example apps/api/.dev.vars
+
+# Neon Postgres connection string
+DATABASE_URL=postgresql://USER:PASSWORD@HOST-pooler.REGION.aws.neon.tech/DBNAME?sslmode=require
+
+# Neon Auth base URL 
+NEON_AUTH_BASE_URL=https://REPLACE-ME.example.com
+
+#CORS
+WEB_ORIGIN=http://localhost:3000

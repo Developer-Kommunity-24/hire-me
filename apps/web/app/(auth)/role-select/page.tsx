@@ -1,16 +1,21 @@
 'use client'
 
 import { motion } from 'motion/react'
-import { ArrowRight, Check } from 'lucide-react'
+import { ArrowRight, Briefcase, Check, GraduationCap } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
+import { ApiError } from '@/lib/api-client'
+import { useSetUserRole } from '@/lib/hooks/use-auth'
+import { type SelfAssignableRole } from '@/lib/schemas/auth.schema'
 
 export default function RoleSelectPage() {
   const router = useRouter()
-  const [selectedRole, setSelectedRole] = useState<'student' | 'recruiter' | null>(null)
-  const [hoveredRole, setHoveredRole] = useState<'student' | 'recruiter' | null>(null)
+  const [selectedRole, setSelectedRole] = useState<SelfAssignableRole | null>(null)
+  const [hoveredRole, setHoveredRole] = useState<SelfAssignableRole | null>(null)
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
   const [blink, setBlink] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Track mouse coordinates for interactive eye tracking
@@ -34,18 +39,41 @@ export default function RoleSelectPage() {
     return () => clearInterval(interval)
   }, [])
 
-  // Selection handler with smooth transition
-  const handleSelect = (role: 'student' | 'recruiter') => {
-    setSelectedRole(role)
-    localStorage.setItem('user_role', role)
+  const setRoleMutation = useSetUserRole()
 
-    setTimeout(() => {
-      if (role === 'student') {
-        router.push('/student')
-      } else {
-        router.push('/recruiter')
+  /**
+   * Persists the chosen role, then moves on to the matching dashboard.
+   *
+   * The role is authorization state, so it lives in Postgres rather than
+   * `localStorage` — navigation only happens once the API confirms the write.
+   */
+  const handleSelect = async (role: SelfAssignableRole) => {
+    if (isSaving) return
+
+    setSelectedRole(role)
+    setIsSaving(true)
+    setErrorMsg('')
+
+    try {
+      await setRoleMutation.mutateAsync(role)
+    } catch (error) {
+      // An expired session cannot be recovered here — send them back to sign in.
+      if (error instanceof ApiError && error.status === 401) {
+        router.push('/login')
+        return
       }
-    }, 900)
+
+      setSelectedRole(null)
+      setIsSaving(false)
+      setErrorMsg(
+        error instanceof ApiError
+          ? error.message
+          : 'Could not save your role. Check your connection and try again.',
+      )
+      return
+    }
+
+    router.push(role === 'student' ? '/student' : '/recruiter')
   }
 
   // Calculate eye gaze vector
@@ -107,7 +135,8 @@ export default function RoleSelectPage() {
               <button
                 type="button"
                 id="role-student-btn"
-                onClick={() => handleSelect('student')}
+                onClick={() => void handleSelect('student')}
+                disabled={isSaving}
                 onMouseEnter={() => setHoveredRole('student')}
                 onMouseLeave={() => setHoveredRole(null)}
                 className={`group relative rounded-3xl p-6 sm:p-7 flex flex-col items-center text-center transition-all duration-300 cursor-pointer select-none bg-card border ${
@@ -118,40 +147,9 @@ export default function RoleSelectPage() {
                       : 'border-slate-100 shadow-[0_6px_30px_-6px_rgba(0,0,0,0.05)] hover:border-slate-200'
                 }`}
               >
-                {/* 3D Student Badge Icon */}
+                {/* Student Badge Icon */}
                 <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-full bg-brand-light flex items-center justify-center mb-5 transition-transform duration-300 group-hover:scale-105">
-                  <svg className="w-10 h-10" viewBox="0 0 64 64" fill="none">
-                    <path
-                      d="M32 14L8 25L32 36L56 25L32 14Z"
-                      fill="var(--brand-green)"
-                      filter="drop-shadow(0 4px 6px rgba(0,194,109,0.3))"
-                    />
-                    <path d="M32 14L56 25L32 36L8 25L32 14Z" fill="url(#capGradIcon)" />
-                    <path
-                      d="M18 31V43C18 43 23 48 32 48C41 48 46 43 46 43V31L32 37.5L18 31Z"
-                      fill="var(--brand-green-dark)"
-                    />
-                    <path
-                      d="M48 28.5V44C48 44 49 48 46 49.5"
-                      stroke="var(--brand-green)"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                    />
-                    <circle cx="46" cy="49.5" r="2.5" fill="var(--brand-green-dark)" />
-                    <defs>
-                      <linearGradient
-                        id="capGradIcon"
-                        x1="8"
-                        y1="14"
-                        x2="56"
-                        y2="36"
-                        gradientUnits="userSpaceOnUse"
-                      >
-                        <stop stopColor="#10D77D" />
-                        <stop offset="1" stopColor="var(--brand-green-hover)" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
+                  <GraduationCap className="w-10 h-10 text-brand" strokeWidth={2.2} />
                 </div>
 
                 {/* Role Name */}
@@ -184,55 +182,21 @@ export default function RoleSelectPage() {
               <button
                 type="button"
                 id="role-recruiter-btn"
-                onClick={() => handleSelect('recruiter')}
+                onClick={() => void handleSelect('recruiter')}
+                disabled={isSaving}
                 onMouseEnter={() => setHoveredRole('recruiter')}
                 onMouseLeave={() => setHoveredRole(null)}
                 className={`group relative rounded-3xl p-6 sm:p-7 flex flex-col items-center text-center transition-all duration-300 cursor-pointer select-none bg-card border ${
                   selectedRole === 'recruiter'
-                    ? 'border-[#8B5CF6] ring-4 ring-[#8B5CF6]/15 shadow-xl scale-[1.02]'
+                    ? 'border-recruiter ring-4 ring-recruiter/15 shadow-xl scale-[1.02]'
                     : hoveredRole === 'recruiter'
                       ? 'border-purple-200 shadow-xl -translate-y-1'
                       : 'border-slate-100 shadow-[0_6px_30px_-6px_rgba(0,0,0,0.05)] hover:border-slate-200'
                 }`}
               >
-                {/* 3D Recruiter Badge Icon */}
-                <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-full bg-[#EFEFFF] flex items-center justify-center mb-5 transition-transform duration-300 group-hover:scale-105">
-                  <svg className="w-10 h-10" viewBox="0 0 64 64" fill="none">
-                    <rect
-                      x="25"
-                      y="16"
-                      width="14"
-                      height="8"
-                      rx="3"
-                      stroke="#6D28D9"
-                      strokeWidth="3"
-                      fill="none"
-                    />
-                    <rect
-                      x="12"
-                      y="22"
-                      width="40"
-                      height="28"
-                      rx="6"
-                      fill="url(#caseGradIcon)"
-                      filter="drop-shadow(0 4px 6px rgba(109,40,217,0.25))"
-                    />
-                    <path d="M12 30H52" stroke="#5B21B6" strokeWidth="2" opacity="0.4" />
-                    <rect x="28" y="32" width="8" height="6" rx="2" fill="#FFFFFF" />
-                    <defs>
-                      <linearGradient
-                        id="caseGradIcon"
-                        x1="12"
-                        y1="22"
-                        x2="52"
-                        y2="50"
-                        gradientUnits="userSpaceOnUse"
-                      >
-                        <stop stopColor="#8B5CF6" />
-                        <stop offset="1" stopColor="#6D28D9" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
+                {/* Recruiter Badge Icon */}
+                <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-full bg-recruiter-light flex items-center justify-center mb-5 transition-transform duration-300 group-hover:scale-105">
+                  <Briefcase className="w-10 h-10 text-recruiter" strokeWidth={2.2} />
                 </div>
 
                 {/* Role Name */}
@@ -249,8 +213,8 @@ export default function RoleSelectPage() {
                 <div
                   className={`w-11 h-11 rounded-full flex items-center justify-center mt-5 transition-all duration-300 ${
                     selectedRole === 'recruiter' || hoveredRole === 'recruiter'
-                      ? 'bg-[#8B5CF6] text-white shadow-md shadow-[#8B5CF6]/30 scale-105'
-                      : 'bg-purple-50 text-[#8B5CF6] border border-purple-100/80'
+                      ? 'bg-recruiter text-white shadow-md shadow-recruiter/30 scale-105'
+                      : 'bg-purple-50 text-recruiter border border-purple-100/80'
                   }`}
                 >
                   {selectedRole === 'recruiter' ? (
@@ -261,6 +225,17 @@ export default function RoleSelectPage() {
                 </div>
               </button>
             </div>
+
+            {/* Save failure */}
+            {errorMsg && (
+              <div
+                id="role-select-error"
+                role="alert"
+                className="mt-6 text-sm text-rose-600 bg-rose-50 border border-rose-100 px-4 py-3 rounded-xl"
+              >
+                {errorMsg}
+              </div>
+            )}
           </div>
 
           {/* Right Column: Exact Vector 3D Scene */}

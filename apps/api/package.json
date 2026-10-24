@@ -12,8 +12,12 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@hono/zod-validator": "^0.9.0",
     "@repo/db": "workspace:*",
-    "hono": "4.13.1"
+    "drizzle-orm": "^0.43.1",
+    "hono": "4.13.1",
+    "jose": "^6.2.9",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260809.1",

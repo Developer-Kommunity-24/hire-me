@@ -1,11 +1,15 @@
 'use client'
 
-import confetti from 'canvas-confetti'
-import { ArrowRight, Check, Loader2 } from 'lucide-react'
-import { useRouter } from 'next/navigation'
-import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { ArrowRight, Loader2 } from 'lucide-react'
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+
+import { FormField } from '@/components/ui/form-field'
+import { Input } from '@/components/ui/input'
+import { useSocialSignIn } from '@/lib/hooks/use-auth'
+import { loginSchema, type LoginInput } from '@/lib/schemas/auth.schema'
 import { CharactersScene, type CharacterSceneState } from './CharactersScene'
-import { sound } from './audio'
 
 function GoogleIcon({ className = 'w-4 h-4' }: { className?: string }) {
   return (
@@ -30,8 +34,12 @@ function GoogleIcon({ className = 'w-4 h-4' }: { className?: string }) {
   )
 }
 
+const DEFAULT_VALUES: LoginInput = {
+  name: '',
+  email: '',
+}
+
 export default function LoginPage() {
-  const router = useRouter()
   const [state, setState] = useState<CharacterSceneState>({
     focusedField: 'none',
     emailLength: 0,
@@ -44,79 +52,51 @@ export default function LoginPage() {
   })
 
   const [isSignUp, setIsSignUp] = useState(false)
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [isRedirecting, setIsRedirecting] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
-  useEffect(() => {
-    if (state.isSuccess) {
-      if (email.trim()) {
-        localStorage.setItem('user_email', email)
-      }
-      const timer = setTimeout(() => {
-        router.push('/role-select')
-      }, 1200)
-      return () => clearTimeout(timer)
-    }
-  }, [state.isSuccess, email, router])
+  const socialSignInMutation = useSocialSignIn()
 
-  const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value
-    setEmail(val)
-    setState((s) => ({ ...s, emailLength: val.length }))
-    sound.playKeystroke(val.length)
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: DEFAULT_VALUES,
+  })
+
+  const failWith = (message: string) => {
+    setIsRedirecting(false)
+    setErrorMsg(message)
+    setState((s) => ({ ...s, isError: true }))
+  }
+
+  const onSubmit = () => {
+    failWith("Email sign-in isn't available yet — continue with Google.")
+  }
+
+  const handleGoogleLogin = async () => {
+    setIsRedirecting(true)
     setErrorMsg('')
-  }
+    setState((s) => ({ ...s, isError: false }))
 
-  const triggerConfetti = () => {
     try {
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#F24E38', '#45C6B6', '#3A82F7', '#FFA2B6', '#FBBF24'],
+      await socialSignInMutation.mutateAsync({
+        provider: 'google',
+        callbackURL: '/role-select',
       })
-    } catch {
-      // Confetti fallback
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : 'Could not start Google sign-in. Please try again.'
+      failWith(message)
     }
-  }
-
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault()
-    if (!email.trim()) {
-      setErrorMsg('Please enter your email address')
-      sound.playError()
-      return
-    }
-
-    setIsLoading(true)
-    sound.playPop(480)
-
-    setTimeout(() => {
-      setIsLoading(false)
-      setState((s) => ({ ...s, isSuccess: true }))
-      sound.playSuccess()
-      triggerConfetti()
-    }, 1100)
-  }
-
-  const handleGoogleLogin = () => {
-    setIsLoading(true)
-    sound.playPop(520)
-
-    setTimeout(() => {
-      setIsLoading(false)
-      setState((s) => ({ ...s, isSuccess: true }))
-      sound.playSuccess()
-      triggerConfetti()
-    }, 900)
   }
 
   return (
     <main
       id="app-root"
-      className="min-h-screen w-full flex items-center justify-center p-3 sm:p-6 md:p-8 bg-[#E9EEF5] select-none font-['Plus_Jakarta_Sans',sans-serif]"
+      className="min-h-screen w-full flex items-center justify-center p-3 sm:p-6 md:p-8 bg-page-subtle select-none font-['Plus_Jakarta_Sans',sans-serif]"
     >
       {/* Centered Interactive Login Card */}
       <div
@@ -126,7 +106,7 @@ export default function LoginPage() {
         {/* Left Pane: Characters Scene */}
         <section
           id="characters-pane"
-          className="w-full md:w-[48%] lg:w-1/2 min-h-[380px] sm:min-h-[440px] md:min-h-[560px] bg-[#EEF2F6] flex shrink-0"
+          className="w-full md:w-[48%] lg:w-1/2 min-h-[380px] sm:min-h-[440px] md:min-h-[560px] bg-stage flex shrink-0"
         >
           <CharactersScene state={state} />
         </section>
@@ -140,17 +120,17 @@ export default function LoginPage() {
             id="login-form-container"
             className="relative flex-1 w-full h-full p-6 sm:p-8 md:p-10 flex flex-col justify-center items-center bg-white"
           >
-            {state.isSuccess ? (
-              <div className="flex flex-col items-center justify-center text-center py-8 space-y-5 animate-in fade-in zoom-in-95 duration-300">
-                <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shadow-xs">
-                  <Check className="w-8 h-8 stroke-[3]" />
+            {isRedirecting ? (
+              <div
+                id="redirecting-panel"
+                className="flex flex-col items-center justify-center text-center py-8 space-y-5 animate-in fade-in zoom-in-95 duration-300"
+              >
+                <div className="w-16 h-16 rounded-full bg-zinc-100 text-zinc-600 flex items-center justify-center shadow-xs">
+                  <Loader2 className="w-8 h-8 animate-spin" />
                 </div>
-                <div className="space-y-1.5">
-                  <p className="text-sm text-zinc-500 max-w-[280px]">
-                    You are successfully logged in as{' '}
-                    <span className="font-semibold text-zinc-800">{email}</span>
-                  </p>
-                </div>
+                <p className="text-sm text-zinc-500 max-w-[280px]">
+                  Taking you to Google to finish signing in&hellip;
+                </p>
               </div>
             ) : (
               <div className="w-full max-w-[360px] mx-auto">
@@ -160,71 +140,54 @@ export default function LoginPage() {
                     {isSignUp ? 'Create an account' : 'Welcome'}
                   </h1>
                   <p className="text-sm text-zinc-500 mt-1">
-                    {isSignUp
-                      ? 'Enter your details to get started.'
-                      : 'Enter your email to sign in.'}
+                    {isSignUp ? 'Enter your details to get started.' : 'Sign in to continue.'}
                   </p>
                 </div>
 
                 {/* Form */}
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
                   {isSignUp && (
-                    <div className="space-y-1.5 text-left">
-                      <label
-                        htmlFor="name-input"
-                        className="text-xs font-semibold text-zinc-700 block"
-                      >
-                        Name
-                      </label>
-                      <input
+                    <FormField label="Name" htmlFor="name-input" error={errors.name?.message}>
+                      <Input
                         id="name-input"
                         type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        {...register('name')}
                         onFocus={() => {
                           setState((s) => ({ ...s, focusedField: 'email' }))
-                          sound.playPop(380)
                         }}
                         onBlur={() => setState((s) => ({ ...s, focusedField: 'none' }))}
                         placeholder="Your full name"
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition bg-zinc-50/50 hover:bg-zinc-50"
                       />
-                    </div>
+                    </FormField>
                   )}
 
                   {/* Email Field */}
-                  <div className="space-y-1.5 text-left">
-                    <label
-                      htmlFor="email-input"
-                      className="text-xs font-semibold text-zinc-700 block"
-                    >
-                      Email
-                    </label>
-                    <div className="relative">
-                      <input
-                        id="email-input"
-                        type="email"
-                        required
-                        value={email}
-                        onChange={handleEmailChange}
-                        onFocus={() => {
-                          setState((s) => ({ ...s, focusedField: 'email' }))
-                          sound.playPop(420)
-                        }}
-                        onBlur={() => setState((s) => ({ ...s, focusedField: 'none' }))}
-                        placeholder="Enter your email"
-                        className={`w-full px-3.5 py-2.5 rounded-xl border text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none transition bg-zinc-50/40 hover:bg-zinc-50 ${
-                          state.focusedField === 'email'
-                            ? 'border-zinc-900 ring-2 ring-zinc-900/10 bg-white'
-                            : 'border-zinc-200'
-                        }`}
-                      />
-                    </div>
-                  </div>
+                  <FormField label="Email" htmlFor="email-input" error={errors.email?.message}>
+                    <Input
+                      id="email-input"
+                      type="email"
+                      {...register('email', {
+                        onChange: (e) => {
+                          const val = e.target.value
+                          setState((s) => ({ ...s, emailLength: val.length }))
+                          setErrorMsg('')
+                        },
+                      })}
+                      onFocus={() => {
+                        setState((s) => ({ ...s, focusedField: 'email' }))
+                      }}
+                      onBlur={() => setState((s) => ({ ...s, focusedField: 'none' }))}
+                      placeholder="Enter your email"
+                    />
+                  </FormField>
 
                   {/* Error banner */}
                   {errorMsg && (
-                    <div className="text-xs text-rose-600 bg-rose-50 border border-rose-100 px-3 py-2 rounded-lg">
+                    <div
+                      id="login-error"
+                      role="alert"
+                      className="text-xs text-rose-600 bg-rose-50 border border-rose-100 px-3 py-2 rounded-lg"
+                    >
                       {errorMsg}
                     </div>
                   )}
@@ -234,22 +197,12 @@ export default function LoginPage() {
                     <button
                       type="submit"
                       id="submit-login-btn"
-                      disabled={isLoading}
                       onMouseEnter={() => setState((s) => ({ ...s, isHoveringSubmit: true }))}
                       onMouseLeave={() => setState((s) => ({ ...s, isHoveringSubmit: false }))}
                       className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-zinc-900 text-white font-semibold text-sm hover:bg-zinc-800 active:scale-[0.99] transition shadow-xs cursor-pointer disabled:opacity-70"
                     >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Signing in...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>{isSignUp ? 'Create account' : 'Continue with Email'}</span>
-                          <ArrowRight className="w-4 h-4" />
-                        </>
-                      )}
+                      <span>{isSignUp ? 'Create account' : 'Continue with Email'}</span>
+                      <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
 
@@ -258,8 +211,7 @@ export default function LoginPage() {
                     <button
                       type="button"
                       id="google-login-btn"
-                      disabled={isLoading}
-                      onClick={handleGoogleLogin}
+                      onClick={() => void handleGoogleLogin()}
                       onMouseEnter={() => setState((s) => ({ ...s, isHoveringGoogle: true }))}
                       onMouseLeave={() => setState((s) => ({ ...s, isHoveringGoogle: false }))}
                       className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl border border-zinc-200 bg-white text-zinc-700 font-medium text-sm hover:bg-zinc-50 hover:border-zinc-300 active:scale-[0.99] transition shadow-2xs cursor-pointer"
@@ -280,7 +232,6 @@ export default function LoginPage() {
                         id="toggle-to-login-btn"
                         onClick={() => {
                           setIsSignUp(false)
-                          sound.playPop(400)
                         }}
                         className="font-semibold text-zinc-900 hover:underline cursor-pointer ml-1"
                       >
@@ -295,7 +246,6 @@ export default function LoginPage() {
                         id="toggle-to-signup-btn"
                         onClick={() => {
                           setIsSignUp(true)
-                          sound.playPop(400)
                         }}
                         className="font-semibold text-zinc-900 hover:underline cursor-pointer ml-1"
                       >
