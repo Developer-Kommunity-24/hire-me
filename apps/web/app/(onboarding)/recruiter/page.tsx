@@ -38,12 +38,7 @@ const STEP_ANIM_EXIT = { opacity: 0, y: -6 }
 
 export default function RecruiterOnboardingPage() {
   const router = useRouter()
-  const REDIRECT_INTERVAL_IN_MS = 1400
-  const [companyName, setCompanyName] = useState('')
-  const [companyMail, setCompanyMail] = useState('')
-  const [companyUrl, setCompanyUrl] = useState('')
-  const [headquartersLocation, setHeadquartersLocation] = useState('')
-  const [errorMsg, setErrorMsg] = useState('')
+  const [step, setStep] = useState<RecruiterStepNumber>(FIRST_STEP)
   const [isCompleted, setIsCompleted] = useState(false)
 
   const { user, isLoading: isAuthLoading } = useAuth()
@@ -146,10 +141,22 @@ export default function RecruiterOnboardingPage() {
       // Handled by mutation hook with sonner toast
     }
   }
-
-    setTimeout(() => {
-      router.push('/dashboard/recruiter')
-    }, REDIRECT_INTERVAL_IN_MS)
+  const handleNext = async () => {
+    if (step === FIRST_STEP) {
+      const isValid = await trigger(STEP_1_FIELDS)
+      if (isValid) {
+        saveDraft(SECOND_STEP, getValues(), false)
+        setStep(SECOND_STEP)
+      }
+    } else if (step === SECOND_STEP) {
+      const isValid = await trigger(STEP_2_FIELDS)
+      if (isValid) {
+        saveDraft(FINAL_STEP, getValues(), false)
+        setStep(FINAL_STEP)
+      }
+    } else if (step === FINAL_STEP) {
+      void handleSubmit(onFinalSubmit)()
+    }
   }
 
   const handleBack = () => {

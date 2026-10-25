@@ -13,18 +13,18 @@ export default function Topbar() {
       <div className="ml-6 flex items-center gap-5">
         <button
           type="button"
-          className="text-lg text-text-muted transition hover:text-text-main"
+          className="text-text-muted transition hover:text-text-main"
           aria-label="Notifications"
         >
-          <Bell />
+          <Bell className="h-5 w-5" />
         </button>
 
         <button
           type="button"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-bg-page text-sm font-bold text-main"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-bg-page text-sm font-bold text-text-main"
           aria-label="Profile"
         >
-          <User />
+          <User className="h-5 w-5" />
         </button>
       </div>
     </header>

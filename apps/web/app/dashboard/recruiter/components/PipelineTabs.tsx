@@ -24,17 +24,19 @@ const tabs: {
 
 export default function PipelineTabs({ activeTab, onChange, counts }: PipelineTabsProps) {
   return (
-    <Tabs value={activeTab} onValueChange={(value) => onChange(value as CandidateStatus)}>
-      <TabsList className="grid w-full grid-cols-3">
-        {tabs.map((tab) => (
-          <TabsTrigger key={tab.value} value={tab.value}>
-            {tab.label}
-            <span className="ml-2 rounded-md bg-muted px-2 py-0.5 text-xs">
-              {counts[tab.value]}
-            </span>
-          </TabsTrigger>
-        ))}
-      </TabsList>
+    <Tabs value={activeTab} onValueChange={(value: string) => onChange(value as CandidateStatus)}>
+      <div className="w-full">
+        <TabsList>
+          {tabs.map((tab) => (
+            <TabsTrigger key={tab.value} value={tab.value}>
+              {tab.label}
+              <span className="ml-2 rounded-md bg-muted px-2 py-0.5 text-xs">
+                {counts[tab.value]}
+              </span>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </div>
     </Tabs>
   )
 }

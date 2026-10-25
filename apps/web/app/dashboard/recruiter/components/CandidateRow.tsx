@@ -14,9 +14,11 @@ export default function CandidateRow({ candidate, onViewProfile, onContact }: Ca
   return (
     <div className="flex flex-col gap-5 rounded-xl border bg-card p-5 transition-shadow hover:shadow-sm md:flex-row md:items-center md:justify-between">
       <div className="flex min-w-0 items-center gap-4">
-        <Avatar className="h-12 w-12 shrink-0">
-          <AvatarFallback>{getInitials(candidate.name)}</AvatarFallback>
-        </Avatar>
+        <div className="shrink-0">
+          <Avatar>
+            <AvatarFallback>{getInitials(candidate.name)}</AvatarFallback>
+          </Avatar>
+        </div>
 
         <div className="min-w-0">
           <h3 className="font-semibold text-foreground">{candidate.name}</h3>

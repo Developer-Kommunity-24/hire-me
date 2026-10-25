@@ -8,10 +8,16 @@ import PipelineTabs from './components/PipelineTabs'
 import Sidebar from './components/Sidebar'
 import Topbar from './components/Topbar'
 
-import { type Candidate, type CandidateStatus } from './data'
+import { candidates, type Candidate, type CandidateStatus } from './data'
+
+export interface RecruiterProfile {
+  companyName: string
+  companyMail: string
+  companyUrl: string
+  headquartersLocation: string
+}
 
 export default function RecruiterDashboard() {
-  const candidates: Candidate[] = []
   const dashboardMetrics = {
     activeJobs: 0,
     activeJobsDelta: '',
@@ -58,12 +64,6 @@ export default function RecruiterDashboard() {
       shortlisted: 0,
     },
   )
-  interface RecruiterProfile {
-    companyName: string
-    companyMail: string
-    companyUrl: string
-    headquartersLocation: string
-  }
 
   return (
     <div className="flex min-h-screen bg-bg-page">
@@ -92,8 +92,10 @@ export default function RecruiterDashboard() {
             </p>
           </div>
 
-          <section id="applicant-pipeline" className="mt-10 scroll-mt-6">
-            {' '}
+          <section
+            id="applicant-pipeline"
+            className="mt-10 scroll-mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
+          >
             <MetricCard
               title="Active Jobs"
               value={dashboardMetrics.activeJobs}
@@ -155,7 +157,9 @@ export default function RecruiterDashboard() {
 
       {selectedCandidate && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-bg-page p-4"
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           onClick={() => setSelectedCandidate(null)}
         >
           <div
@@ -218,7 +222,9 @@ export default function RecruiterDashboard() {
 
       {contactCandidate && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-bg-page p-4"
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           onClick={() => setContactCandidate(null)}
         >
           <div
@@ -240,7 +246,7 @@ export default function RecruiterDashboard() {
 
               <a
                 href={`mailto:${contactCandidate.email}`}
-                className="flex-1 rounded-lg bg-bg-page px-4 py-3 text-center font-semibold text-white transition hover:bg-bg-page"
+                className="flex-1 rounded-lg bg-brand px-4 py-3 text-center font-semibold text-white transition hover:bg-brand-hover"
               >
                 Send Email
               </a>
@@ -249,7 +255,11 @@ export default function RecruiterDashboard() {
         </div>
       )}
       {isProfileFormOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+        >
           <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
             <h2 className="mb-5 text-xl font-bold text-text-main">Company Profile</h2>
 
