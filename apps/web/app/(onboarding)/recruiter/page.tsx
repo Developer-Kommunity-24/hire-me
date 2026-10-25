@@ -14,7 +14,7 @@ import { RecruiterOnboardingStepper } from '@/components/onboarding/recruiter/re
 import { StepAboutYou } from '@/components/onboarding/recruiter/step-about-you'
 import { StepCompany } from '@/components/onboarding/recruiter/step-company'
 import { StepBioReview } from '@/components/onboarding/recruiter/step-bio-review'
-import { apiFetch } from '@/lib/api-client'
+import { apiFetch, ApiError } from '@/lib/api-client'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { ONBOARDING_QUERY_KEYS, useCreateRecruiterProfile } from '@/lib/hooks/use-onboarding'
 import { useRecruiterDraft } from '@/lib/hooks/use-recruiter-draft'
@@ -57,7 +57,7 @@ export default function RecruiterOnboardingPage() {
   }, [])
 
   // Check whether a recruiter profile already exists on the backend to avoid re-onboarding
-  const { data: profileCheck, isLoading: isCheckingProfile } = useQuery({
+  const { data: profileCheck } = useQuery({
     queryKey: [...ONBOARDING_QUERY_KEYS.recruiterProfileCheck, user?.id],
     queryFn: async () => {
       try {
@@ -88,14 +88,7 @@ export default function RecruiterOnboardingPage() {
 
   // Removed useWatch to avoid excessive re-renders
 
-  // Redirect to landing only when a completed profile is confirmed by the server
-  useEffect(() => {
-    if (!isCompleted && !createRecruiterMutation.isPending && profileCheck?.recruiter) {
-      router.replace('/landing')
-    }
-  }, [profileCheck, isCompleted, createRecruiterMutation.isPending, router])
-
-  // Hydrate draft once user identity is resolved; draft always takes precedence over user name
+  // Hydrate draft or existing profile once user identity is resolved
   useEffect(() => {
     if (!user?.id) return
 
@@ -106,6 +99,15 @@ export default function RecruiterOnboardingPage() {
         reset(draft.values)
         if (draft.step) {
           setStep(draft.step)
+        }
+      } else if (profileCheck?.recruiter) {
+        const existing = profileCheck.recruiter as Record<string, unknown>
+        if (user.name) setValue('fullName', user.name)
+        if (typeof existing.companyName === 'string') setValue('companyName', existing.companyName)
+        if (typeof existing.companyMail === 'string') setValue('companyMail', existing.companyMail)
+        if (typeof existing.companyUrl === 'string') setValue('companyUrl', existing.companyUrl)
+        if (typeof existing.headquartersLocation === 'string') {
+          setValue('headquartersLocation', existing.headquartersLocation)
         }
       } else if (user.name) {
         setValue('fullName', user.name)
@@ -118,28 +120,50 @@ export default function RecruiterOnboardingPage() {
         setValue('fullName', user.name)
       }
     }
-  }, [user?.id, user?.name, loadDraft, reset, setValue, getValues, getFieldState])
+  }, [
+    user?.id,
+    user?.name,
+    profileCheck?.recruiter,
+    loadDraft,
+    reset,
+    setValue,
+    getValues,
+    getFieldState,
+  ])
 
   const onFinalSubmit = async (data: RecruiterWizardInput) => {
     try {
-      // Forward only standard company fields accepted by main's backend schema
+      // Forward company fields to create recruiter profile
       await createRecruiterMutation.mutateAsync({
         companyName: data.companyName,
         companyMail: data.companyMail,
         companyUrl: data.companyUrl,
         headquartersLocation: data.headquartersLocation,
       })
-
-      clearDraft()
-      setIsCompleted(true)
-      showConfetti()
-
-      redirectTimeoutRef.current = setTimeout(() => {
-        router.push('/landing')
-      }, ONBOARDING_REDIRECT_DELAY_MS)
-    } catch {
-      // Handled by mutation hook with sonner toast
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        // Recruiter profile already exists on backend: update it
+        await apiFetch('/api/recruiters/me', {
+          method: 'PATCH',
+          body: {
+            companyName: data.companyName,
+            companyMail: data.companyMail,
+            companyUrl: data.companyUrl || null,
+            headquartersLocation: data.headquartersLocation || null,
+          },
+        })
+      } else {
+        return
+      }
     }
+
+    clearDraft()
+    setIsCompleted(true)
+    showConfetti()
+
+    redirectTimeoutRef.current = setTimeout(() => {
+      router.push('/dashboard/recruiter')
+    }, ONBOARDING_REDIRECT_DELAY_MS)
   }
   const handleNext = async () => {
     if (step === FIRST_STEP) {
@@ -204,12 +228,8 @@ export default function RecruiterOnboardingPage() {
 
   const isSaving = createRecruiterMutation.isPending
 
-  // Prevent flash of onboarding form while verifying profile status or during redirect
-  if (
-    !isCompleted &&
-    !isSaving &&
-    (isAuthLoading || (Boolean(user?.id) && isCheckingProfile) || Boolean(profileCheck?.recruiter))
-  ) {
+  // Prevent flash while authenticating
+  if (!isCompleted && !isSaving && isAuthLoading) {
     return (
       <div className="h-screen w-screen bg-bg-page text-text-main flex items-center justify-center font-sans">
         <div className="text-center">
