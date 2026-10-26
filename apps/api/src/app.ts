@@ -5,12 +5,19 @@ import { logger } from 'hono/logger'
 import { dbMiddleware } from './middleware/db.js'
 import { postingsRouter } from './routes/postings.js'
 import { usersRouter } from './routes/users.js'
+import { notificationsRouter } from './routes/notifications.js'
 import { clubMembersRouter } from './routes/club-members.js'
 import { recruitersRouter } from './routes/recruiters.js'
 import { adminRouter } from './routes/admin.js'
 
 const app = new Hono<{
-  Bindings: { DATABASE_URL: string; NEON_AUTH_BASE_URL: string; WEB_ORIGIN: string }
+  Bindings: {
+    DATABASE_URL: string
+    NEON_AUTH_BASE_URL: string
+    WEB_ORIGIN: string
+    INTERNAL_SERVICE_KEY?: string
+    RESEND_API_KEY?: string
+  }
 }>()
 
 app.use('*', logger())
@@ -25,7 +32,7 @@ app.use(
   cors({
     origin: (_origin, c) => env<{ WEB_ORIGIN?: string }>(c).WEB_ORIGIN ?? 'http://localhost:3000',
     allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['authorization', 'content-type'],
+    allowHeaders: ['authorization', 'content-type', 'x-service-key'],
     maxAge: 86400,
   }),
 )
@@ -42,6 +49,8 @@ app.route('/api/postings', postingsRouter)
 // Authenticated user record and role selection
 app.route('/api/users', usersRouter)
 
+// Notifications
+app.route('/api/notifications', notificationsRouter)
 // Club admin: membership management for appointed volunteers
 app.route('/api/clubs/members', clubMembersRouter)
 
