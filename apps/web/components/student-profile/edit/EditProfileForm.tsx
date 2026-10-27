@@ -1,12 +1,12 @@
 'use client'
 
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, HelpCircle, Check } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { useForm, FormProvider } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useProfile } from '@/components/student-profile/ProfileContext'
 import { Button } from '@/components/ui/button'
+import Header from '@/components/common/Header'
 import BasicInfoSection from './BasicInfoSection'
 import SkillsEditSection from './SkillsEditSection'
 import ExperienceEditSection from './ExperienceEditSection'
@@ -107,23 +107,7 @@ export default function EditProfileForm() {
 
   return (
     <FormProvider {...methods}>
-      <header className="sticky top-0 z-20 bg-card/90 backdrop-blur-md border-b border-border-subtle px-5 py-2.5 flex items-center justify-between shadow-xs">
-        <Link
-          href="/student/profile"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-text-muted hover:text-text-main transition-colors"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          Back to Profile
-        </Link>
-
-        <a
-          href="/help"
-          className="text-sm text-text-muted hover:text-text-main transition-colors duration-150 flex items-center gap-1.5"
-        >
-          <HelpCircle className="w-4 h-4" />
-          Need Help?
-        </a>
-      </header>
+      <Header backHref="/student/profile" backLabel="Back to Profile" />
 
       <main className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-4xl mx-auto animate-fade-in">
         <form id="edit-profile-form" onSubmit={handleSubmit(onSubmit)}>

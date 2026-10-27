@@ -8,7 +8,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
     <ProfileProvider>
       <div className="min-h-screen bg-bg-page flex">
         <Sidebar />
-        <div className="flex-1 lg:ml-[160px] flex flex-col min-h-screen">
+        <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
           <div className="flex-1 flex flex-col">{children}</div>
           <Footer />
         </div>

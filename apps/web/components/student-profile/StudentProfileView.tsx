@@ -1,6 +1,6 @@
 'use client'
 
-import { HelpCircle } from 'lucide-react'
+import Header from '@/components/common/Header'
 import {
   ProfileHeader,
   ExperienceTimeline,
@@ -21,15 +21,7 @@ export default function StudentProfileView() {
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-card/90 backdrop-blur-md border-b border-border-subtle px-5 py-2.5 flex items-center justify-end shadow-xs">
-        <a
-          href="/help"
-          className="text-sm text-text-muted hover:text-text-main transition-colors duration-150 flex items-center gap-1.5"
-        >
-          <HelpCircle className="w-4 h-4" />
-          Need Help?
-        </a>
-      </header>
+      <Header />
 
       <main className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-7xl mx-auto animate-fade-in">
         <div

@@ -1,12 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Briefcase, HelpCircle, RefreshCw, Sparkles } from 'lucide-react'
+import { Briefcase, RefreshCw, Sparkles } from 'lucide-react'
 import JobCard, { type Job } from '@/app/components/job/JobCard'
 import JobFilters, { type RoleType, type WorkModel } from '@/app/components/job/JobFilters'
 import JobSearch, { type SortOption } from '@/app/components/job/JobSearch'
 import { apiFetch, ApiError } from '@/lib/api-client'
 import { Button } from '@/components/ui/button'
+import Header from '@/components/common/Header'
 
 type ApiJob = {
   id: string
@@ -174,24 +175,11 @@ export default function StudentJobsPage() {
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-card/90 backdrop-blur-md border-b border-border-subtle px-5 py-3.5 flex items-center justify-between shadow-xs">
-        <div>
-          <h1 className="text-lg font-bold text-text-main flex items-center gap-2">
-            <Briefcase className="w-5 h-5 text-brand" />
-            Job Feed
-          </h1>
-          <p className="text-xs text-text-muted mt-0.5">
-            Discover internships, full-time roles, and opportunities matched for you
-          </p>
-        </div>
-        <a
-          href="/help"
-          className="text-xs font-medium text-text-muted hover:text-text-main transition-colors duration-150 flex items-center gap-1.5"
-        >
-          <HelpCircle className="w-4 h-4" />
-          Need Help?
-        </a>
-      </header>
+      <Header
+        title="Job Feed"
+        subtitle="Discover internships, full-time roles, and opportunities matched for you"
+        icon={Briefcase}
+      />
 
       <main className="px-4 sm:px-6 lg:px-8 py-6 max-w-7xl mx-auto w-full animate-fade-in flex-1">
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

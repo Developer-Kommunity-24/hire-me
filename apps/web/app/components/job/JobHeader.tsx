@@ -73,24 +73,23 @@ export const JobHeader = ({ job }: { job: Job }) => {
 
         {/* Action Buttons */}
         <div className="flex items-center gap-3 w-full sm:w-auto">
-          <Button
-            variant={isSaved ? 'default' : 'outline'}
-            onClick={handleToggleSave}
-            disabled={isSaving}
-            className="flex-1 sm:flex-initial items-center gap-2"
-          >
-            <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
-            {isSaved ? 'Saved' : 'Save'}
-          </Button>
+          <div className="flex-1 sm:flex-initial">
+            <Button
+              variant={isSaved ? 'default' : 'outline'}
+              onClick={handleToggleSave}
+              disabled={isSaving}
+            >
+              <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
+              {isSaved ? 'Saved' : 'Save'}
+            </Button>
+          </div>
 
-          <Button
-            variant="outline"
-            onClick={handleShare}
-            className="flex-1 sm:flex-initial items-center gap-2"
-          >
-            <Share2 className="w-4 h-4" />
-            {copied ? 'Copied!' : 'Share'}
-          </Button>
+          <div className="flex-1 sm:flex-initial">
+            <Button variant="outline" onClick={handleShare}>
+              <Share2 className="w-4 h-4" />
+              {copied ? 'Copied!' : 'Share'}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
