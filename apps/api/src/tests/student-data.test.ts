@@ -94,7 +94,9 @@ describe('Student data API', () => {
       body: JSON.stringify({ skill: ' TypeScript ' }),
     })
     expect(response.status).toBe(201)
-    expect(controller.createSkill).toHaveBeenCalledWith(expect.anything(), authUser.id, { skill: 'TypeScript' })
+    expect(controller.createSkill).toHaveBeenCalledWith(expect.anything(), authUser.id, {
+      skill: 'TypeScript',
+    })
   })
 
   it('returns 409 for duplicate skills', async () => {
@@ -108,8 +110,14 @@ describe('Student data API', () => {
   })
 
   it('returns 404 when the authenticated user has no student profile', async () => {
-    vi.mocked(controller.createSkill).mockResolvedValue({ ok: false, error: 'student_profile_missing' })
-    vi.mocked(controller.createProject).mockResolvedValue({ ok: false, error: 'student_profile_missing' })
+    vi.mocked(controller.createSkill).mockResolvedValue({
+      ok: false,
+      error: 'student_profile_missing',
+    })
+    vi.mocked(controller.createProject).mockResolvedValue({
+      ok: false,
+      error: 'student_profile_missing',
+    })
     vi.mocked(controller.createExperience).mockResolvedValue({
       ok: false,
       error: 'student_profile_missing',
@@ -120,23 +128,132 @@ describe('Student data API', () => {
     })
 
     const headers = { 'content-type': 'application/json' }
-    expect((await request('/api/student-data/skills', { method: 'POST', headers, body: JSON.stringify({ skill: 'TypeScript' }) })).status).toBe(404)
-    expect((await request('/api/student-data/projects', { method: 'POST', headers, body: JSON.stringify({ title: 'Project' }) })).status).toBe(404)
-    expect((await request('/api/student-data/experience', { method: 'POST', headers, body: JSON.stringify({ companyName: 'Company', role: 'Engineer' }) })).status).toBe(404)
-    expect((await request('/api/student-data/achievements', { method: 'POST', headers, body: JSON.stringify({ type: 'award', title: 'Award' }) })).status).toBe(404)
+    expect(
+      (
+        await request('/api/student-data/skills', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ skill: 'TypeScript' }),
+        })
+      ).status,
+    ).toBe(404)
+    expect(
+      (
+        await request('/api/student-data/projects', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ title: 'Project' }),
+        })
+      ).status,
+    ).toBe(404)
+    expect(
+      (
+        await request('/api/student-data/experience', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ companyName: 'Company', role: 'Engineer' }),
+        })
+      ).status,
+    ).toBe(404)
+    expect(
+      (
+        await request('/api/student-data/achievements', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ type: 'award', title: 'Award' }),
+        })
+      ).status,
+    ).toBe(404)
   })
 
   it('validates required fields, dates, URLs, and achievement categories', async () => {
     const headers = { 'content-type': 'application/json' }
-    expect((await request('/api/student-data/skills', { method: 'POST', headers, body: JSON.stringify({ skill: '   ' }) })).status).toBe(400)
-    expect((await request('/api/student-data/projects', { method: 'POST', headers, body: JSON.stringify({}) })).status).toBe(400)
-    expect((await request('/api/student-data/projects', { method: 'POST', headers, body: JSON.stringify({ title: 'x', liveUrl: 'bad' }) })).status).toBe(400)
-    expect((await request('/api/student-data/projects', { method: 'POST', headers, body: JSON.stringify({ title: 'x', displayOrder: -1 }) })).status).toBe(400)
-    expect((await request('/api/student-data/experience', { method: 'POST', headers, body: JSON.stringify({ role: 'y' }) })).status).toBe(400)
-    expect((await request('/api/student-data/experience', { method: 'POST', headers, body: JSON.stringify({ companyName: 'x', role: 'y', startDate: '2025-02-01', endDate: '2025-01-01' }) })).status).toBe(400)
-    expect((await request('/api/student-data/achievements', { method: 'POST', headers, body: JSON.stringify({}) })).status).toBe(400)
-    expect((await request('/api/student-data/achievements', { method: 'POST', headers, body: JSON.stringify({ type: 'medal', title: 'x' }) })).status).toBe(400)
-    expect((await request('/api/student-data/achievements', { method: 'POST', headers, body: JSON.stringify({ type: 'award', title: 'x', date: '2025-99-99' }) })).status).toBe(400)
+    expect(
+      (
+        await request('/api/student-data/skills', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ skill: '   ' }),
+        })
+      ).status,
+    ).toBe(400)
+    expect(
+      (
+        await request('/api/student-data/projects', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({}),
+        })
+      ).status,
+    ).toBe(400)
+    expect(
+      (
+        await request('/api/student-data/projects', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ title: 'x', liveUrl: 'bad' }),
+        })
+      ).status,
+    ).toBe(400)
+    expect(
+      (
+        await request('/api/student-data/projects', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ title: 'x', displayOrder: -1 }),
+        })
+      ).status,
+    ).toBe(400)
+    expect(
+      (
+        await request('/api/student-data/experience', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ role: 'y' }),
+        })
+      ).status,
+    ).toBe(400)
+    expect(
+      (
+        await request('/api/student-data/experience', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            companyName: 'x',
+            role: 'y',
+            startDate: '2025-02-01',
+            endDate: '2025-01-01',
+          }),
+        })
+      ).status,
+    ).toBe(400)
+    expect(
+      (
+        await request('/api/student-data/achievements', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({}),
+        })
+      ).status,
+    ).toBe(400)
+    expect(
+      (
+        await request('/api/student-data/achievements', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ type: 'medal', title: 'x' }),
+        })
+      ).status,
+    ).toBe(400)
+    expect(
+      (
+        await request('/api/student-data/achievements', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ type: 'award', title: 'x', date: '2025-99-99' }),
+        })
+      ).status,
+    ).toBe(400)
   })
 
   it('scopes updates and deletes by authenticated ownership', async () => {
@@ -147,16 +264,23 @@ describe('Student data API', () => {
       body: JSON.stringify({ title: 'Updated' }),
     })
     expect(response.status).toBe(404)
-    expect(controller.updateProject).toHaveBeenCalledWith(expect.anything(), authUser.id, id, { title: 'Updated' })
+    expect(controller.updateProject).toHaveBeenCalledWith(expect.anything(), authUser.id, id, {
+      title: 'Updated',
+    })
 
     vi.mocked(controller.deleteAchievement).mockResolvedValue(false)
-    const deleteResponse = await request(`/api/student-data/achievements/${id}`, { method: 'DELETE' })
+    const deleteResponse = await request(`/api/student-data/achievements/${id}`, {
+      method: 'DELETE',
+    })
     expect(deleteResponse.status).toBe(404)
     expect(controller.deleteAchievement).toHaveBeenCalledWith(expect.anything(), authUser.id, id)
   })
 
   it('returns 400 when a partial experience update creates an invalid date range', async () => {
-    vi.mocked(controller.updateExperience).mockResolvedValue({ ok: false, error: 'invalid_date_range' })
+    vi.mocked(controller.updateExperience).mockResolvedValue({
+      ok: false,
+      error: 'invalid_date_range',
+    })
     const response = await request(`/api/student-data/experience/${id}`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
@@ -191,17 +315,87 @@ describe('Student data API', () => {
     vi.mocked(controller.updateAchievement).mockResolvedValue({ ok: true, data: { id } } as never)
 
     const headers = { 'content-type': 'application/json' }
-    expect((await request('/api/student-data/skills', { method: 'POST', headers, body: JSON.stringify({ skill: 'TypeScript' }) })).status).toBe(201)
-    expect((await request('/api/student-data/projects', { method: 'POST', headers, body: JSON.stringify({ title: 'Project' }) })).status).toBe(201)
-    expect((await request('/api/student-data/experience', { method: 'POST', headers, body: JSON.stringify({ companyName: 'Company', role: 'Engineer' }) })).status).toBe(201)
-    expect((await request('/api/student-data/achievements', { method: 'POST', headers, body: JSON.stringify({ type: 'award', title: 'Award' }) })).status).toBe(201)
-    expect((await request(`/api/student-data/skills/${id}`, { method: 'PATCH', headers, body: JSON.stringify({ skill: 'Go' }) })).status).toBe(200)
-    expect((await request(`/api/student-data/projects/${id}`, { method: 'PATCH', headers, body: JSON.stringify({ title: 'Updated' }) })).status).toBe(200)
-    expect((await request(`/api/student-data/experience/${id}`, { method: 'PATCH', headers, body: JSON.stringify({ role: 'Senior Engineer' }) })).status).toBe(200)
-    expect((await request(`/api/student-data/achievements/${id}`, { method: 'PATCH', headers, body: JSON.stringify({ title: 'Updated' }) })).status).toBe(200)
+    expect(
+      (
+        await request('/api/student-data/skills', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ skill: 'TypeScript' }),
+        })
+      ).status,
+    ).toBe(201)
+    expect(
+      (
+        await request('/api/student-data/projects', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ title: 'Project' }),
+        })
+      ).status,
+    ).toBe(201)
+    expect(
+      (
+        await request('/api/student-data/experience', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ companyName: 'Company', role: 'Engineer' }),
+        })
+      ).status,
+    ).toBe(201)
+    expect(
+      (
+        await request('/api/student-data/achievements', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ type: 'award', title: 'Award' }),
+        })
+      ).status,
+    ).toBe(201)
+    expect(
+      (
+        await request(`/api/student-data/skills/${id}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ skill: 'Go' }),
+        })
+      ).status,
+    ).toBe(200)
+    expect(
+      (
+        await request(`/api/student-data/projects/${id}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ title: 'Updated' }),
+        })
+      ).status,
+    ).toBe(200)
+    expect(
+      (
+        await request(`/api/student-data/experience/${id}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ role: 'Senior Engineer' }),
+        })
+      ).status,
+    ).toBe(200)
+    expect(
+      (
+        await request(`/api/student-data/achievements/${id}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ title: 'Updated' }),
+        })
+      ).status,
+    ).toBe(200)
     expect((await request(`/api/student-data/skills/${id}`, { method: 'DELETE' })).status).toBe(200)
-    expect((await request(`/api/student-data/projects/${id}`, { method: 'DELETE' })).status).toBe(200)
-    expect((await request(`/api/student-data/experience/${id}`, { method: 'DELETE' })).status).toBe(200)
-    expect((await request(`/api/student-data/achievements/${id}`, { method: 'DELETE' })).status).toBe(200)
+    expect((await request(`/api/student-data/projects/${id}`, { method: 'DELETE' })).status).toBe(
+      200,
+    )
+    expect((await request(`/api/student-data/experience/${id}`, { method: 'DELETE' })).status).toBe(
+      200,
+    )
+    expect(
+      (await request(`/api/student-data/achievements/${id}`, { method: 'DELETE' })).status,
+    ).toBe(200)
   })
 })

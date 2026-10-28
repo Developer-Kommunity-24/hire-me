@@ -1,11 +1,5 @@
 import { and, asc, desc, eq } from 'drizzle-orm'
-import {
-  achievements,
-  experience,
-  projects,
-  studentProfiles,
-  skills,
-} from '@repo/db'
+import { achievements, experience, projects, studentProfiles, skills } from '@repo/db'
 import type { Database } from '@repo/db'
 
 export type SkillInput = { skill: string }
@@ -35,11 +29,9 @@ export type AchievementInput = {
 }
 
 export type WriteResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; error: 'duplicate' | 'not_found' | 'invalid_date_range' }
+  { ok: true; data: T } | { ok: false; error: 'duplicate' | 'not_found' | 'invalid_date_range' }
 export type CreateResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; error: 'student_profile_missing' | 'duplicate' }
+  { ok: true; data: T } | { ok: false; error: 'student_profile_missing' | 'duplicate' }
 
 function isConstraintError(error: unknown, constraint: string): boolean {
   return (
@@ -80,7 +72,8 @@ export async function createSkill(
     if (!data) throw new Error('Insert returned no rows')
     return { ok: true, data }
   } catch (error) {
-    if (isConstraintError(error, 'idx_skills_student_skill')) return { ok: false, error: 'duplicate' }
+    if (isConstraintError(error, 'idx_skills_student_skill'))
+      return { ok: false, error: 'duplicate' }
     throw error
   }
 }
@@ -99,7 +92,8 @@ export async function updateSkill(
       .returning()
     return data ? { ok: true, data } : { ok: false, error: 'not_found' }
   } catch (error) {
-    if (isConstraintError(error, 'idx_skills_student_skill')) return { ok: false, error: 'duplicate' }
+    if (isConstraintError(error, 'idx_skills_student_skill'))
+      return { ok: false, error: 'duplicate' }
     throw error
   }
 }
@@ -129,7 +123,10 @@ export async function createProject(db: Database, studentId: string, input: Proj
 
   if (!profile) return { ok: false as const, error: 'student_profile_missing' as const }
 
-  const [data] = await db.insert(projects).values({ ...input, studentId }).returning()
+  const [data] = await db
+    .insert(projects)
+    .values({ ...input, studentId })
+    .returning()
   if (!data) throw new Error('Insert returned no rows')
   return { ok: true as const, data }
 }
@@ -173,7 +170,10 @@ export async function createExperience(db: Database, studentId: string, input: E
 
   if (!profile) return { ok: false as const, error: 'student_profile_missing' as const }
 
-  const [data] = await db.insert(experience).values({ ...input, studentId }).returning()
+  const [data] = await db
+    .insert(experience)
+    .values({ ...input, studentId })
+    .returning()
   if (!data) throw new Error('Insert returned no rows')
   return { ok: true as const, data }
 }
@@ -195,10 +195,10 @@ export async function updateExperience(
   const existing = data[0]
   if (!existing) return { ok: false, error: 'not_found' }
   const startDate = Object.prototype.hasOwnProperty.call(input, 'startDate')
-    ? input.startDate ?? null
+    ? (input.startDate ?? null)
     : existing.startDate
   const endDate = Object.prototype.hasOwnProperty.call(input, 'endDate')
-    ? input.endDate ?? null
+    ? (input.endDate ?? null)
     : existing.endDate
 
   if (startDate && endDate && endDate < startDate) {
@@ -229,11 +229,7 @@ export async function listAchievements(db: Database, studentId: string) {
     .orderBy(desc(achievements.date), desc(achievements.createdAt), asc(achievements.id))
 }
 
-export async function createAchievement(
-  db: Database,
-  studentId: string,
-  input: AchievementInput,
-) {
+export async function createAchievement(db: Database, studentId: string, input: AchievementInput) {
   const [profile] = await db
     .select({ userId: studentProfiles.userId })
     .from(studentProfiles)
@@ -242,7 +238,10 @@ export async function createAchievement(
 
   if (!profile) return { ok: false as const, error: 'student_profile_missing' as const }
 
-  const [data] = await db.insert(achievements).values({ ...input, studentId }).returning()
+  const [data] = await db
+    .insert(achievements)
+    .values({ ...input, studentId })
+    .returning()
   if (!data) throw new Error('Insert returned no rows')
   return { ok: true as const, data }
 }
