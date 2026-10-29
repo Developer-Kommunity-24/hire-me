@@ -137,7 +137,7 @@ export default function StudentOnboardingPage() {
       showConfetti()
 
       setTimeout(() => {
-        router.push('/landing')
+        router.push('/student/profile')
       }, ONBOARDING_REDIRECT_DELAY_MS)
     } catch {
       // Error handled by mutation hook
