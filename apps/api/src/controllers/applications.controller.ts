@@ -12,12 +12,8 @@ export type ApplicationStatus = Application['status']
 // ==========================================
 
 /**
- * The recruitment pipeline, as a forward-only graph.
- *
- * `applied` is the entry state and never a valid target. `accepted` and
- * `rejected` are terminal — once a decision is made it is not silently undone.
- * Skipping stages is allowed (e.g. `applied` straight to `shortlisted`) because
- * recruiters often decide without recording every intermediate step.
+ * Forward-only pipeline. `applied` is the entry state, never a target.
+ * `accepted` and `rejected` are terminal. Stages may be skipped.
  */
 const ALLOWED_TRANSITIONS: Record<ApplicationStatus, readonly ApplicationStatus[]> = {
   applied: ['under_review', 'shortlisted', 'accepted', 'rejected'],
@@ -39,9 +35,9 @@ export function isTransitionAllowed(from: ApplicationStatus, to: ApplicationStat
 /**
  * Signals why an application could not be created.
  *
- * `not_found`  — no posting with that id exists.
- * `closed`     — the posting is closed, expired, or past its deadline.
- * `duplicate`  — the student already applied to this posting.
+ * `not_found`: no posting with that id exists.
+ * `closed`: the posting is closed, expired, or past its deadline.
+ * `duplicate`: the student already applied to this posting.
  */
 export type ApplyError = 'not_found' | 'closed' | 'duplicate'
 
@@ -50,8 +46,8 @@ export type ApplyResult = { ok: true; data: Application } | { ok: false; error: 
 /**
  * Signals why a status update was rejected.
  *
- * `not_found`          — no application with that id is owned by the caller.
- * `invalid_transition` — the target status is not reachable from the current one.
+ * `not_found`: no application with that id is owned by the caller.
+ * `invalid_transition`: the target status is not reachable from the current one.
  */
 export type UpdateStatusError = 'not_found' | 'invalid_transition'
 
@@ -99,11 +95,8 @@ export interface Applicant {
 // ==========================================
 
 /**
- * Detects a duplicate application from a Postgres unique-constraint violation.
- *
- * The `idx_applications_posting_student` unique index is the single source of
- * truth for "one application per student per posting"; relying on its error
- * (rather than a pre-check) keeps the guarantee race-free.
+ * Detects a duplicate application from the unique-index violation on
+ * `idx_applications_posting_student`.
  */
 function isDuplicateApplication(err: unknown): boolean {
   if (
@@ -122,13 +115,7 @@ function isDuplicateApplication(err: unknown): boolean {
 // NOTIFICATIONS
 // ==========================================
 
-/**
- * Best-effort notification insert.
- *
- * A failed notification must never fail the action that triggered it — the
- * application/status change is already persisted, and surfacing an error would
- * make the caller retry a write that has already happened.
- */
+/** Inserts a notification, swallowing failures so the caller's write stands. */
 async function notifySafely(db: Database, input: Parameters<typeof createNotification>[1]) {
   try {
     await createNotification(db, input)
@@ -142,14 +129,8 @@ async function notifySafely(db: Database, input: Parameters<typeof createNotific
 // ==========================================
 
 /**
- * Creates an application from `studentId` to `postingId`.
- *
- * Rejects postings that do not exist ({@link ApplyError}`not_found`), that are
- * closed/expired/past deadline ({@link ApplyError}`closed`), and repeat
- * applications ({@link ApplyError}`duplicate`).
- *
- * On success a best-effort `application_received` notification is written for
- * the posting's recruiter.
+ * Creates an application from `studentId` to `postingId`, returning the reason
+ * on rejection. Notifies the posting's recruiter on success.
  */
 export async function applyToPosting(
   db: Database,
@@ -216,15 +197,9 @@ export async function applyToPosting(
 }
 
 /**
- * Moves an application to `newStatus`, but only when the posting it targets is
- * owned by `recruiterId`.
- *
- * Returns `not_found` when the application does not exist or belongs to another
- * recruiter (callers cannot tell the two apart), and `invalid_transition` when
- * the move violates {@link ALLOWED_TRANSITIONS}.
- *
- * On success `updated_at` is refreshed and a best-effort `status_changed`
- * notification is written for the applicant.
+ * Moves an application to `newStatus` when the posting is owned by
+ * `recruiterId`. Returns `not_found` for unknown or unowned applications and
+ * `invalid_transition` for illegal moves. Notifies the applicant on success.
  */
 export async function updateApplicationStatus(
   db: Database,
@@ -313,12 +288,7 @@ export async function listOwnApplications(
   return rows
 }
 
-/**
- * Lists every applicant for a posting, but only when `recruiterId` owns it.
- *
- * Returns `null` when the posting does not exist or belongs to another
- * recruiter, so ownership cannot be probed.
- */
+/** Lists applicants for a posting owned by `recruiterId`, or `null` otherwise. */
 export async function listApplicantsForPosting(
   db: Database,
   recruiterId: string,

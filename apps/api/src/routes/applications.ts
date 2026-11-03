@@ -27,12 +27,8 @@ export const applicationsRouter = new Hono<ApplicationsEnv>()
 applicationsRouter.use('*', requireAuth)
 
 /**
- * POST /api/applications
- *
- * Lets an authenticated student apply to an active, non-expired posting.
- *
- * Responds with 404 when the posting does not exist, 409 when the posting is
- * closed/expired or when the student has already applied.
+ * POST /api/applications: apply to a posting.
+ * 404 unknown posting; 409 closed/expired or already applied.
  */
 applicationsRouter.post(
   '/',
@@ -58,25 +54,15 @@ applicationsRouter.post(
   },
 )
 
-/**
- * GET /api/applications
- *
- * Lists the authenticated student's own applications, newest first.
- */
+/** GET /api/applications: the caller's applications, newest first. */
 applicationsRouter.get('/', requireStudent, async (c) => {
   const rows = await listOwnApplications(c.var.db, c.var.studentId)
   return c.json({ data: rows })
 })
 
 /**
- * PATCH /api/applications/:id/status
- *
- * Lets the recruiter who owns the posting behind an application move it through
- * the pipeline (applied → under_review → shortlisted → accepted/rejected,
- * with stages skippable).
- *
- * Responds with 404 for unknown or unowned applications and 409 when the move
- * is not a legal transition.
+ * PATCH /api/applications/:id/status: owner recruiter moves an application.
+ * 404 unknown or unowned; 409 illegal transition.
  */
 applicationsRouter.patch(
   '/:id/status',

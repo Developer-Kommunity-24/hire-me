@@ -5,21 +5,12 @@ import type { AuthVariables } from './auth.js'
 import type { DbVariables } from './db.js'
 
 /**
- * Variables injected into Hono context by this middleware.
- *
- * `studentId` mirrors `authUser.id` but only exists once a `student_profiles`
- * row has been confirmed, so downstream handlers can trust it.
+ * `studentId` is only set once a `student_profiles` row is confirmed, so
+ * downstream handlers can trust it.
  */
 export type StudentVariables = { studentId: string }
 
-/**
- * Confirms the authenticated caller has a student profile.
- *
- * Mirrors {@link requireRecruiter} for the student side of the pipeline. The
- * `applications.student_id` foreign key points at `student_profiles`, so a
- * caller without a profile could never be persisted anyway — this rejects them
- * early with a clear 403.
- */
+/** Rejects the caller with 403 unless they have a student profile. */
 export const requireStudent = createMiddleware<{
   Variables: AuthVariables & DbVariables & StudentVariables
 }>(async (c, next) => {
