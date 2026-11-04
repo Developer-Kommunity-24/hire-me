@@ -20,13 +20,5 @@
     "prettier": "3.9.6",
     "turbo": "2.10.9",
     "typescript": "6.0.3"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@tailwindcss/oxide",
-      "esbuild",
-      "sharp",
-      "unrs-resolver"
-    ]
   }
 }

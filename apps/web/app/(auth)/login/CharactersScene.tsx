@@ -2,7 +2,6 @@
 
 import { motion } from 'motion/react'
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
-import { sound } from './audio'
 
 export interface CharacterSceneState {
   focusedField: 'none' | 'email' | 'submit' | 'google'
@@ -92,27 +91,6 @@ export function CharactersScene({ state, onCharacterPoke }: CharactersSceneProps
 
   const handlePoke = (characterName: string) => {
     setPokeId(characterName)
-
-    switch (characterName) {
-      case 'red':
-        sound.playBoing()
-        break
-      case 'pink':
-        sound.playBlush()
-        break
-      case 'cyan':
-        sound.playFloat()
-        break
-      case 'blue':
-        sound.playGiggle()
-        break
-      case 'yellow':
-        sound.playSpin()
-        break
-      default:
-        sound.playPop(440)
-        break
-    }
 
     if (onCharacterPoke) onCharacterPoke()
     setTimeout(() => {
