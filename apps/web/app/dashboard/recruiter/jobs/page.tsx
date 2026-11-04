@@ -1,19 +1,10 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import {
-  ArrowUpDown,
-  Clock3,
-  Filter,
-  MapPin,
-  MoreVertical,
-  Plus,
-  Search,
-  SearchX,
-} from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { ArrowUpDown, Filter, Plus, Search, SearchX } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -25,18 +16,7 @@ import {
 import MetricCard from '../components/MetricCard'
 import Sidebar from '../components/Sidebar'
 import Topbar from '../components/Topbar'
-
-interface MockJobPosting {
-  id: string
-  title: string
-  location: string
-  employmentType: 'Full-time' | 'Internship' | 'Part-time' | 'Contract'
-  status: 'active' | 'closed' | 'expired'
-  postedAt: string
-  applicants: number
-  inReview: number
-  interviewing: number
-}
+import JobPostingCard, { type MockJobPosting } from './components/JobPostingCard'
 
 type StatusFilter = 'all' | 'active' | 'closed' | 'expired'
 type SortOption = 'newest' | 'oldest' | 'most-applicants' | 'least-applicants' | 'a-z' | 'z-a'
@@ -87,17 +67,6 @@ const initialMockPostings: MockJobPosting[] = [
     interviewing: 0,
   },
 ]
-
-function getStatusBadgeConfig(status: MockJobPosting['status']) {
-  switch (status) {
-    case 'active':
-      return { label: 'Active', variant: 'default' as const }
-    case 'closed':
-      return { label: 'Closed', variant: 'secondary' as const }
-    case 'expired':
-      return { label: 'Expired', variant: 'destructive' as const }
-  }
-}
 
 export default function JobPostingsPage() {
   const [searchQuery, setSearchQuery] = useState('')
@@ -190,7 +159,7 @@ export default function JobPostingsPage() {
             </div>
 
             <div>
-              <Button type="button">
+              <Button type="button" onClick={() => toast.info('Create Posting coming soon')}>
                 <Plus className="h-4 w-4" />
                 Create Posting
               </Button>
@@ -282,89 +251,9 @@ export default function JobPostingsPage() {
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {filteredAndSortedPostings.map((job) => {
-                  const badgeConfig = getStatusBadgeConfig(job.status)
-
-                  return (
-                    <Card key={job.id}>
-                      <CardHeader>
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0 flex-1">
-                            <CardTitle>
-                              <span className="truncate block">{job.title}</span>
-                            </CardTitle>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <Badge variant={badgeConfig.variant}>{badgeConfig.label}</Badge>
-                            <button
-                              type="button"
-                              className="rounded-md p-1 text-muted-foreground transition-colors hover:text-text-main"
-                              aria-label={`Options for ${job.title}`}
-                            >
-                              <MoreVertical className="h-4 w-4" aria-hidden="true" />
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                          <span className="inline-flex items-center gap-1.5">
-                            <MapPin
-                              className="h-4 w-4 shrink-0 text-muted-foreground"
-                              aria-hidden="true"
-                            />
-                            {job.location}
-                          </span>
-                          <span aria-hidden="true">•</span>
-                          <span className="inline-flex items-center gap-1.5">
-                            <Clock3
-                              className="h-4 w-4 shrink-0 text-muted-foreground"
-                              aria-hidden="true"
-                            />
-                            {job.postedAt}
-                          </span>
-                        </div>
-                      </CardHeader>
-
-                      <CardContent>
-                        <div className="grid grid-cols-3 divide-x divide-border-subtle rounded-lg border border-border-subtle py-3 text-center">
-                          <div className="px-2">
-                            <p className="text-3xl font-bold text-text-main">{job.applicants}</p>
-                            <p className="mt-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                              Applicants
-                            </p>
-                          </div>
-                          <div className="px-2">
-                            <p className="text-3xl font-bold text-text-main">{job.inReview}</p>
-                            <p className="mt-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                              In Review
-                            </p>
-                          </div>
-                          <div className="px-2">
-                            <p className="text-3xl font-bold text-text-main">{job.interviewing}</p>
-                            <p className="mt-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                              Interviewing
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-
-                      <CardFooter>
-                        <div className="grid w-full grid-cols-2 gap-3">
-                          <Button type="button" variant="default">
-                            {job.status === 'expired' ? 'Publish Posting' : 'View Applicants'}
-                          </Button>
-                          <Button type="button" variant="outline">
-                            {job.status === 'active'
-                              ? 'Edit Posting'
-                              : job.status === 'closed'
-                                ? 'Reopen Posting'
-                                : 'Continue Editing'}
-                          </Button>
-                        </div>
-                      </CardFooter>
-                    </Card>
-                  )
-                })}
+                {filteredAndSortedPostings.map((job) => (
+                  <JobPostingCard key={job.id} job={job} />
+                ))}
               </div>
             )}
           </section>
