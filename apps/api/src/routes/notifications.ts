@@ -11,6 +11,7 @@ import {
   createNotification,
   markNotificationAsRead,
   markAllNotificationsAsRead,
+  deleteNotification,
   sendEmail,
 } from '../controllers/notifications.controller.js'
 
@@ -21,16 +22,27 @@ type NotificationsEnv = {
     NEON_AUTH_BASE_URL: string
     INTERNAL_SERVICE_KEY?: string
     RESEND_API_KEY?: string
+    RESEND_FROM_EMAIL?: string
   }
   Variables: DbVariables & AuthVariables
 }
 
-// Zod schema to validate request body for sending simulated email
+export const notificationStatusValues = [
+  'applied',
+  'under_review',
+  'shortlisted',
+  'accepted',
+  'rejected',
+] as const
+
+export type NotificationStatus = (typeof notificationStatusValues)[number]
+
+// Zod schema to validate request body for sending an email
 const sendEmailSchema = z.object({
   studentEmail: z.string().email('Invalid student email format'),
   postingTitle: z.string().min(1, 'Posting title is required'),
   companyName: z.string().min(1, 'Company name is required'),
-  status: z.enum(['applied', 'under_review', 'shortlisted', 'accepted', 'rejected']),
+  status: z.enum(notificationStatusValues),
 })
 
 // Zod schema to validate notification creation payload
@@ -66,10 +78,14 @@ notificationsRouter.post(
     const { studentEmail, postingTitle, companyName, status } = c.req.valid('json')
 
     // Read Resend API Key from Cloudflare Worker environment bindings
-    const bindings = env<{ RESEND_API_KEY?: string }>(c)
+    const bindings = env<{
+      RESEND_API_KEY?: string
+      RESEND_FROM_EMAIL?: string
+    }>(c)
 
     const result = await sendEmail(
       bindings.RESEND_API_KEY,
+      bindings.RESEND_FROM_EMAIL,
       studentEmail,
       postingTitle,
       companyName,
@@ -136,6 +152,29 @@ notificationsRouter.patch('/:id/read', requireAuth, async (c) => {
     return c.json({ error: 'Notification not found' }, 404)
   }
   return c.json({ data })
+})
+
+/**
+ * DELETE /api/notifications/:id
+ * Deletes a specific notification belonging to the authenticated user.
+ */
+notificationsRouter.delete('/:id', requireAuth, async (c) => {
+  const db = c.var.db
+  const authUser = c.var.authUser
+  const id = c.req.param('id')
+
+  // Basic UUID check
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (!uuidRegex.test(id)) {
+    return c.json({ error: 'Notification not found' }, 404)
+  }
+
+  const data = await deleteNotification(db, authUser.id, id)
+  if (!data) {
+    return c.json({ error: 'Notification not found' }, 404)
+  }
+
+  return c.json({ data: null })
 })
 
 /**

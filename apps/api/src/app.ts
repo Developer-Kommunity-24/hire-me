@@ -15,6 +15,7 @@ const app = new Hono<{
     WEB_ORIGIN: string
     INTERNAL_SERVICE_KEY?: string
     RESEND_API_KEY?: string
+    RESEND_FROM_EMAIL?: string
   }
 }>()
 

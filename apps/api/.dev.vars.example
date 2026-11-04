@@ -15,3 +15,6 @@ INTERNAL_SERVICE_KEY=replace_with_a_secure_random_secret
 
 # Resend API Key for email notifications
 RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxx
+
+# Sender address for email notifications
+RESEND_FROM_EMAIL=onboarding@resend.dev

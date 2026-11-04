@@ -38,6 +38,7 @@ vi.mock('../controllers/notifications.controller.ts', () => ({
   createNotification: vi.fn(),
   markNotificationAsRead: vi.fn(),
   markAllNotificationsAsRead: vi.fn(),
+  deleteNotification: vi.fn(),
   sendEmail: vi.fn(),
 }))
 
@@ -47,6 +48,7 @@ import {
   createNotification,
   markNotificationAsRead,
   markAllNotificationsAsRead,
+  deleteNotification,
   sendEmail,
 } from '../controllers/notifications.controller.js'
 
@@ -124,7 +126,7 @@ describe('Notifications API', () => {
     it('sends email successfully with valid service key and body', async () => {
       vi.mocked(sendEmail).mockResolvedValue({
         success: true,
-        simulated: true,
+        id: 'email-id',
         recipient: 'student@example.com',
         subject: 'Application Status Update',
       })
@@ -140,6 +142,7 @@ describe('Notifications API', () => {
 
       expect(res.status).toBe(200)
       expect(sendEmail).toHaveBeenCalledWith(
+        undefined,
         undefined,
         'student@example.com',
         'Frontend Engineer',
@@ -285,6 +288,62 @@ describe('Notifications API', () => {
         authUser.id,
         '22222222-2222-4222-8222-222222222222',
       )
+    })
+  })
+
+  // ==========================================
+  // USER-FACING: DELETE /api/notifications/:id
+  // ==========================================
+  describe('DELETE /api/notifications/:id', () => {
+    it('401s without user authorization', async () => {
+      const res = await app.request('/api/notifications/22222222-2222-4222-8222-222222222222', {
+        method: 'DELETE',
+      })
+      expect(res.status).toBe(401)
+    })
+
+    it('404s for invalid UUID without calling controller', async () => {
+      const res = await app.request('/api/notifications/invalid-uuid', {
+        method: 'DELETE',
+        headers: { authorization: 'Bearer test-token' },
+      })
+      expect(res.status).toBe(404)
+      expect(deleteNotification).not.toHaveBeenCalled()
+    })
+
+    it('404s when the notification does not belong to the user', async () => {
+      vi.mocked(deleteNotification).mockResolvedValue(null)
+
+      const res = await app.request('/api/notifications/22222222-2222-4222-8222-222222222222', {
+        method: 'DELETE',
+        headers: { authorization: 'Bearer test-token' },
+      })
+
+      expect(res.status).toBe(404)
+      expect(deleteNotification).toHaveBeenCalledWith(
+        expect.anything(),
+        authUser.id,
+        '22222222-2222-4222-8222-222222222222',
+      )
+    })
+
+    it('deletes the notification for the authenticated user', async () => {
+      vi.mocked(deleteNotification).mockResolvedValue({
+        id: '22222222-2222-4222-8222-222222222222',
+        userId: authUser.id,
+        type: 'status_changed',
+        payload: {},
+        readAt: null,
+        createdAt: new Date(),
+      })
+
+      const res = await app.request('/api/notifications/22222222-2222-4222-8222-222222222222', {
+        method: 'DELETE',
+        headers: { authorization: 'Bearer test-token' },
+      })
+
+      expect(res.status).toBe(200)
+      expect(await res.json()).toEqual({ data: null })
     })
   })
 

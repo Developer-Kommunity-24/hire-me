@@ -59,11 +59,27 @@ export async function markAllNotificationsAsRead(
 }
 
 /**
- * 5. Simulate sending an email to a student.
- * Since we don't have an active SMTP server, we log the formatted output to the console.
+ * 5. Delete a specific notification.
+ * Ensures the notification belongs to the caller before deleting it.
+ */
+export async function deleteNotification(
+  db: Database,
+  userId: string,
+  id: string,
+): Promise<Notification | null> {
+  const [deleted] = await db
+    .delete(notifications)
+    .where(and(eq(notifications.id, id), eq(notifications.userId, userId)))
+    .returning()
+  return deleted ?? null
+}
+
+/**
+ * 6. Send an email notification to a student through Resend.
  */
 export async function sendEmail(
   apiKey: string | undefined,
+  fromEmail: string | undefined,
   studentEmail: string,
   postingTitle: string,
   companyName: string,
@@ -76,19 +92,12 @@ export async function sendEmail(
     <p>Best regards,<br>The HireMe Team</p>
   `
 
+  if (!fromEmail) {
+    throw new Error('RESEND_FROM_EMAIL is not configured')
+  }
+
   if (!apiKey) {
-    const textBody = `Hi,\n\nYour application status for "${postingTitle}" at "${companyName}" has been updated to "${status}".\n\nBest regards,\nThe HireMe Team`
-    console.log(`\n--- [SIMULATED EMAIL DISPATCH (No API Key)] ---`)
-    console.log(`To:      ${studentEmail}`)
-    console.log(`Subject: ${subject}`)
-    console.log(`Body:\n${textBody}`)
-    console.log(`-----------------------------------------------\n`)
-    return {
-      success: true,
-      simulated: true,
-      recipient: studentEmail,
-      subject,
-    }
+    throw new Error('RESEND_API_KEY is not configured')
   }
 
   // Call the Resend Emails API
@@ -99,7 +108,7 @@ export async function sendEmail(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: 'onboarding@resend.dev', // Default sender for testing sandbox
+      from: fromEmail,
       to: [studentEmail],
       subject,
       html: htmlBody,
@@ -114,7 +123,6 @@ export async function sendEmail(
   const result = (await response.json()) as { id: string }
   return {
     success: true,
-    simulated: false,
     id: result.id,
     recipient: studentEmail,
     subject,
