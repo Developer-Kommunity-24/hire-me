@@ -6,6 +6,7 @@ import { dbMiddleware } from './middleware/db.js'
 import { postingsRouter } from './routes/postings.js'
 import { studentRouter } from './routes/student.js'
 import { usersRouter } from './routes/users.js'
+import { notificationsRouter } from './routes/notifications.js'
 import { clubMembersRouter } from './routes/club-members.js'
 
 import { recruitersRouter } from './routes/recruiters.js'
@@ -16,7 +17,14 @@ import { studentDataRouter } from './routes/student-data.js'
 import { adminRouter } from './routes/admin.js'
 
 const app = new Hono<{
-  Bindings: { DATABASE_URL: string; NEON_AUTH_BASE_URL: string; WEB_ORIGIN: string }
+  Bindings: {
+    DATABASE_URL: string
+    NEON_AUTH_BASE_URL: string
+    WEB_ORIGIN: string
+    INTERNAL_SERVICE_KEY?: string
+    RESEND_API_KEY?: string
+    RESEND_FROM_EMAIL?: string
+  }
 }>()
 
 app.use('*', logger())
@@ -49,6 +57,8 @@ app.route('/api/student', studentRouter)
 // Authenticated user record and role selection
 app.route('/api/users', usersRouter)
 
+// Notifications
+app.route('/api/notifications', notificationsRouter)
 // Club admin: membership management for appointed volunteers
 app.route('/api/clubs/members', clubMembersRouter)
 
