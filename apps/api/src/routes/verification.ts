@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { requireAuth } from '../middleware/auth.js'
+import { requireCoreAdmin } from '../middleware/core-admin.js'
 import type { AuthVariables } from '../middleware/auth.js'
 import type { DbVariables } from '../middleware/db.js'
 import {
@@ -143,38 +144,51 @@ verificationRouter.get('/', async (c) => {
  * GET /api/verifications/requests
  *
  * Lists verification requests with optional limit and offset pagination.
+ * Requires core administrator privileges.
  */
-verificationRouter.get('/requests', zValidator('query', paginationQuerySchema), async (c) => {
-  const { limit, offset } = c.req.valid('query')
-  const requests = await listVerificationRequests(c.var.db, { limit, offset })
-  return c.json({ data: requests })
-})
+verificationRouter.get(
+  '/requests',
+  requireCoreAdmin,
+  zValidator('query', paginationQuerySchema),
+  async (c) => {
+    const { limit, offset } = c.req.valid('query')
+    const requests = await listVerificationRequests(c.var.db, { limit, offset })
+    return c.json({ data: requests })
+  },
+)
 
 /**
  * POST /api/verifications/revocations
  *
  * Flags a badge revocation for a student and club membership.
  * Automatically marks the student's dk24Status as 'revoked'.
+ * Requires core administrator privileges.
  */
-verificationRouter.post('/revocations', zValidator('json', flagRevocationSchema), async (c) => {
-  const input = c.req.valid('json')
+verificationRouter.post(
+  '/revocations',
+  requireCoreAdmin,
+  zValidator('json', flagRevocationSchema),
+  async (c) => {
+    const input = c.req.valid('json')
 
-  const revocation = await flagBadgeRevocation(c.var.db, {
-    studentId: input.studentId,
-    clubMembershipId: input.clubMembershipId,
-    resolution: input.resolution,
-    resolvedBy: c.var.authUser.id,
-  })
+    const revocation = await flagBadgeRevocation(c.var.db, {
+      studentId: input.studentId,
+      clubMembershipId: input.clubMembershipId,
+      resolution: input.resolution,
+      resolvedBy: c.var.authUser.id,
+    })
 
-  return c.json({ data: revocation }, 201)
-})
+    return c.json({ data: revocation }, 201)
+  },
+)
 
 /**
  * GET /api/verifications/revocations/pending
  *
  * Lists all pending (unresolved) badge revocations for administrative review.
+ * Requires core administrator privileges.
  */
-verificationRouter.get('/revocations/pending', async (c) => {
+verificationRouter.get('/revocations/pending', requireCoreAdmin, async (c) => {
   const revocations = await listPendingRevocations(c.var.db)
   return c.json({ data: revocations })
 })
@@ -184,9 +198,11 @@ verificationRouter.get('/revocations/pending', async (c) => {
  *
  * Resolves an active badge revocation record, recording the resolver and note.
  * Optionally restores the student's verification status.
+ * Requires core administrator privileges.
  */
 verificationRouter.patch(
   '/revocations/:id/resolve',
+  requireCoreAdmin,
   zValidator('json', resolveRevocationSchema),
   async (c) => {
     const rawId = c.req.param('id')

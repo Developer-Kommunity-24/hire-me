@@ -20,17 +20,29 @@ process.env.WEB_ORIGIN = 'http://localhost:3000'
 // AUTH MOCK
 // ==========================================
 
-const { authUser } = vi.hoisted(() => ({
+const { authUser, middlewareState } = vi.hoisted(() => ({
   authUser: {
     id: '11111111-1111-4111-8111-111111111111',
     email: 'student@example.test',
     name: 'Test Student',
+  },
+  middlewareState: {
+    coreAdmin: true,
   },
 }))
 
 vi.mock('../middleware/auth.ts', () => ({
   requireAuth: async (c: Context, next: Next) => {
     c.set('authUser', authUser)
+    await next()
+  },
+}))
+
+vi.mock('../middleware/core-admin.ts', () => ({
+  requireCoreAdmin: async (c: Context, next: Next) => {
+    if (!middlewareState.coreAdmin) {
+      return c.json({ error: 'Forbidden' }, 403)
+    }
     await next()
   },
 }))
@@ -113,6 +125,7 @@ const mockUnmatchedData: VerificationResponseData = {
 describe('Verification API Routes', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    middlewareState.coreAdmin = true
   })
 
   describe('normalizeUsn utility', () => {
@@ -441,6 +454,53 @@ describe('Verification API Routes', () => {
       expect(res.status).toBe(404)
       expect(resolveBadgeRevocation).not.toHaveBeenCalled()
     })
+
+    it('returns 403 on POST /api/verifications/revocations when not core admin', async () => {
+      middlewareState.coreAdmin = false
+
+      const res = await app.request('/api/verifications/revocations', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          studentId: authUser.id,
+          clubMembershipId: '44444444-4444-4444-8444-444444444444',
+          resolution: 'Violation',
+        }),
+      })
+
+      expect(res.status).toBe(403)
+      await expect(res.json()).resolves.toEqual({ error: 'Forbidden' })
+      expect(flagBadgeRevocation).not.toHaveBeenCalled()
+    })
+
+    it('returns 403 on GET /api/verifications/revocations/pending when not core admin', async () => {
+      middlewareState.coreAdmin = false
+
+      const res = await app.request('/api/verifications/revocations/pending')
+
+      expect(res.status).toBe(403)
+      await expect(res.json()).resolves.toEqual({ error: 'Forbidden' })
+      expect(listPendingRevocations).not.toHaveBeenCalled()
+    })
+
+    it('returns 403 on PATCH /api/verifications/revocations/:id/resolve when not core admin', async () => {
+      middlewareState.coreAdmin = false
+
+      const res = await app.request(
+        '/api/verifications/revocations/99999999-9999-4999-8999-999999999999/resolve',
+        {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            resolution: 'Audit cleared',
+          }),
+        },
+      )
+
+      expect(res.status).toBe(403)
+      await expect(res.json()).resolves.toEqual({ error: 'Forbidden' })
+      expect(resolveBadgeRevocation).not.toHaveBeenCalled()
+    })
   })
 
   describe('GET /api/verifications/requests', () => {
@@ -456,6 +516,16 @@ describe('Verification API Routes', () => {
         limit: 10,
         offset: 5,
       })
+    })
+
+    it('returns 403 when not core admin', async () => {
+      middlewareState.coreAdmin = false
+
+      const res = await app.request('/api/verifications/requests')
+
+      expect(res.status).toBe(403)
+      await expect(res.json()).resolves.toEqual({ error: 'Forbidden' })
+      expect(listVerificationRequests).not.toHaveBeenCalled()
     })
   })
 })
