@@ -108,9 +108,11 @@ export default function AddMembers() {
           </p>
         )}
 
-        <Button type="submit" disabled={mutation.isPending} className="self-start">
-          {mutation.isPending ? 'Adding...' : 'Add Member'}
-        </Button>
+        <div className="flex justify-start">
+          <Button type="submit" disabled={mutation.isPending}>
+            {mutation.isPending ? 'Adding...' : 'Add Member'}
+          </Button>
+        </div>
       </form>
     </Form>
   )

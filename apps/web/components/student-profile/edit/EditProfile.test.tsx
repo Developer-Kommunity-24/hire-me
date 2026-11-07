@@ -139,6 +139,8 @@ describe('EditProfileForm', () => {
 
     const saveButtons = screen.getAllByRole('button', { name: /Save Changes/i })
     fireEvent.click(saveButtons[0]!)
+    const form = saveButtons[0]!.closest('form')
+    if (form) fireEvent.submit(form)
 
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith('/student/profile')
@@ -160,6 +162,8 @@ describe('EditProfileForm', () => {
 
     const saveButtons = screen.getAllByRole('button', { name: /Save Changes/i })
     fireEvent.click(saveButtons[0]!)
+    const form = saveButtons[0]!.closest('form')
+    if (form) fireEvent.submit(form)
 
     await waitFor(() => {
       expect(screen.getByText('Full name is required')).toBeInTheDocument()
