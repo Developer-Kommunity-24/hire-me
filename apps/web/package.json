@@ -33,7 +33,8 @@
     "react-hook-form": "^7.88.0",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.6.0",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "zustand": "^5.1.0"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
