@@ -362,7 +362,6 @@ describe('Verification API Routes', () => {
         studentId: authUser.id,
         clubMembershipId: '44444444-4444-4444-8444-444444444444',
         resolution: 'Violation of club conduct policy',
-        resolvedBy: authUser.id,
       })
     })
 

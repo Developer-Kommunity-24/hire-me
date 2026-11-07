@@ -27,14 +27,18 @@ type VerificationEnv = {
 // VALIDATION SCHEMAS
 // ==========================================
 
+const uuidSchema = z
+  .string()
+  .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, 'Invalid UUID')
+
 const verificationSubmissionSchema = z.object({
   usn: z.string().trim().min(1, 'USN is required').max(20, 'USN must be at most 20 characters'),
-  clubId: z.string().uuid('Invalid club ID').optional().nullable(),
+  clubId: uuidSchema.optional().nullable(),
 })
 
 const flagRevocationSchema = z.object({
-  studentId: z.string().uuid('Invalid student ID'),
-  clubMembershipId: z.string().uuid('Invalid club membership ID'),
+  studentId: uuidSchema,
+  clubMembershipId: uuidSchema,
   resolution: z.string().trim().optional(),
 })
 
@@ -42,8 +46,6 @@ const resolveRevocationSchema = z.object({
   resolution: z.string().trim().min(1, 'Resolution description is required'),
   restoreStatus: z.enum(['none', 'pending', 'verified']).optional(),
 })
-
-const uuidSchema = z.string().uuid()
 
 const paginationQuerySchema = z.object({
   limit: z
@@ -175,7 +177,6 @@ verificationRouter.post(
       studentId: input.studentId,
       clubMembershipId: input.clubMembershipId,
       resolution: input.resolution,
-      resolvedBy: c.var.authUser.id,
     })
 
     return c.json({ data: revocation }, 201)
