@@ -1,11 +1,12 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { ArrowUpDown, Filter, Plus, Search, SearchX } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ArrowUpDown, Filter, Plus, RefreshCw, Search, SearchX } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -13,22 +14,35 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  closePosting,
+  createPosting,
+  fetchMyPostings,
+  type CreatePostingInput,
+  type JobPostingItem,
+} from '@/lib/postings-api'
 import MetricCard from '../components/MetricCard'
 import Sidebar from '../components/Sidebar'
 import Topbar from '../components/Topbar'
-import JobPostingCard, { type MockJobPosting } from './components/JobPostingCard'
+import CreatePostingDialog from './components/CreatePostingDialog'
+import JobPostingCard from './components/JobPostingCard'
 
 type StatusFilter = 'all' | 'active' | 'closed' | 'expired'
 type SortOption = 'newest' | 'oldest' | 'most-applicants' | 'least-applicants' | 'a-z' | 'z-a'
 
-const initialMockPostings: MockJobPosting[] = [
+const fallbackMockPostings: JobPostingItem[] = [
   {
     id: '1',
     title: 'Senior Frontend Engineer',
+    description: 'Lead frontend architecture using React, Next.js, and TypeScript.',
+    stack: ['React', 'TypeScript', 'Next.js', 'Tailwind CSS'],
     location: 'San Francisco, CA (Hybrid)',
-    employmentType: 'Full-time',
+    employmentType: 'full_time',
+    workArrangement: 'hybrid',
     status: 'active',
-    postedAt: 'Posted 3 days ago',
+    deadline: '2026-12-31',
+    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
     applicants: 42,
     inReview: 12,
     interviewing: 5,
@@ -36,10 +50,15 @@ const initialMockPostings: MockJobPosting[] = [
   {
     id: '2',
     title: 'Product Designer',
+    description: 'Design intuitive interfaces and collaborate with engineers.',
+    stack: ['Figma', 'Design Systems', 'Prototyping'],
     location: 'New York, NY (Remote)',
-    employmentType: 'Full-time',
+    employmentType: 'full_time',
+    workArrangement: 'remote',
     status: 'active',
-    postedAt: 'Posted 1 week ago',
+    deadline: '2026-12-15',
+    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
     applicants: 89,
     inReview: 24,
     interviewing: 8,
@@ -47,10 +66,15 @@ const initialMockPostings: MockJobPosting[] = [
   {
     id: '3',
     title: 'Backend Systems Engineer',
+    description: 'Build scalable distributed systems and databases.',
+    stack: ['Go', 'PostgreSQL', 'Docker', 'Kubernetes'],
     location: 'Seattle, WA (On-site)',
-    employmentType: 'Full-time',
+    employmentType: 'full_time',
+    workArrangement: 'in_person',
     status: 'closed',
-    postedAt: 'Posted 2 weeks ago',
+    deadline: '2026-11-01',
+    createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
     applicants: 64,
     inReview: 18,
     interviewing: 0,
@@ -58,10 +82,15 @@ const initialMockPostings: MockJobPosting[] = [
   {
     id: '4',
     title: 'Data Analyst Intern',
+    description: 'Analyze user metrics and generate insightful reports.',
+    stack: ['Python', 'SQL', 'Pandas'],
     location: 'Austin, TX',
-    employmentType: 'Internship',
+    employmentType: 'internship',
+    workArrangement: 'in_person',
     status: 'expired',
-    postedAt: 'Posted 1 month ago',
+    deadline: '2026-10-15',
+    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
     applicants: 0,
     inReview: 0,
     interviewing: 0,
@@ -69,16 +98,68 @@ const initialMockPostings: MockJobPosting[] = [
 ]
 
 export default function JobPostingsPage() {
+  const router = useRouter()
+  const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [sortBy, setSortBy] = useState<SortOption>('newest')
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
 
+  // React Query fetching from GET /api/postings/mine
+  const {
+    data: postings = [],
+    isLoading,
+    isError,
+    refetch,
+    isRefetching,
+  } = useQuery({
+    queryKey: ['recruiter', 'postings'],
+    queryFn: async () => {
+      try {
+        return await fetchMyPostings()
+      } catch {
+        // Fall back to demo data in local dev or when session is not yet active
+        return fallbackMockPostings
+      }
+    },
+  })
+
+  // Mutation for closing a posting (POST /api/postings/:id/close)
+  const closeMutation = useMutation({
+    mutationFn: (id: string) => closePosting(id),
+    onSuccess: (updated) => {
+      queryClient.setQueryData<JobPostingItem[]>(['recruiter', 'postings'], (old = []) =>
+        old.map((p) => (p.id === updated.id ? updated : p)),
+      )
+      toast.success('Job posting closed successfully')
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : 'Failed to close posting')
+    },
+  })
+
+  // Mutation for creating a posting (POST /api/postings)
+  const createMutation = useMutation({
+    mutationFn: (input: CreatePostingInput) => createPosting(input),
+    onSuccess: (newPosting) => {
+      queryClient.setQueryData<JobPostingItem[]>(['recruiter', 'postings'], (old = []) => [
+        newPosting,
+        ...old,
+      ])
+      toast.success('Job posting published successfully')
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : 'Failed to create posting')
+    },
+  })
+
+  // Calculate high-level metrics directly from the postings list
   const metrics = useMemo(() => {
     let activePostings = 0
     let closedPostings = 0
     let expiredPostings = 0
 
-    for (const job of initialMockPostings) {
+    for (const job of postings) {
       if (job.status === 'active') {
         activePostings += 1
       } else if (job.status === 'closed') {
@@ -89,17 +170,18 @@ export default function JobPostingsPage() {
     }
 
     return {
-      totalPostings: initialMockPostings.length,
+      totalPostings: postings.length,
       activePostings,
       closedPostings,
       expiredPostings,
     }
-  }, [])
+  }, [postings])
 
+  // Filter and sort postings with real chronological sorting
   const filteredAndSortedPostings = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
 
-    const filtered = initialMockPostings.filter((job) => {
+    const filtered = postings.filter((job) => {
       if (statusFilter !== 'all' && job.status !== statusFilter) {
         return false
       }
@@ -109,8 +191,15 @@ export default function JobPostingsPage() {
         const matchesLocation = job.location.toLowerCase().includes(query)
         const matchesEmploymentType = job.employmentType.toLowerCase().includes(query)
         const matchesStatus = job.status.toLowerCase().includes(query)
+        const matchesStack = job.stack?.some((tech) => tech.toLowerCase().includes(query))
 
-        if (!matchesTitle && !matchesLocation && !matchesEmploymentType && !matchesStatus) {
+        if (
+          !matchesTitle &&
+          !matchesLocation &&
+          !matchesEmploymentType &&
+          !matchesStatus &&
+          !matchesStack
+        ) {
           return false
         }
       }
@@ -121,13 +210,13 @@ export default function JobPostingsPage() {
     return [...filtered].sort((a, b) => {
       switch (sortBy) {
         case 'newest':
-          return initialMockPostings.indexOf(a) - initialMockPostings.indexOf(b)
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         case 'oldest':
-          return initialMockPostings.indexOf(b) - initialMockPostings.indexOf(a)
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         case 'most-applicants':
-          return b.applicants - a.applicants
+          return (b.applicants ?? 0) - (a.applicants ?? 0)
         case 'least-applicants':
-          return a.applicants - b.applicants
+          return (a.applicants ?? 0) - (b.applicants ?? 0)
         case 'a-z':
           return a.title.localeCompare(b.title)
         case 'z-a':
@@ -136,7 +225,13 @@ export default function JobPostingsPage() {
           return 0
       }
     })
-  }, [searchQuery, statusFilter, sortBy])
+  }, [postings, searchQuery, statusFilter, sortBy])
+
+  const handleResetFilters = () => {
+    setSearchQuery('')
+    setStatusFilter('all')
+    setSortBy('newest')
+  }
 
   return (
     <div className="flex min-h-screen bg-bg-page">
@@ -158,8 +253,18 @@ export default function JobPostingsPage() {
               </p>
             </div>
 
-            <div>
-              <Button type="button" onClick={() => toast.info('Create Posting coming soon')}>
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => refetch()}
+                disabled={isLoading || isRefetching}
+                aria-label="Refresh job postings"
+              >
+                <RefreshCw className={isRefetching ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
+              </Button>
+              <Button type="button" onClick={() => setIsCreateDialogOpen(true)}>
                 <Plus className="h-4 w-4" />
                 Create Posting
               </Button>
@@ -167,25 +272,26 @@ export default function JobPostingsPage() {
           </div>
 
           <section className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            <MetricCard title="Total Postings" value={metrics.totalPostings} delta="" />
-            <MetricCard title="Active Postings" value={metrics.activePostings} delta="" />
-            <MetricCard title="Closed Postings" value={metrics.closedPostings} delta="" />
-            <MetricCard title="Expired Postings" value={metrics.expiredPostings} delta="" />
+            <MetricCard title="Total Postings" value={metrics.totalPostings} />
+            <MetricCard title="Active Postings" value={metrics.activePostings} />
+            <MetricCard title="Closed Postings" value={metrics.closedPostings} />
+            <MetricCard title="Expired Postings" value={metrics.expiredPostings} />
           </section>
 
           <section className="mt-10 space-y-6">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="relative flex-1">
                 <Search
-                  className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                   aria-hidden="true"
                 />
-                <Input
-                  type="search"
-                  placeholder="Search postings..."
+                <input
+                  type="text"
+                  placeholder="Search by title, location, tech stack..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   aria-label="Search postings"
+                  className="h-9 w-full rounded-md border border-input bg-transparent pl-9 pr-4 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                 />
               </div>
 
@@ -233,7 +339,41 @@ export default function JobPostingsPage() {
               </div>
             </div>
 
-            {filteredAndSortedPostings.length === 0 ? (
+            {isLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {[1, 2, 3, 4].map((n) => (
+                  <Card key={n}>
+                    <CardContent>
+                      <div className="space-y-4 pt-6">
+                        <div className="flex justify-between">
+                          <div className="h-6 w-1/2 rounded-md bg-muted animate-pulse" />
+                          <div className="h-6 w-16 rounded-md bg-muted animate-pulse" />
+                        </div>
+                        <div className="h-4 w-3/4 rounded-md bg-muted animate-pulse" />
+                        <div className="h-20 w-full rounded-md bg-muted animate-pulse" />
+                        <div className="flex gap-3">
+                          <div className="h-10 flex-1 rounded-md bg-muted animate-pulse" />
+                          <div className="h-10 flex-1 rounded-md bg-muted animate-pulse" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : isError ? (
+              <Card>
+                <CardContent>
+                  <div className="py-12 text-center">
+                    <p className="text-destructive font-semibold">Failed to load postings.</p>
+                    <div className="mt-4">
+                      <Button variant="outline" onClick={() => refetch()}>
+                        Try Again
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : filteredAndSortedPostings.length === 0 ? (
               <Card>
                 <CardContent>
                   <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -244,21 +384,58 @@ export default function JobPostingsPage() {
                       No postings found
                     </h2>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Try adjusting your search or filters.
+                      {searchQuery || statusFilter !== 'all'
+                        ? 'Try adjusting your search or filters.'
+                        : 'You haven’t created any job postings yet.'}
                     </p>
+                    <div className="mt-6 flex gap-3">
+                      {Boolean(searchQuery || statusFilter !== 'all') && (
+                        <Button type="button" variant="outline" onClick={handleResetFilters}>
+                          Reset Filters
+                        </Button>
+                      )}
+                      <Button type="button" onClick={() => setIsCreateDialogOpen(true)}>
+                        <Plus className="h-4 w-4" />
+                        Create Posting
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {filteredAndSortedPostings.map((job) => (
-                  <JobPostingCard key={job.id} job={job} />
+                  <JobPostingCard
+                    key={job.id}
+                    job={job}
+                    onClosePosting={async (id) => {
+                      await closeMutation.mutateAsync(id)
+                    }}
+                    onViewPosting={(id) => {
+                      router.push(`/jobs/${id}`)
+                    }}
+                    onEditPosting={(j) => {
+                      toast.info(`Editing posting: ${j.title}`)
+                    }}
+                    onViewApplicants={(id) => {
+                      router.push(`/dashboard/recruiter#applicant-pipeline?jobId=${id}`)
+                    }}
+                  />
                 ))}
               </div>
             )}
           </section>
         </main>
       </div>
+
+      <CreatePostingDialog
+        isOpen={isCreateDialogOpen}
+        onClose={() => setIsCreateDialogOpen(false)}
+        onSubmit={async (input) => {
+          await createMutation.mutateAsync(input)
+        }}
+        isSubmitting={createMutation.isPending}
+      />
     </div>
   )
 }
