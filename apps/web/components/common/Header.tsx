@@ -2,7 +2,7 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { ArrowLeft, HelpCircle, type LucideIcon } from 'lucide-react'
+import { ArrowLeft, HelpCircle, Layers, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export interface HeaderProps {
@@ -24,52 +24,50 @@ export default function Header({
   icon: Icon,
   backHref,
   backLabel = 'Back',
-  showLogo,
+  showLogo = true,
   leftAction,
   rightAction,
   children,
   className,
 }: HeaderProps) {
-  const shouldRenderLogo = showLogo ?? (!backHref && !title)
-
   return (
     <header
       className={cn(
-        'sticky top-0 z-20 bg-card/90 backdrop-blur-md border-b border-border-subtle px-5 py-3 flex items-center justify-between shadow-xs',
+        'h-14 border-b border-gray-200 bg-white px-6 flex items-center justify-between shrink-0 sticky top-0 z-20 font-sans',
         className,
       )}
     >
       <div className="flex items-center gap-3 min-w-0">
-        {shouldRenderLogo && (
+        {showLogo && (
           <Link
             href="/"
-            className="flex items-center gap-2 group mr-2"
+            className="flex items-center gap-2.5 group mr-2 shrink-0"
             aria-label="CareerLink home"
           >
-            <span className="text-xl font-black tracking-tight text-brand font-mono">DK24</span>
-            <span className="text-base font-extrabold tracking-tight text-text-main group-hover:text-brand transition-colors">
-              CareerLink
-            </span>
+            <div className="w-6 h-6 rounded-md bg-emerald-600 flex items-center justify-center text-white shadow-xs">
+              <Layers className="w-3.5 h-3.5" />
+            </div>
+            <span className="font-bold text-gray-900 text-base tracking-tight">CareerLink</span>
           </Link>
         )}
 
         {backHref && (
           <Link
             href={backHref}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-text-muted hover:text-text-main transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            {backLabel}
+            <span>{backLabel}</span>
           </Link>
         )}
 
         {title && (
-          <div>
-            <h1 className="text-lg font-bold text-text-main flex items-center gap-2">
-              {Icon && <Icon className="w-5 h-5 text-brand shrink-0" />}
+          <div className="border-l border-slate-200 pl-3 ml-1">
+            <h1 className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
+              {Icon && <Icon className="w-4 h-4 text-emerald-600 shrink-0" />}
               <span className="truncate">{title}</span>
             </h1>
-            {subtitle && <p className="text-xs text-text-muted mt-0.5">{subtitle}</p>}
+            {subtitle && <p className="text-[11px] text-slate-400 truncate">{subtitle}</p>}
           </div>
         )}
 
@@ -81,13 +79,13 @@ export default function Header({
         {rightAction !== undefined ? (
           rightAction
         ) : (
-          <a
+          <Link
             href="/help"
-            className="text-xs font-medium text-text-muted hover:text-text-main transition-colors duration-150 flex items-center gap-1.5"
+            className="text-xs font-medium text-gray-500 hover:text-gray-900 flex items-center gap-1.5 transition-colors"
           >
-            <HelpCircle className="w-4 h-4" />
+            <HelpCircle className="w-4 h-4 text-gray-400" />
             <span>Need Help?</span>
-          </a>
+          </Link>
         )}
       </div>
     </header>

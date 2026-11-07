@@ -10,6 +10,7 @@ import { useForm, useWatch } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import Header from '@/components/common/Header'
 import { StudentMascotHero } from '@/components/onboarding/student-mascot-hero'
 import {
   StudentOnboardingStepper,
@@ -174,20 +175,8 @@ export default function StudentOnboardingPage() {
       onMouseMove={handleMouseMove}
       className="h-screen w-screen bg-bg-page text-text-main flex flex-col justify-between overflow-hidden font-sans select-none selection:bg-brand/20 selection:text-text-main"
     >
-      {/* Top Navbar */}
-      <header className="w-full z-20 shrink-0">
-        <div className="w-full max-w-7xl mx-auto px-6 sm:px-10 py-3 sm:py-4 flex items-center justify-between">
-          {/* Logo */}
-          <button
-            type="button"
-            className="flex items-center gap-1.5 text-2xl tracking-tight cursor-pointer bg-transparent border-0 text-left p-0 outline-none"
-            onClick={() => router.push('/')}
-          >
-            <span className="font-extrabold text-brand">DK24</span>
-            <span className="font-bold text-text-main">CareerLink</span>
-          </button>
-        </div>
-      </header>
+      {/* Top Header Bar */}
+      <Header />
 
       {/* Main Container Fixed-Height Card */}
       <main className="flex-1 w-full flex items-center justify-center px-4 sm:px-8 py-2 z-10 overflow-hidden">

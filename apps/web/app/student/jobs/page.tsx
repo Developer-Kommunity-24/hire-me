@@ -175,11 +175,7 @@ export default function StudentJobsPage() {
 
   return (
     <>
-      <Header
-        title="Job Feed"
-        subtitle="Discover internships, full-time roles, and opportunities matched for you"
-        icon={Briefcase}
-      />
+      <Header />
 
       <main className="px-4 sm:px-6 lg:px-8 py-6 max-w-7xl mx-auto w-full animate-fade-in flex-1">
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
