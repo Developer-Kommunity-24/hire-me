@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ArrowUpRight } from 'lucide-react'
 
 export default function LandingPage() {
   return (
@@ -58,18 +59,7 @@ export default function LandingPage() {
                     className="font-bold text-sm text-text-main mt-4 inline-flex items-center gap-1.5 group/link group-hover:text-brand transition-colors"
                   >
                     <span>Get Started</span>
-                    <svg
-                      className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 shrink-0"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <line x1="7" y1="17" x2="17" y2="7" />
-                      <polyline points="7 7 17 7 17 17" />
-                    </svg>
+                    <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 shrink-0" />
                   </Link>
                 </div>
 
@@ -86,18 +76,7 @@ export default function LandingPage() {
                     className="font-bold text-sm text-text-main mt-4 inline-flex items-center gap-1.5 group/link group-hover:text-brand transition-colors"
                   >
                     <span>Get Started</span>
-                    <svg
-                      className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 shrink-0"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <line x1="7" y1="17" x2="17" y2="7" />
-                      <polyline points="7 7 17 7 17 17" />
-                    </svg>
+                    <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 shrink-0" />
                   </Link>
                 </div>
               </div>

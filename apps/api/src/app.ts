@@ -4,11 +4,27 @@ import { env } from 'hono/adapter'
 import { logger } from 'hono/logger'
 import { dbMiddleware } from './middleware/db.js'
 import { postingsRouter } from './routes/postings.js'
+import { studentRouter } from './routes/student.js'
 import { usersRouter } from './routes/users.js'
+import { notificationsRouter } from './routes/notifications.js'
 import { clubMembersRouter } from './routes/club-members.js'
 
+import { recruitersRouter } from './routes/recruiters.js'
+import { talentsRouter } from './routes/talents.js'
+
+import { studentDataRouter } from './routes/student-data.js'
+
+import { adminRouter } from './routes/admin.js'
+
 const app = new Hono<{
-  Bindings: { DATABASE_URL: string; NEON_AUTH_BASE_URL: string; WEB_ORIGIN: string }
+  Bindings: {
+    DATABASE_URL: string
+    NEON_AUTH_BASE_URL: string
+    WEB_ORIGIN: string
+    INTERNAL_SERVICE_KEY?: string
+    RESEND_API_KEY?: string
+    RESEND_FROM_EMAIL?: string
+  }
 }>()
 
 app.use('*', logger())
@@ -22,7 +38,7 @@ app.use(
   '*',
   cors({
     origin: (_origin, c) => env<{ WEB_ORIGIN?: string }>(c).WEB_ORIGIN ?? 'http://localhost:3000',
-    allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowHeaders: ['authorization', 'content-type'],
     maxAge: 86400,
   }),
@@ -36,12 +52,26 @@ app.get('/api/hello', (c) => c.json({ message: 'Hello from Hono' }))
 
 // Student job discovery
 app.route('/api/postings', postingsRouter)
+app.route('/api/student', studentRouter)
 
 // Authenticated user record and role selection
 app.route('/api/users', usersRouter)
 
+// Notifications
+app.route('/api/notifications', notificationsRouter)
 // Club admin: membership management for appointed volunteers
 app.route('/api/clubs/members', clubMembersRouter)
+
+// Authenticated student-owned profile data
+app.route('/api/student-data', studentDataRouter)
+// Recruiter onboarding and company profile management
+app.route('/api/recruiters', recruitersRouter)
+
+// Recruiter talent search
+app.route('/api/talents', talentsRouter)
+
+// Core-admin role administration
+app.route('/api/admin', adminRouter)
 
 export { app }
 export type AppType = typeof app

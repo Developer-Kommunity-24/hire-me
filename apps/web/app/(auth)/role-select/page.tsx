@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'motion/react'
-import { ArrowRight, Check } from 'lucide-react'
+import { ArrowRight, Briefcase, Check, GraduationCap } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { ApiError } from '@/lib/api-client'
@@ -147,40 +147,9 @@ export default function RoleSelectPage() {
                       : 'border-slate-100 shadow-[0_6px_30px_-6px_rgba(0,0,0,0.05)] hover:border-slate-200'
                 }`}
               >
-                {/* 3D Student Badge Icon */}
+                {/* Student Badge Icon */}
                 <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-full bg-brand-light flex items-center justify-center mb-5 transition-transform duration-300 group-hover:scale-105">
-                  <svg className="w-10 h-10" viewBox="0 0 64 64" fill="none">
-                    <path
-                      d="M32 14L8 25L32 36L56 25L32 14Z"
-                      fill="var(--brand-green)"
-                      filter="drop-shadow(0 4px 6px rgba(0,194,109,0.3))"
-                    />
-                    <path d="M32 14L56 25L32 36L8 25L32 14Z" fill="url(#capGradIcon)" />
-                    <path
-                      d="M18 31V43C18 43 23 48 32 48C41 48 46 43 46 43V31L32 37.5L18 31Z"
-                      fill="var(--brand-green-dark)"
-                    />
-                    <path
-                      d="M48 28.5V44C48 44 49 48 46 49.5"
-                      stroke="var(--brand-green)"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                    />
-                    <circle cx="46" cy="49.5" r="2.5" fill="var(--brand-green-dark)" />
-                    <defs>
-                      <linearGradient
-                        id="capGradIcon"
-                        x1="8"
-                        y1="14"
-                        x2="56"
-                        y2="36"
-                        gradientUnits="userSpaceOnUse"
-                      >
-                        <stop stopColor="#10D77D" />
-                        <stop offset="1" stopColor="var(--brand-green-hover)" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
+                  <GraduationCap className="w-10 h-10 text-brand" strokeWidth={2.2} />
                 </div>
 
                 {/* Role Name */}
@@ -225,44 +194,9 @@ export default function RoleSelectPage() {
                       : 'border-slate-100 shadow-[0_6px_30px_-6px_rgba(0,0,0,0.05)] hover:border-slate-200'
                 }`}
               >
-                {/* 3D Recruiter Badge Icon */}
+                {/* Recruiter Badge Icon */}
                 <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-full bg-recruiter-light flex items-center justify-center mb-5 transition-transform duration-300 group-hover:scale-105">
-                  <svg className="w-10 h-10" viewBox="0 0 64 64" fill="none">
-                    <rect
-                      x="25"
-                      y="16"
-                      width="14"
-                      height="8"
-                      rx="3"
-                      stroke="var(--recruiter-purple-dark)"
-                      strokeWidth="3"
-                      fill="none"
-                    />
-                    <rect
-                      x="12"
-                      y="22"
-                      width="40"
-                      height="28"
-                      rx="6"
-                      fill="url(#caseGradIcon)"
-                      filter="drop-shadow(0 4px 6px rgba(109,40,217,0.25))"
-                    />
-                    <path d="M12 30H52" stroke="#5B21B6" strokeWidth="2" opacity="0.4" />
-                    <rect x="28" y="32" width="8" height="6" rx="2" fill="#FFFFFF" />
-                    <defs>
-                      <linearGradient
-                        id="caseGradIcon"
-                        x1="12"
-                        y1="22"
-                        x2="52"
-                        y2="50"
-                        gradientUnits="userSpaceOnUse"
-                      >
-                        <stop stopColor="var(--recruiter-purple)" />
-                        <stop offset="1" stopColor="var(--recruiter-purple-dark)" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
+                  <Briefcase className="w-10 h-10 text-recruiter" strokeWidth={2.2} />
                 </div>
 
                 {/* Role Name */}

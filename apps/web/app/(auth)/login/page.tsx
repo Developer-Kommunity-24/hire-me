@@ -8,7 +8,6 @@ import { useForm } from 'react-hook-form'
 import { FormField } from '@/components/ui/form-field'
 import { Input } from '@/components/ui/input'
 import { useSocialSignIn } from '@/lib/hooks/use-auth'
-import { cn } from '@/lib/utils'
 import { loginSchema, type LoginInput } from '@/lib/schemas/auth.schema'
 import { CharactersScene, type CharacterSceneState } from './CharactersScene'
 
@@ -158,7 +157,6 @@ export default function LoginPage() {
                         }}
                         onBlur={() => setState((s) => ({ ...s, focusedField: 'none' }))}
                         placeholder="Your full name"
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition bg-zinc-50/50 hover:bg-zinc-50 text-zinc-900"
                       />
                     </FormField>
                   )}
@@ -180,11 +178,6 @@ export default function LoginPage() {
                       }}
                       onBlur={() => setState((s) => ({ ...s, focusedField: 'none' }))}
                       placeholder="Enter your email"
-                      className={cn(
-                        'w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none transition bg-zinc-50/40 hover:bg-zinc-50',
-                        state.focusedField === 'email' &&
-                          'border-zinc-900 ring-2 ring-zinc-900/10 bg-white',
-                      )}
                     />
                   </FormField>
 

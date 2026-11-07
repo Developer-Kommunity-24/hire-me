@@ -1,309 +1,350 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import {
-  ArrowLeft,
-  ArrowRight,
-  Briefcase,
-  Building2,
-  Globe,
-  Mail,
-  MapPin,
-  Search,
-  Sparkles,
-  UserCheck,
-  Users,
-  X,
-} from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { motion, AnimatePresence } from 'motion/react'
+import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { useSaveRecruiterProfile } from '@/lib/hooks/use-onboarding'
+
+import { Button } from '@/components/ui/button'
+import { RecruiterHero } from '@/components/onboarding/recruiter/recruiter-hero'
+import { RecruiterOnboardingStepper } from '@/components/onboarding/recruiter/recruiter-onboarding-stepper'
+import { StepAboutYou } from '@/components/onboarding/recruiter/step-about-you'
+import { StepCompany } from '@/components/onboarding/recruiter/step-company'
+import { StepBioReview } from '@/components/onboarding/recruiter/step-bio-review'
+import { apiFetch, ApiError } from '@/lib/api-client'
+import { useAuth } from '@/lib/hooks/use-auth'
+import { ONBOARDING_QUERY_KEYS, useCreateRecruiterProfile } from '@/lib/hooks/use-onboarding'
+import { useRecruiterDraft } from '@/lib/hooks/use-recruiter-draft'
 import {
-  recruiterOnboardingSchema,
-  type RecruiterOnboardingInput,
+  DEFAULT_RECRUITER_WIZARD_VALUES,
+  FINAL_STEP,
+  FIRST_STEP,
+  recruiterWizardSchema,
+  SECOND_STEP,
+  STEP_1_FIELDS,
+  STEP_2_FIELDS,
+  type RecruiterStepNumber,
+  type RecruiterWizardInput,
 } from '@/lib/schemas/recruiter-onboarding.schema'
 import { showConfetti, ONBOARDING_REDIRECT_DELAY_MS } from '@/lib/utils/confetti'
 
-export interface RecruiterProfileData {
-  companyName: string
-  companyMail: string
-  companyUrl: string
-  headquartersLocation: string
-}
-
-const DEFAULT_VALUES: RecruiterOnboardingInput = {
-  companyName: '',
-  companyMail: '',
-  companyUrl: '',
-  headquartersLocation: '',
-}
+const STEP_TRANSITION = { duration: 0.18 }
+const STEP_ANIM_INITIAL = { opacity: 0, y: 6 }
+const STEP_ANIM_ANIMATE = { opacity: 1, y: 0 }
+const STEP_ANIM_EXIT = { opacity: 0, y: -6 }
 
 export default function RecruiterOnboardingPage() {
   const router = useRouter()
-  const [errorMsg, setErrorMsg] = useState('')
+  const [step, setStep] = useState<RecruiterStepNumber>(FIRST_STEP)
   const [isCompleted, setIsCompleted] = useState(false)
 
-  const saveRecruiterMutation = useSaveRecruiterProfile()
+  const { user, isLoading: isAuthLoading } = useAuth()
+  const createRecruiterMutation = useCreateRecruiterProfile()
+  const { loadDraft, saveDraft, clearDraft } = useRecruiterDraft(user?.id)
+
+  const hasHydratedRef = useRef(false)
+  const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (redirectTimeoutRef.current) {
+        clearTimeout(redirectTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  // Check whether a recruiter profile already exists on the backend to avoid re-onboarding
+  const { data: profileCheck } = useQuery({
+    queryKey: [...ONBOARDING_QUERY_KEYS.recruiterProfileCheck, user?.id],
+    queryFn: async () => {
+      try {
+        return await apiFetch<{ recruiter: unknown }>('/api/recruiters/me')
+      } catch {
+        // 404 (no profile yet), 401, or network errors keep the user on the wizard
+        return null
+      }
+    },
+    enabled: Boolean(user?.id),
+    retry: false,
+  })
 
   const {
     register,
     handleSubmit,
+    trigger,
+    getValues,
+    setValue,
+    reset,
+    getFieldState,
     formState: { errors },
-  } = useForm<RecruiterOnboardingInput>({
-    resolver: zodResolver(recruiterOnboardingSchema),
-    defaultValues: DEFAULT_VALUES,
+  } = useForm<RecruiterWizardInput>({
+    resolver: zodResolver(recruiterWizardSchema),
+    mode: 'onTouched',
+    defaultValues: DEFAULT_RECRUITER_WIZARD_VALUES,
   })
 
-  const onSubmit = async (data: RecruiterOnboardingInput) => {
-    setErrorMsg('')
-    try {
-      await saveRecruiterMutation.mutateAsync(data)
-      setIsCompleted(true)
-      showConfetti()
+  // Removed useWatch to avoid excessive re-renders
 
-      setTimeout(() => {
-        router.push('/landing')
-      }, ONBOARDING_REDIRECT_DELAY_MS)
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setErrorMsg(err.message)
+  // Hydrate draft or existing profile once user identity is resolved
+  useEffect(() => {
+    if (!user?.id) return
+
+    if (!hasHydratedRef.current) {
+      hasHydratedRef.current = true
+      const draft = loadDraft()
+      if (draft?.values) {
+        reset(draft.values)
+        if (draft.step) {
+          setStep(draft.step)
+        }
+      } else if (profileCheck?.recruiter) {
+        const existing = profileCheck.recruiter as Record<string, unknown>
+        if (user.name) setValue('fullName', user.name)
+        if (typeof existing.companyName === 'string') setValue('companyName', existing.companyName)
+        if (typeof existing.companyMail === 'string') setValue('companyMail', existing.companyMail)
+        if (typeof existing.companyUrl === 'string') setValue('companyUrl', existing.companyUrl)
+        if (typeof existing.headquartersLocation === 'string') {
+          setValue('headquartersLocation', existing.headquartersLocation)
+        }
+      } else if (user.name) {
+        setValue('fullName', user.name)
       }
+    } else if (user.name) {
+      // Late-arriving name only populates if user has not typed and field is not dirty
+      const currentFullName = getValues('fullName')
+      const isDirty = getFieldState('fullName').isDirty
+      if (!currentFullName && !isDirty) {
+        setValue('fullName', user.name)
+      }
+    }
+  }, [
+    user?.id,
+    user?.name,
+    profileCheck?.recruiter,
+    loadDraft,
+    reset,
+    setValue,
+    getValues,
+    getFieldState,
+  ])
+
+  const onFinalSubmit = async (data: RecruiterWizardInput) => {
+    try {
+      // Forward company fields to create recruiter profile
+      await createRecruiterMutation.mutateAsync({
+        companyName: data.companyName,
+        companyMail: data.companyMail,
+        companyUrl: data.companyUrl,
+        headquartersLocation: data.headquartersLocation,
+      })
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        // Recruiter profile already exists on backend: update it
+        await apiFetch('/api/recruiters/me', {
+          method: 'PATCH',
+          body: {
+            companyName: data.companyName,
+            companyMail: data.companyMail,
+            companyUrl: data.companyUrl || null,
+            headquartersLocation: data.headquartersLocation || null,
+          },
+        })
+      } else {
+        return
+      }
+    }
+
+    clearDraft()
+    setIsCompleted(true)
+    showConfetti()
+
+    redirectTimeoutRef.current = setTimeout(() => {
+      router.push('/dashboard/recruiter')
+    }, ONBOARDING_REDIRECT_DELAY_MS)
+  }
+  const handleNext = async () => {
+    if (step === FIRST_STEP) {
+      const isValid = await trigger(STEP_1_FIELDS)
+      if (isValid) {
+        saveDraft(SECOND_STEP, getValues(), false)
+        setStep(SECOND_STEP)
+      }
+    } else if (step === SECOND_STEP) {
+      const isValid = await trigger(STEP_2_FIELDS)
+      if (isValid) {
+        saveDraft(FINAL_STEP, getValues(), false)
+        setStep(FINAL_STEP)
+      }
+    } else if (step === FINAL_STEP) {
+      void handleSubmit(onFinalSubmit)()
     }
   }
 
   const handleBack = () => {
-    router.push('/role-select')
+    if (step === FIRST_STEP) {
+      router.push('/role-select')
+    } else {
+      setStep((prev) => (prev - 1) as RecruiterStepNumber)
+    }
+  }
+
+  const handleStepClick = async (targetStep: RecruiterStepNumber) => {
+    if (targetStep === step) return
+
+    if (targetStep < step) {
+      setStep(targetStep)
+      return
+    }
+
+    if (targetStep === SECOND_STEP) {
+      const isStep1Valid = await trigger(STEP_1_FIELDS)
+      if (!isStep1Valid) {
+        if (step !== FIRST_STEP) setStep(FIRST_STEP)
+        return
+      }
+    } else if (targetStep === FINAL_STEP) {
+      const isStep1Valid = await trigger(STEP_1_FIELDS)
+      if (!isStep1Valid) {
+        if (step !== FIRST_STEP) setStep(FIRST_STEP)
+        return
+      }
+
+      const isStep2Valid = await trigger(STEP_2_FIELDS)
+      if (!isStep2Valid) {
+        if (step !== SECOND_STEP) {
+          saveDraft(SECOND_STEP, getValues(), false)
+          setStep(SECOND_STEP)
+        }
+        return
+      }
+    }
+
+    saveDraft(targetStep, getValues(), false)
+    setStep(targetStep)
+  }
+
+  const isSaving = createRecruiterMutation.isPending
+
+  // Prevent flash while authenticating
+  if (!isCompleted && !isSaving && isAuthLoading) {
+    return (
+      <div className="h-screen w-screen bg-bg-page text-text-main flex items-center justify-center font-sans">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-sm text-text-muted">Loading your profile...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="h-screen w-screen bg-bg-page text-text-main flex flex-col justify-between overflow-hidden font-['Plus_Jakarta_Sans',sans-serif] select-none selection:bg-brand/20 selection:text-text-main">
-      {/* Top Navbar */}
+    <div className="h-screen w-screen bg-bg-page text-text-main flex flex-col justify-between overflow-hidden font-sans select-none selection:bg-brand/20 selection:text-text-main">
       <header className="w-full z-20 shrink-0">
-        <div className="w-full max-w-[1440px] mx-auto px-6 sm:px-10 py-3 sm:py-4 flex items-center justify-between">
-          {/* Logo */}
-          <div
-            className="flex items-center gap-1.5 text-2xl tracking-tight cursor-pointer"
+        <div className="w-full max-w-7xl mx-auto px-6 sm:px-10 py-3 sm:py-4 flex items-center justify-between">
+          <button
+            type="button"
+            className="flex items-center gap-1.5 text-2xl tracking-tight cursor-pointer bg-transparent border-0 text-left p-0 outline-none"
             onClick={() => router.push('/')}
           >
             <span className="font-extrabold text-brand">DK24</span>
             <span className="font-bold text-text-main">CareerLink</span>
-          </div>
+          </button>
         </div>
       </header>
 
-      {/* Main Container Card */}
       <main className="flex-1 w-full flex items-center justify-center px-4 sm:px-8 py-2 z-10 overflow-hidden">
-        <div className="w-full max-w-[1240px] h-[550px] sm:h-[570px] lg:h-[580px] bg-card rounded-3xl sm:rounded-[32px] border border-border-subtle shadow-[0_12px_44px_-12px_rgba(0,0,0,0.06)] overflow-hidden grid grid-cols-1 lg:grid-cols-12">
-          {/* ========================================================================= */}
-          {/* LEFT COLUMN: HERO & RECRUITER TALENT SEARCH ILLUSTRATION */}
-          {/* ========================================================================= */}
-          <div className="lg:col-span-5 bg-gradient-to-b from-surface-hero-start to-surface-hero-end border-b lg:border-b-0 lg:border-r border-border-subtle/50 p-6 sm:p-8 lg:p-10 flex flex-col justify-between h-full relative overflow-hidden">
-            {/* Top Illustration Scene using Lucide Icons */}
-            <div className="w-full flex flex-col items-center justify-center py-6 select-none relative">
-              {/* Background Glow */}
-              <div className="absolute inset-0 bg-emerald-500/10 blur-3xl rounded-full max-w-[280px] mx-auto pointer-events-none" />
+        <div className="w-full max-w-6xl h-full max-h-[580px] bg-card rounded-3xl sm:rounded-2xl border border-border-subtle shadow-xl overflow-hidden grid grid-cols-1 lg:grid-cols-12">
+          <RecruiterHero />
 
-              {/* Hero Icon Card Showcase */}
-              <div className="relative z-10 w-full max-w-[320px] bg-white/90 backdrop-blur-md rounded-2xl p-5 border border-slate-200/60 shadow-[0_10px_30px_-5px_rgba(0,0,0,0.08)] space-y-3.5">
-                {/* Candidate Row 1 */}
-                <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                  <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-                    <UserCheck className="w-5 h-5" />
-                  </div>
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <div className="h-3 bg-slate-200 rounded-md w-3/4 animate-pulse" />
-                    <div className="h-2 bg-slate-100 rounded-md w-1/2" />
-                  </div>
-                  <Sparkles className="w-4 h-4 text-emerald-500 shrink-0" />
-                </div>
+          <div className="lg:col-span-7 p-6 sm:p-8 lg:p-9 flex flex-col justify-between h-full overflow-hidden">
+            <RecruiterOnboardingStepper currentStep={step} onStepClick={handleStepClick} />
 
-                {/* Candidate Row 2 */}
-                <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                  <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-                    <Users className="w-5 h-5" />
-                  </div>
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <div className="h-3 bg-slate-200 rounded-md w-4/5" />
-                    <div className="h-2 bg-slate-100 rounded-md w-2/3" />
-                  </div>
-                </div>
+            <div className="flex-1 py-3 overflow-y-auto">
+              <AnimatePresence mode="wait">
+                {step === FIRST_STEP && (
+                  <motion.div
+                    key="step-1"
+                    initial={STEP_ANIM_INITIAL}
+                    animate={STEP_ANIM_ANIMATE}
+                    exit={STEP_ANIM_EXIT}
+                    transition={STEP_TRANSITION}
+                  >
+                    <StepAboutYou register={register} errors={errors} />
+                  </motion.div>
+                )}
 
-                {/* Candidate Row 3 */}
-                <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                  <div className="w-9 h-9 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
-                    <Briefcase className="w-5 h-5" />
-                  </div>
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <div className="h-3 bg-slate-200 rounded-md w-2/3" />
-                    <div className="h-2 bg-slate-100 rounded-md w-1/3" />
-                  </div>
-                  <Search className="w-4 h-4 text-slate-400 shrink-0" />
-                </div>
-              </div>
+                {step === SECOND_STEP && (
+                  <motion.div
+                    key="step-2"
+                    initial={STEP_ANIM_INITIAL}
+                    animate={STEP_ANIM_ANIMATE}
+                    exit={STEP_ANIM_EXIT}
+                    transition={STEP_TRANSITION}
+                  >
+                    <StepCompany register={register} errors={errors} />
+                  </motion.div>
+                )}
+
+                {step === FINAL_STEP && (
+                  <motion.div
+                    key="step-3"
+                    initial={STEP_ANIM_INITIAL}
+                    animate={STEP_ANIM_ANIMATE}
+                    exit={STEP_ANIM_EXIT}
+                    transition={STEP_TRANSITION}
+                  >
+                    <StepBioReview register={register} errors={errors} values={getValues()} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
-            {/* Bottom Hero Text */}
-            <div className="space-y-2 pt-2">
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-text-main tracking-tight leading-[1.2]">
-                Build a stronger <br />
-                team, <span className="text-brand">faster.</span>
-              </h1>
-              <p className="text-text-muted text-xs sm:text-sm font-medium leading-relaxed max-w-[340px]">
-                Create your company profile and start discovering top talent on DK24 CareerLink.
-              </p>
-            </div>
-          </div>
+            <div className="flex items-center justify-between pt-3 border-t border-border-subtle/50 shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleBack}
+                disabled={isSaving}
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back</span>
+              </Button>
 
-          {/* ========================================================================= */}
-          {/* RIGHT COLUMN: 4 FORM FIELDS (NO PROGRESS BAR) */}
-          {/* ========================================================================= */}
-          <div className="lg:col-span-7 p-6 sm:p-8 lg:p-10 flex flex-col justify-between h-full">
-            {/* Header: Title & Subtitle */}
-            <div className="space-y-1 shrink-0 pb-2">
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-text-main tracking-tight">
-                Company &amp; Recruiter Details
-              </h2>
-              <p className="text-xs sm:text-sm text-text-muted font-medium">
-                Set up your verified company profile to start hiring talent from the DK24 network.
-              </p>
-            </div>
-
-            {/* Error Banner */}
-            {errorMsg && (
-              <div className="my-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium flex items-center justify-between">
-                <span>{errorMsg}</span>
-                <button
+              <div className="flex items-center gap-2">
+                <Button
                   type="button"
-                  onClick={() => setErrorMsg('')}
-                  className="text-red-500 hover:text-red-800 cursor-pointer"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => saveDraft(step, getValues(), true)}
+                  disabled={isSaving || isCompleted}
                 >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            )}
+                  <span>Save Draft</span>
+                </Button>
 
-            {/* 4 Form Fields Form */}
-            <form
-              onSubmit={handleSubmit(onSubmit)}
-              noValidate
-              className="flex-1 py-3 flex flex-col justify-center space-y-4"
-            >
-              {/* Field 1: Company Name */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Company Name <span className="text-red-500">*</span>
-                </label>
-                <div className="relative flex items-center">
-                  <Building2 className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
-                  <input
-                    type="text"
-                    {...register('companyName')}
-                    placeholder="e.g. Acme Innovations Inc."
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
-                  />
-                </div>
-                {errors.companyName && (
-                  <p role="alert" className="text-xs font-medium text-rose-500 mt-1">
-                    {errors.companyName.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Field 2: Company Work Email */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Company Work Email <span className="text-red-500">*</span>
-                </label>
-                <div className="relative flex items-center">
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
-                  <input
-                    type="email"
-                    {...register('companyMail')}
-                    placeholder="recruiting@company.com"
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
-                  />
-                </div>
-                {errors.companyMail ? (
-                  <p role="alert" className="text-xs font-medium text-rose-500 mt-1">
-                    {errors.companyMail.message}
-                  </p>
-                ) : (
-                  <p className="text-[11px] text-text-muted mt-1">
-                    Official corporate email for candidate correspondence and verification.
-                  </p>
-                )}
-              </div>
-
-              {/* Field 3: Company Website URL */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Company Website URL
-                </label>
-                <div className="relative flex items-center">
-                  <Globe className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
-                  <input
-                    type="url"
-                    {...register('companyUrl')}
-                    placeholder="https://acme.example.com"
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
-                  />
-                </div>
-                {errors.companyUrl && (
-                  <p role="alert" className="text-xs font-medium text-rose-500 mt-1">
-                    {errors.companyUrl.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Field 4: Headquarters Location */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Headquarters Location
-                </label>
-                <div className="relative flex items-center">
-                  <MapPin className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
-                  <input
-                    type="text"
-                    {...register('headquartersLocation')}
-                    placeholder="e.g. Bengaluru, India or San Francisco, CA"
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-subtle focus:border-brand focus:ring-2 focus:ring-brand/15 outline-none text-xs sm:text-sm transition bg-card placeholder:text-slate-400"
-                  />
-                </div>
-                {errors.headquartersLocation && (
-                  <p role="alert" className="text-xs font-medium text-rose-500 mt-1">
-                    {errors.headquartersLocation.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Bottom Actions Bar */}
-              <div className="flex items-center justify-between pt-4 border-t border-border-subtle/60 mt-3 shrink-0">
-                {/* Back Button */}
-                <button
+                <Button
                   type="button"
-                  onClick={handleBack}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-border-subtle hover:bg-slate-100 text-slate-700 font-semibold text-xs sm:text-sm transition cursor-pointer active:scale-[0.98]"
+                  size="sm"
+                  onClick={handleNext}
+                  disabled={isSaving || isCompleted}
                 >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Back</span>
-                </button>
-
-                {/* Complete Setup Button */}
-                <button
-                  type="submit"
-                  disabled={isCompleted || saveRecruiterMutation.isPending}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-action-dark hover:bg-black text-white font-semibold text-xs sm:text-sm transition shadow-md hover:shadow-lg cursor-pointer active:scale-[0.98] disabled:opacity-70"
-                >
-                  <span>{isCompleted ? 'Profile Created!' : 'Complete Setup'}</span>
-                  {isCompleted ? (
-                    <Sparkles className="w-4 h-4 text-brand-emerald" />
+                  {step < FINAL_STEP ? (
+                    <>
+                      <span>Next</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
                   ) : (
-                    <ArrowRight className="w-4 h-4" />
+                    <>
+                      <span>{isCompleted ? 'Profile Created!' : 'Complete Setup'}</span>
+                      <Sparkles className="w-4 h-4" />
+                    </>
                   )}
-                </button>
+                </Button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       </main>

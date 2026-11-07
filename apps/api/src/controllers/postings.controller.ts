@@ -1,11 +1,8 @@
-import { and, asc, desc, eq, gte, ilike, isNull, lte, or, sql } from 'drizzle-orm'
-import type { Database } from '@repo/db'
+import { and, asc, desc, eq, gte, ilike, isNull, lte, lt, or, sql } from 'drizzle-orm'
+import type { Database, NewPosting, Posting } from '@repo/db'
 import { postings, recruiters } from '@repo/db'
 import { type PaginationParams, pageToOffset } from '../utils/pagination.js'
-
-// ==========================================
-// TYPES
-// ==========================================
+import { todayIST } from '../utils/date.js'
 
 export type SortField = 'createdAt' | 'deadline' | 'title'
 export type SortOrder = 'asc' | 'desc'
@@ -54,10 +51,6 @@ export const postingSelectFields = {
   },
 } as const
 
-// ==========================================
-// QUERY BUILDER HELPERS
-// ==========================================
-
 /**
  * Returns the SQL column expression to sort by.
  */
@@ -79,7 +72,7 @@ function sortColumn(field: SortField) {
  *   status = 'active' AND (deadline IS NULL OR deadline >= today)
  */
 function buildWhereConditions(filters: PostingFilters) {
-  const today = new Date().toISOString().slice(0, 10) // "YYYY-MM-DD"
+  const today = todayIST()
 
   const conditions = [
     // Active-only guard
@@ -103,12 +96,10 @@ function buildWhereConditions(filters: PostingFilters) {
     conditions.push(sql`${postings.stack} && ${tagArray}`)
   }
 
-  // Employment type
   if (filters.employmentType) {
     conditions.push(eq(postings.employmentType, filters.employmentType))
   }
 
-  // Work arrangement
   if (filters.workArrangement) {
     conditions.push(eq(postings.workArrangement, filters.workArrangement))
   }
@@ -118,7 +109,6 @@ function buildWhereConditions(filters: PostingFilters) {
     conditions.push(ilike(postings.location, `%${filters.location}%`))
   }
 
-  // Deadline range
   if (filters.deadlineBefore) {
     conditions.push(lte(postings.deadline, filters.deadlineBefore))
   }
@@ -128,10 +118,6 @@ function buildWhereConditions(filters: PostingFilters) {
 
   return and(...conditions)
 }
-
-// ==========================================
-// SERVICE FUNCTIONS
-// ==========================================
 
 /**
  * Returns a paginated list of active, non-expired job postings with recruiter
@@ -184,7 +170,7 @@ export async function listActivePostings(
  * Returns `null` when the posting does not exist, is closed, or is expired.
  */
 export async function getPostingById(db: Database, id: string) {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayIST()
 
   const rows = await db
     .select(postingSelectFields)
@@ -200,4 +186,111 @@ export async function getPostingById(db: Database, id: string) {
     .limit(1)
 
   return rows[0] ?? null
+}
+
+/**
+ * Flips a posting to 'expired' if its deadline has passed and it's still
+ * 'active'. Called on every write-side read as a safety net between
+ * scheduled sweeps (see expirePastDeadlinePostings) — not a replacement
+ * for the cron, since it only fires on request.
+ */
+async function expireIfPastDeadline(db: Database, posting: Posting): Promise<Posting> {
+  const today = todayIST()
+
+  if (posting.status === 'active' && posting.deadline && posting.deadline < today) {
+    const [updated] = await db
+      .update(postings)
+      .set({ status: 'expired', updatedAt: new Date() })
+      .where(eq(postings.id, posting.id))
+      .returning()
+    return updated ?? posting
+  }
+
+  return posting
+}
+
+/**
+ * Bulk-expires every posting that is still 'active' but past its deadline.
+ * This is the actual "automatic" expiration — invoked on a schedule (see
+ * index.ts's `scheduled` handler), independent of any request.
+ *
+ * @returns number of postings expired in this sweep.
+ */
+export async function expirePastDeadlinePostings(db: Database): Promise<number> {
+  const today = todayIST()
+
+  const expired = await db
+    .update(postings)
+    .set({ status: 'expired', updatedAt: new Date() })
+    .where(and(eq(postings.status, 'active'), lt(postings.deadline, today)))
+    .returning({ id: postings.id })
+
+  return expired.length
+}
+
+/** Creates a posting owned by `recruiterId`. */
+export async function createPosting(
+  db: Database,
+  recruiterId: string,
+  input: Omit<NewPosting, 'id' | 'recruiterId' | 'status' | 'createdAt' | 'updatedAt'>,
+): Promise<Posting> {
+  const [posting] = await db
+    .insert(postings)
+    .values({ ...input, recruiterId })
+    .returning()
+
+  if (!posting) {
+    throw new Error('Failed to create posting')
+  }
+
+  return posting
+}
+
+/** Lists all postings owned by the recruiter, including closed and expired. */
+export async function listOwnPostings(db: Database, recruiterId: string): Promise<Posting[]> {
+  const rows = await db
+    .select()
+    .from(postings)
+    .where(eq(postings.recruiterId, recruiterId))
+    .orderBy(desc(postings.createdAt))
+
+  return Promise.all(rows.map((row) => expireIfPastDeadline(db, row)))
+}
+
+/**
+ * Updates a posting, but only if `recruiterId` owns it.
+ * Returns `null` if the posting doesn't exist or belongs to someone else —
+ * callers shouldn't be able to tell the difference.
+ */
+export async function updatePosting(
+  db: Database,
+  id: string,
+  recruiterId: string,
+  patch: Partial<Omit<NewPosting, 'id' | 'recruiterId' | 'status' | 'createdAt' | 'updatedAt'>>,
+): Promise<Posting | null> {
+  const [updated] = await db
+    .update(postings)
+    .set({ ...patch, updatedAt: new Date() })
+    .where(and(eq(postings.id, id), eq(postings.recruiterId, recruiterId)))
+    .returning()
+
+  return updated ?? null
+}
+
+/**
+ * Closes a posting, but only if `recruiterId` owns it.
+ * Returns `null` if the posting doesn't exist or belongs to someone else.
+ */
+export async function closePosting(
+  db: Database,
+  id: string,
+  recruiterId: string,
+): Promise<Posting | null> {
+  const [closed] = await db
+    .update(postings)
+    .set({ status: 'closed', updatedAt: new Date() })
+    .where(and(eq(postings.id, id), eq(postings.recruiterId, recruiterId)))
+    .returning()
+
+  return closed ?? null
 }
