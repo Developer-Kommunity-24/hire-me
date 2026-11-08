@@ -1,6 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
+import { Button } from '@/components/ui/button'
 import {
   getRecruiterApplicants,
   getRecruiterMetrics,
@@ -27,15 +28,17 @@ export default function RecruiterDashboardData() {
     return (
       <div className="p-6" role="alert">
         <p>Unable to load recruiter data.</p>
-        <button
-          className="mt-3 rounded-md border px-4 py-2"
-          onClick={() => {
-            void metrics.refetch()
-            void applicants.refetch()
-          }}
-        >
-          Retry
-        </button>
+        <div className="mt-3">
+          <Button
+            size="sm"
+            onClick={() => {
+              void metrics.refetch()
+              void applicants.refetch()
+            }}
+          >
+            Retry
+          </Button>
+        </div>
       </div>
     )
   }

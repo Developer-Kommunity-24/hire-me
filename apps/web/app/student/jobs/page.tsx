@@ -1,11 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Briefcase, RefreshCw, Sparkles } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Briefcase, Loader2, RefreshCw } from 'lucide-react'
 import JobCard, { type Job } from '@/app/components/job/JobCard'
 import JobFilters, { type RoleType, type WorkModel } from '@/app/components/job/JobFilters'
 import JobSearch, { type SortOption } from '@/app/components/job/JobSearch'
 import { apiFetch, ApiError } from '@/lib/api-client'
+import { useAuth } from '@/lib/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import Header from '@/components/common/Header'
 
@@ -35,8 +37,6 @@ type JobsResponse = {
   }
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8787'
-
 function formatRoleType(type: ApiJob['employmentType']): Job['roleType'] {
   switch (type) {
     case 'internship':
@@ -62,6 +62,16 @@ function formatWorkModel(model: ApiJob['workArrangement']): Job['workModel'] {
 }
 
 export default function StudentJobsPage() {
+  const router = useRouter()
+  const { user, isLoading: authLoading } = useAuth()
+  const isAuthenticated = Boolean(user)
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.replace('/login')
+    }
+  }, [authLoading, isAuthenticated, router])
+
   const [jobs, setJobs] = useState<Job[]>([])
   const [search, setSearch] = useState('')
   const [roleType, setRoleType] = useState<RoleType>('All')
@@ -123,13 +133,10 @@ export default function StudentJobsPage() {
         response = await apiFetch<JobsResponse>(`/api/postings?${queryString}`)
       } catch (err) {
         if (err instanceof ApiError && err.status === 401) {
-          // Public endpoint fallback if not authenticated in browser session yet
-          const res = await fetch(`${API_BASE_URL}/api/postings?${queryString}`)
-          if (!res.ok) throw err
-          response = (await res.json()) as JobsResponse
-        } else {
-          throw err
+          router.replace('/login')
+          return
         }
+        throw err
       }
 
       const formattedJobs: Job[] = response.data.map((job) => ({
@@ -156,7 +163,7 @@ export default function StudentJobsPage() {
     } finally {
       setLoading(false)
     }
-  }, [search, roleType, workModel, sortBy])
+  }, [search, roleType, workModel, sortBy, router])
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -173,6 +180,15 @@ export default function StudentJobsPage() {
     setSortBy('newest')
   }
 
+  if (authLoading || !isAuthenticated) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center min-h-[50vh] p-8">
+        <Loader2 className="w-8 h-8 animate-spin text-brand" />
+        <p className="mt-3 text-sm text-text-muted">Redirecting to login...</p>
+      </div>
+    )
+  }
+
   return (
     <>
       <Header />
@@ -182,7 +198,6 @@ export default function StudentJobsPage() {
           <div>
             <h2 className="text-2xl font-bold tracking-tight text-text-main flex items-center gap-2">
               Explore Opportunities
-              <Sparkles className="w-5 h-5 text-brand" />
             </h2>
             <p className="text-sm text-text-muted mt-1">
               Apply to active positions from verified partner companies and DK24 clubs.

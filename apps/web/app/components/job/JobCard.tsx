@@ -48,10 +48,10 @@ export default function JobCard({ job }: JobCardProps) {
           }}
           aria-label={bookmarked ? `Remove ${job.title} bookmark` : `Bookmark ${job.title}`}
           aria-pressed={bookmarked}
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition-colors ${
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-all active:scale-95 shadow-2xs cursor-pointer ${
             bookmarked
               ? 'border-brand bg-brand-light text-brand-dark'
-              : 'border-border-subtle text-text-muted hover:border-brand/40 hover:text-brand'
+              : 'border-border-subtle bg-white text-text-muted hover:border-slate-300 hover:bg-slate-50 hover:text-text-main'
           }`}
         >
           <Bookmark className="h-4 w-4" fill={bookmarked ? 'currentColor' : 'none'} />

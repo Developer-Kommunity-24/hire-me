@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import { z } from 'zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Upload, Pencil, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 import { importMembers, membersQueryKey } from './members-data'
 
@@ -187,14 +188,12 @@ export default function BulkImportForm() {
           />
         </div>
 
-        {/* Upload CSV Green Button */}
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="mt-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2 rounded-md shadow-xs transition-colors flex items-center justify-center gap-1.5"
-        >
-          Upload CSV
-        </button>
+        {/* Upload CSV Button */}
+        <div className="mt-3">
+          <Button type="button" size="sm" onClick={() => fileInputRef.current?.click()}>
+            Upload CSV
+          </Button>
+        </div>
       </div>
 
       {/* Preview Table */}
@@ -269,7 +268,7 @@ export default function BulkImportForm() {
                     <button
                       type="button"
                       onClick={() => setEditingRow(row)}
-                      className="text-gray-400 hover:text-gray-700 p-1 rounded transition-colors inline-flex items-center justify-center"
+                      className="text-gray-400 hover:text-gray-700 p-1.5 rounded-xl hover:bg-slate-100 transition-all active:scale-95 inline-flex items-center justify-center cursor-pointer"
                       aria-label={`Edit ${row.name}`}
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -291,14 +290,13 @@ export default function BulkImportForm() {
 
       {/* Action / Status Area */}
       <div className="w-full max-w-4xl flex items-center justify-between mt-4">
-        <button
+        <Button
           type="button"
           onClick={handleImport}
           disabled={rows.length === 0 || hasErrors || mutation.isPending}
-          className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2 rounded-md shadow-xs transition-colors"
         >
           {mutation.isPending ? 'Importing…' : 'Import Members'}
-        </button>
+        </Button>
 
         {importSuccess && (
           <p className="text-sm font-medium text-emerald-600">Members imported successfully!</p>
@@ -326,7 +324,7 @@ export default function BulkImportForm() {
               <button
                 type="button"
                 onClick={() => setEditingRow(null)}
-                className="text-gray-400 hover:text-gray-600 p-1 rounded"
+                className="flex h-8 w-8 items-center justify-center rounded-xl border border-border-subtle bg-white text-text-muted transition-all hover:bg-slate-50 hover:text-text-main hover:border-slate-300 active:scale-95 shadow-2xs cursor-pointer"
                 aria-label="Close dialog"
               >
                 <X className="w-4 h-4" />
@@ -402,19 +400,17 @@ export default function BulkImportForm() {
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => setEditingRow(null)}
-                  className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md"
                 >
                   Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-md shadow-xs"
-                >
+                </Button>
+                <Button type="submit" size="sm">
                   Save Changes
-                </button>
+                </Button>
               </div>
             </form>
           </div>

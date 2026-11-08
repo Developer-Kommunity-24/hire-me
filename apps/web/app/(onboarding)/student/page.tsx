@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion, AnimatePresence } from 'motion/react'
-import { ArrowLeft, ArrowRight, Code, FileText, Globe, Link, Plus, Sparkles, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Code, FileText, Globe, Link, Plus, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
@@ -10,7 +10,7 @@ import { useForm, useWatch } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import Header from '@/components/common/Header'
+import { OnboardingHeader } from '@/components/onboarding/onboarding-header'
 import { StudentMascotHero } from '@/components/onboarding/student-mascot-hero'
 import {
   StudentOnboardingStepper,
@@ -176,7 +176,7 @@ export default function StudentOnboardingPage() {
       className="h-screen w-screen bg-bg-page text-text-main flex flex-col justify-between overflow-hidden font-sans select-none selection:bg-brand/20 selection:text-text-main"
     >
       {/* Top Header Bar */}
-      <Header />
+      <OnboardingHeader />
 
       {/* Main Container Fixed-Height Card */}
       <main className="flex-1 w-full flex items-center justify-center px-4 sm:px-8 py-2 z-10 overflow-hidden">
@@ -608,7 +608,6 @@ export default function StudentOnboardingPage() {
                 ) : (
                   <>
                     <span>{isCompleted ? 'Profile Created!' : 'Finish Setup'}</span>
-                    <Sparkles />
                   </>
                 )}
               </Button>

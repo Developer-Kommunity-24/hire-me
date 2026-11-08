@@ -1,6 +1,8 @@
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
+import { X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import RecruiterProfileForm from './components/RecruiterProfileForm'
 import CandidateRow from './components/CandidateRow'
 import MetricCard from './components/MetricCard'
@@ -69,23 +71,21 @@ export default function RecruiterDashboard() {
     <div className="flex min-h-screen bg-bg-page">
       <Sidebar />
 
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 lg:ml-64">
         <Topbar />
 
         <main className="p-6 lg:p-8">
           <div className="mb-8">
-            <p className="mb-2 text-sm font-semibold uppercase tracking-wider text-brand-green">
+            <p className="mb-2 text-sm font-semibold uppercase tracking-wider text-brand">
               Recruiter Dashboard
             </p>
 
             <h1 className="text-3xl font-bold tracking-tight text-text-main">Welcome back!</h1>
-            <button
-              type="button"
-              onClick={() => setIsProfileFormOpen(true)}
-              className="rounded-lg bg-brand px-4 py-2 font-semibold text-white"
-            >
-              Edit Company Profile
-            </button>
+            <div className="mt-3">
+              <Button type="button" onClick={() => setIsProfileFormOpen(true)}>
+                Edit Company Profile
+              </Button>
+            </div>
             <p className="mt-2 text-text-muted">
               Here's an overview of your recruitment activity
               {profile?.companyName ? ` at ${profile.companyName}` : ''}.
@@ -176,9 +176,10 @@ export default function RecruiterDashboard() {
               <button
                 type="button"
                 onClick={() => setSelectedCandidate(null)}
-                className="text-2xl text-text-main hover:text-text-main"
+                className="flex h-8 w-8 items-center justify-center rounded-xl border border-border-subtle bg-white text-text-muted transition-all hover:bg-slate-50 hover:text-text-main hover:border-slate-300 active:scale-95 shadow-2xs cursor-pointer"
+                aria-label="Close candidate details"
               >
-                ×
+                <X className="h-4 w-4" />
               </button>
             </div>
 
@@ -209,13 +210,11 @@ export default function RecruiterDashboard() {
               <p className="mt-1 text-sm text-text-muted">{selectedCandidate.email}</p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setSelectedCandidate(null)}
-              className="mt-7 w-full rounded-lg bg-brand px-4 py-3 font-semibold text-white transition hover:bg-brand-green"
-            >
-              Close
-            </button>
+            <div className="mt-7 w-full *:w-full">
+              <Button type="button" onClick={() => setSelectedCandidate(null)}>
+                Close
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -235,21 +234,14 @@ export default function RecruiterDashboard() {
 
             <p className="mt-2 text-sm text-text-muted">{contactCandidate.email}</p>
 
-            <div className="mt-6 flex gap-3">
-              <button
-                type="button"
-                onClick={() => setContactCandidate(null)}
-                className="flex-1 rounded-lg border border-gray-200 px-4 py-3 font-semibold text-text-muted"
-              >
+            <div className="mt-6 flex gap-3 *:flex-1">
+              <Button type="button" variant="outline" onClick={() => setContactCandidate(null)}>
                 Cancel
-              </button>
+              </Button>
 
-              <a
-                href={`mailto:${contactCandidate.email}`}
-                className="flex-1 rounded-lg bg-brand px-4 py-3 text-center font-semibold text-white transition hover:bg-brand-hover"
-              >
-                Send Email
-              </a>
+              <Button asChild>
+                <a href={`mailto:${contactCandidate.email}`}>Send Email</a>
+              </Button>
             </div>
           </div>
         </div>
