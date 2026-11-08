@@ -113,10 +113,10 @@ export default function CreatePostingDialog({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1 text-muted-foreground transition hover:bg-muted hover:text-text-main"
+            className="flex h-8 w-8 items-center justify-center rounded-xl border border-border-subtle bg-white text-text-muted transition-all hover:bg-slate-50 hover:text-text-main hover:border-slate-300 active:scale-95 shadow-2xs cursor-pointer"
             aria-label="Close dialog"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
         </div>
 

@@ -3,12 +3,13 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'motion/react'
-import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react'
+import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 
 import { Button } from '@/components/ui/button'
+import { OnboardingHeader } from '@/components/onboarding/onboarding-header'
 import { RecruiterHero } from '@/components/onboarding/recruiter/recruiter-hero'
 import { RecruiterOnboardingStepper } from '@/components/onboarding/recruiter/recruiter-onboarding-stepper'
 import { StepAboutYou } from '@/components/onboarding/recruiter/step-about-you'
@@ -242,18 +243,7 @@ export default function RecruiterOnboardingPage() {
 
   return (
     <div className="h-screen w-screen bg-bg-page text-text-main flex flex-col justify-between overflow-hidden font-sans select-none selection:bg-brand/20 selection:text-text-main">
-      <header className="w-full z-20 shrink-0">
-        <div className="w-full max-w-7xl mx-auto px-6 sm:px-10 py-3 sm:py-4 flex items-center justify-between">
-          <button
-            type="button"
-            className="flex items-center gap-1.5 text-2xl tracking-tight cursor-pointer bg-transparent border-0 text-left p-0 outline-none"
-            onClick={() => router.push('/')}
-          >
-            <span className="font-extrabold text-brand">DK24</span>
-            <span className="font-bold text-text-main">CareerLink</span>
-          </button>
-        </div>
-      </header>
+      <OnboardingHeader />
 
       <main className="flex-1 w-full flex items-center justify-center px-4 sm:px-8 py-2 z-10 overflow-hidden">
         <div className="w-full max-w-6xl h-full max-h-[580px] bg-card rounded-3xl sm:rounded-2xl border border-border-subtle shadow-xl overflow-hidden grid grid-cols-1 lg:grid-cols-12">
@@ -339,7 +329,6 @@ export default function RecruiterOnboardingPage() {
                   ) : (
                     <>
                       <span>{isCompleted ? 'Profile Created!' : 'Complete Setup'}</span>
-                      <Sparkles className="w-4 h-4" />
                     </>
                   )}
                 </Button>

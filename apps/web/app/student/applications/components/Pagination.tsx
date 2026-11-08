@@ -75,13 +75,13 @@ export function Pagination({
         )}
       </div>
 
-      <nav aria-label="Pagination Navigation" className="flex items-center gap-1">
+      <nav aria-label="Pagination Navigation" className="flex items-center gap-1.5">
         <button
           type="button"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage <= 1}
           aria-label="Previous page"
-          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 active:scale-95 transition-all shadow-xs cursor-pointer"
         >
           <ChevronLeft className="w-3.5 h-3.5" />
           <span>Previous</span>
@@ -106,10 +106,10 @@ export function Pagination({
                 aria-label={`Page ${p}`}
                 aria-current={isCurrent ? 'page' : undefined}
                 className={cn(
-                  'w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold transition-colors',
+                  'w-8 h-8 flex items-center justify-center rounded-xl text-xs font-semibold transition-all active:scale-95 cursor-pointer',
                   isCurrent
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+                    ? 'bg-action-dark hover:bg-black text-white shadow-xs'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent hover:border-slate-200',
                 )}
               >
                 {p}
@@ -123,7 +123,7 @@ export function Pagination({
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage >= totalPages}
           aria-label="Next page"
-          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 active:scale-95 transition-all shadow-xs cursor-pointer"
         >
           <span>Next</span>
           <ChevronRight className="w-3.5 h-3.5" />

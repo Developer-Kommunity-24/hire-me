@@ -237,13 +237,13 @@ export default function JobPostingsPage() {
     <div className="flex min-h-screen bg-bg-page">
       <Sidebar />
 
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 lg:ml-64">
         <Topbar />
 
         <main className="p-6 lg:p-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="mb-2 text-sm font-semibold uppercase tracking-wider text-brand-green">
+              <p className="mb-2 text-sm font-semibold uppercase tracking-wider text-brand">
                 Recruiter Portal
               </p>
               <h1 className="text-3xl font-bold tracking-tight text-text-main">Job Postings</h1>

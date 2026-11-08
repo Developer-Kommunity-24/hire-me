@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 export default function Error({
   error,
@@ -23,13 +24,10 @@ export default function Error({
       <p className="text-sm text-gray-500 max-w-md mb-6">
         {error.message || 'Failed to load the job details. Please check your network or try again.'}
       </p>
-      <button
-        onClick={() => reset()}
-        className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors"
-      >
+      <Button onClick={() => reset()}>
         <RefreshCw className="w-4 h-4" />
         Try Again
-      </button>
+      </Button>
     </div>
   )
 }

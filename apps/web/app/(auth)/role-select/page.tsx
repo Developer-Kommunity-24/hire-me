@@ -1,9 +1,11 @@
 'use client'
 
 import { motion } from 'motion/react'
-import { ArrowRight, Briefcase, Check, GraduationCap } from 'lucide-react'
+import { ArrowRight, Briefcase, Check, CircleHelp, GraduationCap } from 'lucide-react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
+import { BrandLogo } from '@/components/common/BrandLogo'
 import { ApiError } from '@/lib/api-client'
 import { useSetUserRole } from '@/lib/hooks/use-auth'
 import { type SelfAssignableRole } from '@/lib/schemas/auth.schema'
@@ -97,16 +99,16 @@ export default function RoleSelectPage() {
       className="min-h-screen w-full bg-card flex flex-col justify-between select-none font-['Plus_Jakarta_Sans',sans-serif] relative overflow-hidden"
     >
       {/* Top Header */}
-      <header className="w-full z-20">
-        <div className="w-full max-w-[1600px] mx-auto px-6 sm:px-12 md:px-16 lg:px-20 pt-6 sm:pt-8 pb-3 flex items-center justify-between">
-          {/* Logo */}
-          <div
-            className="flex items-center gap-1 text-2xl sm:text-3xl tracking-tight cursor-pointer"
-            onClick={() => router.push('/')}
+      <header className="h-16 border-b border-border-subtle bg-card/90 backdrop-blur-md w-full sticky top-0 z-20 shrink-0 font-sans">
+        <div className="w-full max-w-[1600px] mx-auto px-6 sm:px-12 md:px-16 lg:px-20 h-full flex items-center justify-between">
+          <BrandLogo size="default" />
+          <Link
+            href="/help"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-text-muted hover:text-text-main transition-all px-3 py-1.5 rounded-xl hover:bg-slate-50 border border-transparent hover:border-border-subtle active:scale-95 cursor-pointer"
           >
-            <span className="font-extrabold text-brand">DK24</span>
-            <span className="font-bold text-text-main">CareerLink</span>
-          </div>
+            <CircleHelp className="w-3.5 h-3.5 text-text-muted" />
+            <span>Need Help?</span>
+          </Link>
         </div>
       </header>
 
@@ -125,7 +127,6 @@ export default function RoleSelectPage() {
               <p className="text-sm sm:text-base text-slate-400 font-medium leading-relaxed pt-2">
                 Select the option that best describes you.
                 <br />
-                You can always change this later.
               </p>
             </div>
 
