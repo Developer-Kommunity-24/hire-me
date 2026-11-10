@@ -8,6 +8,7 @@ import { studentRouter } from './routes/student.js'
 import { usersRouter } from './routes/users.js'
 import { notificationsRouter } from './routes/notifications.js'
 import { clubMembersRouter } from './routes/club-members.js'
+import { verificationRouter } from './routes/verification.js'
 
 import { recruitersRouter } from './routes/recruiters.js'
 import { talentsRouter } from './routes/talents.js'
@@ -52,6 +53,8 @@ app.get('/api/hello', (c) => c.json({ message: 'Hello from Hono' }))
 
 // Student job discovery
 app.route('/api/postings', postingsRouter)
+// Automatic DK24 student verification flow
+app.route('/api/student/verification', verificationRouter)
 app.route('/api/student', studentRouter)
 
 // Authenticated user record and role selection
@@ -72,6 +75,8 @@ app.route('/api/talents', talentsRouter)
 
 // Core-admin role administration
 app.route('/api/admin', adminRouter)
+
+app.route('/api/verifications', verificationRouter)
 
 export { app }
 export type AppType = typeof app
