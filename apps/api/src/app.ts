@@ -60,6 +60,7 @@ app.route('/api/student', studentRouter)
 
 // Student applications and the recruiter status pipeline
 app.route('/api/applications', applicationsRouter)
+app.route('/api/student/applications', applicationsRouter)
 
 // Authenticated user record and role selection
 app.route('/api/users', usersRouter)
