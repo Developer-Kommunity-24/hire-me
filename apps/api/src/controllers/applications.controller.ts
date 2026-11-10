@@ -2,7 +2,7 @@ import { and, desc, eq } from 'drizzle-orm'
 import type { Application, Database } from '@repo/db'
 import { applications, postings, recruiters, studentProfiles, users } from '@repo/db'
 import { todayIST } from '../utils/date.js'
-import { createNotification } from './notifications.controller.js'
+import { createNotification, sendEmail } from './notifications.controller.js'
 
 /** A status as allowed by the `application_status` enum. */
 export type ApplicationStatus = Application['status']
@@ -124,6 +124,22 @@ async function notifySafely(db: Database, input: Parameters<typeof createNotific
   }
 }
 
+/** Sends an email notification to the applicant, swallowing failures so the caller's write stands. */
+async function sendEmailSafely(
+  apiKey: string | undefined,
+  fromEmail: string | undefined,
+  studentEmail: string,
+  postingTitle: string,
+  companyName: string,
+  status: string,
+) {
+  try {
+    await sendEmail(apiKey, fromEmail, studentEmail, postingTitle, companyName, status)
+  } catch (err) {
+    console.error('Failed to send status update email', err)
+  }
+}
+
 // ==========================================
 // WRITES
 // ==========================================
@@ -196,6 +212,11 @@ export async function applyToPosting(
   }
 }
 
+export interface UpdateStatusEmailOptions {
+  apiKey?: string
+  fromEmail?: string
+}
+
 /**
  * Moves an application to `newStatus` when the posting is owned by
  * `recruiterId`. Returns `not_found` for unknown or unowned applications and
@@ -206,12 +227,14 @@ export async function updateApplicationStatus(
   recruiterId: string,
   applicationId: string,
   newStatus: Exclude<ApplicationStatus, 'applied'>,
+  emailOptions?: UpdateStatusEmailOptions,
 ): Promise<UpdateStatusResult> {
   const [row] = await db
     .select({
       id: applications.id,
       status: applications.status,
       studentId: applications.studentId,
+      studentEmail: users.email,
       postingId: postings.id,
       postingTitle: postings.title,
       companyName: recruiters.companyName,
@@ -219,6 +242,7 @@ export async function updateApplicationStatus(
     .from(applications)
     .innerJoin(postings, eq(applications.postingId, postings.id))
     .innerJoin(recruiters, eq(postings.recruiterId, recruiters.userId))
+    .innerJoin(users, eq(applications.studentId, users.id))
     .where(and(eq(applications.id, applicationId), eq(postings.recruiterId, recruiterId)))
     .limit(1)
 
@@ -250,6 +274,22 @@ export async function updateApplicationStatus(
       newStatus,
     },
   })
+
+  const apiKey =
+    emailOptions?.apiKey ??
+    (typeof process !== 'undefined' ? process.env?.RESEND_API_KEY : undefined)
+  const fromEmail =
+    emailOptions?.fromEmail ??
+    (typeof process !== 'undefined' ? process.env?.RESEND_FROM_EMAIL : undefined)
+
+  await sendEmailSafely(
+    apiKey,
+    fromEmail,
+    row.studentEmail,
+    row.postingTitle,
+    row.companyName,
+    newStatus,
+  )
 
   return { ok: true, data: updated }
 }

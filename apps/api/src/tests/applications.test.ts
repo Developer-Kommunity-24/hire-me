@@ -230,6 +230,10 @@ describe('PATCH /api/applications/:id/status', () => {
       'recruiter-1',
       id,
       'shortlisted',
+      {
+        apiKey: undefined,
+        fromEmail: undefined,
+      },
     )
   })
 

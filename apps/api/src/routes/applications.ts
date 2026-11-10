@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { env } from 'hono/adapter'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import type { DbVariables } from '../middleware/db.js'
@@ -17,7 +18,12 @@ import { createApplicationSchema, updateApplicationStatusSchema } from './applic
 const uuidSchema = z.uuid()
 
 type ApplicationsEnv = {
-  Bindings: { DATABASE_URL: string; NEON_AUTH_BASE_URL: string }
+  Bindings: {
+    DATABASE_URL: string
+    NEON_AUTH_BASE_URL: string
+    RESEND_API_KEY?: string
+    RESEND_FROM_EMAIL?: string
+  }
   Variables: DbVariables & AuthVariables & StudentVariables & { recruiterId: string }
 }
 
@@ -76,7 +82,12 @@ applicationsRouter.patch(
     }
 
     const { status } = c.req.valid('json')
-    const result = await updateApplicationStatus(c.var.db, c.var.recruiterId, rawId, status)
+    const bindings = env<ApplicationsEnv['Bindings']>(c)
+
+    const result = await updateApplicationStatus(c.var.db, c.var.recruiterId, rawId, status, {
+      apiKey: bindings.RESEND_API_KEY,
+      fromEmail: bindings.RESEND_FROM_EMAIL,
+    })
 
     if (!result.ok) {
       if (result.error === 'not_found') {
