@@ -16,6 +16,7 @@ import { talentsRouter } from './routes/talents.js'
 import { studentDataRouter } from './routes/student-data.js'
 
 import { adminRouter } from './routes/admin.js'
+import { applicationsRouter } from './routes/applications.js'
 
 const app = new Hono<{
   Bindings: {
@@ -56,6 +57,10 @@ app.route('/api/postings', postingsRouter)
 // Automatic DK24 student verification flow
 app.route('/api/student/verification', verificationRouter)
 app.route('/api/student', studentRouter)
+
+// Student applications and the recruiter status pipeline
+app.route('/api/applications', applicationsRouter)
+app.route('/api/student/applications', applicationsRouter)
 
 // Authenticated user record and role selection
 app.route('/api/users', usersRouter)
