@@ -30,6 +30,22 @@ import JobPostingCard from './components/JobPostingCard'
 type StatusFilter = 'all' | 'active' | 'closed' | 'expired'
 type SortOption = 'newest' | 'oldest' | 'most-applicants' | 'least-applicants' | 'a-z' | 'z-a'
 
+const STATUS_FILTER_OPTIONS: Record<StatusFilter, string> = {
+  all: 'All',
+  active: 'Active',
+  closed: 'Closed',
+  expired: 'Expired',
+}
+
+const SORT_OPTIONS: Record<SortOption, string> = {
+  newest: 'Newest',
+  oldest: 'Oldest',
+  'most-applicants': 'Most Applicants',
+  'least-applicants': 'Least Applicants',
+  'a-z': 'A-Z',
+  'z-a': 'Z-A',
+}
+
 const fallbackMockPostings: JobPostingItem[] = [
   {
     id: '1',
@@ -298,6 +314,7 @@ export default function JobPostingsPage() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <div className="w-full sm:w-36">
                   <Select
+                    items={STATUS_FILTER_OPTIONS}
                     value={statusFilter}
                     onValueChange={(val) => setStatusFilter((val ?? 'all') as StatusFilter)}
                   >
@@ -316,6 +333,7 @@ export default function JobPostingsPage() {
 
                 <div className="w-full sm:w-44">
                   <Select
+                    items={SORT_OPTIONS}
                     value={sortBy}
                     onValueChange={(val) => setSortBy((val ?? 'newest') as SortOption)}
                   >
