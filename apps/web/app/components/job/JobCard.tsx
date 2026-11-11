@@ -27,7 +27,7 @@ export default function JobCard({ job }: JobCardProps) {
       <div className="flex items-start justify-between gap-4">
         <Link href={`/jobs/${job.id}`} className="flex min-w-0 flex-1 items-start gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-light font-bold text-brand-dark">
-            {job.company.charAt(0)}
+            {job.company.trim().charAt(0).toUpperCase() || '?'}
           </div>
 
           <div className="min-w-0">
@@ -77,7 +77,7 @@ export default function JobCard({ job }: JobCardProps) {
           <p className="text-sm font-bold text-text-main">{job.compensation}</p>
 
           <div className="mt-3 flex flex-wrap gap-2">
-            {job.techStack.map((technology) => (
+            {[...new Set(job.techStack)].map((technology) => (
               <span
                 key={technology}
                 className="rounded-md bg-page-subtle px-2.5 py-1 text-xs font-medium text-text-muted"
