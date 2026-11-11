@@ -5,6 +5,7 @@ import React, { useState } from 'react'
 import { Job } from '../../types/job'
 import { Button } from '@/components/ui/button'
 import { Bookmark, Share2, MapPin, Building2 } from 'lucide-react'
+import { ApplyButton } from './ApplyButton'
 
 export const JobHeader = ({ job }: { job: Job }) => {
   const [isSaved, setIsSaved] = useState(false)
@@ -72,7 +73,9 @@ export const JobHeader = ({ job }: { job: Job }) => {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          <ApplyButton job={job} />
+
           <div className="flex-1 sm:flex-initial">
             <Button
               variant={isSaved ? 'default' : 'outline'}
