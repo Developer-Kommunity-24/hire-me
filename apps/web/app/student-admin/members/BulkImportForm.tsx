@@ -22,25 +22,6 @@ const memberRowSchema = z.object({
 
 type MemberRow = z.infer<typeof memberRowSchema> & { error?: string }
 
-const initialPreviewRows: MemberRow[] = [
-  {
-    id: '1',
-    name: 'Priya Nair',
-    username: 'priyan',
-    email: 'priyan@stanford.edu',
-    avatarInitials: 'PN',
-    avatarColor: 'bg-slate-700',
-  },
-  {
-    id: '2',
-    name: 'Marcus Webb',
-    username: 'mwebb22',
-    email: 'mwebb22@stanford.edu',
-    avatarInitials: 'MW',
-    avatarColor: 'bg-amber-700',
-  },
-]
-
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/)
   if (parts.length === 0 || !parts[0]) return '?'
@@ -63,21 +44,53 @@ export default function BulkImportForm() {
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [rows, setRows] = useState<MemberRow[]>(initialPreviewRows)
+  const [rows, setRows] = useState<MemberRow[]>([])
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [editingRow, setEditingRow] = useState<MemberRow | null>(null)
-  const [importSuccess, setImportSuccess] = useState(false)
+  const [importResult, setImportResult] = useState<{ text: string; hasFailures: boolean } | null>(
+    null,
+  )
+  // Ids of the rows in the batch being imported, in request order (to map failures back to rows).
+  const batchIdsRef = useRef<string[]>([])
 
   const mutation = useMutation({
     mutationFn: importMembers,
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: membersQueryKey })
-      setImportSuccess(true)
-      setTimeout(() => setImportSuccess(false), 4000)
+
+      // Map each failure back to the row it came from.
+      const failedMessages = new Map<string, string>()
+      for (const { index, message } of result.failures) {
+        const rowId = batchIdsRef.current[index]
+        if (rowId) failedMessages.set(rowId, message)
+      }
+      const batchIds = new Set(batchIdsRef.current)
+
+      // Imported rows leave the preview; failed rows stay, marked with the server's error.
+      setRows((prev) =>
+        prev
+          .filter((row) => !batchIds.has(row.id) || failedMessages.has(row.id))
+          .map((row) => {
+            const message = failedMessages.get(row.id)
+            return message ? { ...row, error: message } : row
+          }),
+      )
+      setSelectedIds([])
+
+      const failed = result.failures.length
+      setImportResult({
+        text:
+          failed === 0
+            ? 'Members imported successfully!'
+            : `Imported ${result.imported} of ${result.total} members. ${failed} failed: fix the highlighted rows and import again.`,
+        hasFailures: failed > 0,
+      })
+      if (failed === 0) setTimeout(() => setImportResult(null), 4000)
     },
   })
 
   async function processFile(file: File) {
+    setImportResult(null)
     const text = await file.text()
     const lines = text
       .split(/\r\n|\r|\n/)
@@ -147,6 +160,8 @@ export default function BulkImportForm() {
     if (rows.length === 0 || hasErrors) return
     const toImport = selectedIds.length > 0 ? rows.filter((r) => selectedIds.includes(r.id)) : rows
 
+    batchIdsRef.current = toImport.map((r) => r.id)
+    setImportResult(null)
     mutation.mutate(toImport.map(({ name, username, email }) => ({ name, usn: username, email })))
   }
 
@@ -298,8 +313,14 @@ export default function BulkImportForm() {
           {mutation.isPending ? 'Importing…' : 'Import Members'}
         </Button>
 
-        {importSuccess && (
-          <p className="text-sm font-medium text-emerald-600">Members imported successfully!</p>
+        {importResult && (
+          <p
+            className={`text-sm font-medium ${
+              importResult.hasFailures ? 'text-amber-600' : 'text-emerald-600'
+            }`}
+          >
+            {importResult.text}
+          </p>
         )}
         {mutation.isError && (
           <p className="text-sm text-red-500">
