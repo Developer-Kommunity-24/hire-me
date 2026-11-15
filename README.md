@@ -12,14 +12,14 @@ Hire Me is a monorepo for a job platform, with a Next.js web application and a H
 
 ## Repository Structure
 
-| Path | Purpose |
-| ---- | ------- |
-| `apps/web` | Next.js web application |
-| `apps/api` | Hono API Worker |
-| `packages/db` | Shared database client, queries, and migrations |
-| `packages/eslint-config` | Shared ESLint configuration |
-| `packages/typescript-config` | Shared TypeScript configuration |
-| `docs` | Project documentation |
+| Path                         | Purpose                                         |
+| ---------------------------- | ----------------------------------------------- |
+| `apps/web`                   | Next.js web application                         |
+| `apps/api`                   | Hono API Worker                                 |
+| `packages/db`                | Shared database client, queries, and migrations |
+| `packages/eslint-config`     | Shared ESLint configuration                     |
+| `packages/typescript-config` | Shared TypeScript configuration                 |
+| `docs`                       | Project documentation                           |
 
 ## Prerequisites
 
@@ -88,15 +88,15 @@ This starts both applications locally:
 
 Run these commands from the project root:
 
-| Command | Purpose |
-| ------- | ------- |
-| `pnpm dev` | Start the web app and API for local development |
-| `pnpm build` | Build all workspace applications and packages |
-| `pnpm lint` | Run ESLint across the workspace |
-| `pnpm check-types` | Check TypeScript types across the workspace |
-| `pnpm test` | Run workspace tests |
-| `pnpm format` | Format supported source and documentation files |
-| `pnpm format:check` | Check formatting without changing files |
+| Command             | Purpose                                         |
+| ------------------- | ----------------------------------------------- |
+| `pnpm dev`          | Start the web app and API for local development |
+| `pnpm build`        | Build all workspace applications and packages   |
+| `pnpm lint`         | Run ESLint across the workspace                 |
+| `pnpm check-types`  | Check TypeScript types across the workspace     |
+| `pnpm test`         | Run workspace tests                             |
+| `pnpm format`       | Format supported source and documentation files |
+| `pnpm format:check` | Check formatting without changing files         |
 
 ## Further Documentation
 
