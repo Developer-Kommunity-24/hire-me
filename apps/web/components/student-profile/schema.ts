@@ -53,6 +53,18 @@ export function isDateOrderValid(startDate?: string, endDate?: string): boolean 
 }
 
 /**
+ * Extracts the four-digit graduation year from values such as "2025", "May 2025",
+ * or "Class of 2025". Returns null when no valid year is present.
+ */
+export function parseGraduationYear(value?: string): number | null {
+  if (!value) return null
+  const match = value.match(/\b(19\d{2}|20\d{2}|2100)\b/)
+  if (!match?.[0]) return null
+  const year = Number(match[0])
+  return year >= 1900 && year <= 2100 ? year : null
+}
+
+/**
  * Parses GPA in forms like "3.9 / 4.0", "3.9/4.0", "3.9", "9.2 / 10.0".
  */
 export function parseGpa(val: string): { score: number; scale?: number } | null {
@@ -90,6 +102,19 @@ export const githubUrlSchema = z.string().refine(
   },
 )
 
+const optionalUrlSchema = z.string().refine(
+  (val: string) => {
+    if (!val || val.trim() === '') return true
+    try {
+      new URL(val.trim())
+      return true
+    } catch {
+      return false
+    }
+  },
+  { message: 'Invalid URL format' },
+)
+
 /**
  * GPA schema: validates non-empty string and valid numerical range.
  */
@@ -109,6 +134,25 @@ export const gpaSchema = z
       message: 'Invalid GPA (must be between 0.0 and 4.0 or score / scale, e.g. 3.9 / 4.0)',
     },
   )
+
+/**
+ * GPA schema for optional profile fields. Empty values are allowed because the
+ * backend permits a null GPA.
+ */
+export const optionalGpaSchema = z.string().refine(
+  (val: string) => {
+    if (!val || val.trim() === '') return true
+    const parsed = parseGpa(val)
+    if (!parsed) return false
+    if (parsed.scale !== undefined) {
+      return parsed.score >= 0 && parsed.score <= parsed.scale
+    }
+    return parsed.score >= 0 && parsed.score <= 10.0
+  },
+  {
+    message: 'Invalid GPA (must be between 0.0 and 4.0 or score / scale, e.g. 3.9 / 4.0)',
+  },
+)
 
 /**
  * Raw object schema for experience items.
@@ -173,10 +217,13 @@ export const skillCategorySchema = z.object({
 
 /**
  * Profile info schema with required fields and format validation.
+ *
+ * Only the full name is required. The remaining fields are optional in the
+ * backend profile API, so the form must allow partially completed profiles.
  */
 export const profileDataSchema = z.object({
   name: z.string().min(1, 'Full name is required'),
-  degree: z.string().min(1, 'Headline / degree is required'),
+  degree: z.string(),
   university: z.string().optional(),
   graduationYear: z.string().optional(),
   location: z.string(),
@@ -184,34 +231,40 @@ export const profileDataSchema = z.object({
   email: z.string().refine((val: string) => !val || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val), {
     message: 'Invalid email address',
   }),
-  resumeLink: z
-    .string()
-    .optional()
-    .refine(
-      (val: string | undefined) => {
-        if (!val || val.trim() === '') return true
-        try {
-          new URL(val)
-          return true
-        } catch {
-          return false
-        }
-      },
-      { message: 'Invalid URL format' },
-    ),
+  resumeLink: optionalUrlSchema.optional(),
   photoUrl: z.string(),
   isVerified: z.boolean(),
+  bio: z.string().max(2000, 'Bio must be 2000 characters or fewer'),
+  phone: z.string(),
+  linkedin: optionalUrlSchema,
+  portfolio: optionalUrlSchema,
+  openToWork: z.boolean(),
+  completionPercentage: z.number().min(0).max(100),
+  otherLinks: z.array(
+    z.object({
+      label: z.string(),
+      url: z.string(),
+    }),
+  ),
 })
 
 /**
- * Academics schema.
+ * Academics schema. All fields are optional in the backend profile API, so
+ * validation only applies when a value is present.
  */
 export const academicDataSchema = z.object({
-  gpa: gpaSchema,
-  major: z.string().min(1, 'Major is required'),
+  gpa: optionalGpaSchema,
+  major: z.string(),
   minor: z.string(),
   honors: z.string(),
-  expectedGraduation: z.string().min(1, 'Expected graduation date is required'),
+  expectedGraduation: z.string().refine(
+    (val: string) => {
+      if (!val || val.trim() === '') return true
+      return parseGraduationYear(val) !== null
+    },
+    { message: 'Expected graduation must include a four-digit year (e.g. 2025)' },
+  ),
+  school: z.string(),
 })
 
 /**

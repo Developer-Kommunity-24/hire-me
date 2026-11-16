@@ -1,6 +1,5 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { defaultSkillCategories } from './ProfileContext'
 import { getCategoryIcon } from './utils'
 import type { SkillCategory } from './types'
 
@@ -26,11 +25,7 @@ function SkillGroup({ category }: { category: SkillCategory }) {
   )
 }
 
-export default function SkillsCard({
-  categories = defaultSkillCategories,
-}: {
-  categories?: SkillCategory[]
-}) {
+export default function SkillsCard({ categories }: { categories: SkillCategory[] }) {
   return (
     <Card>
       <CardContent>
