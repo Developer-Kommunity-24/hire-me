@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Providers } from '@/app/providers'
 import JobPostingsPage from './page'
@@ -99,5 +99,35 @@ describe('JobPostingsPage', () => {
 
     expect(screen.getByRole('dialog', { name: /create job posting/i })).toBeInTheDocument()
     expect(screen.getByLabelText(/job title \*/i)).toBeInTheDocument()
+  })
+
+  it('shows the error state when postings fail to load', async () => {
+    vi.spyOn(postingsApi, 'fetchMyPostings').mockRejectedValue(new Error('Request failed'))
+
+    renderWithProviders(<JobPostingsPage />)
+
+    expect(
+      await screen.findByText('Failed to load postings.', undefined, { timeout: 5000 }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument()
+  })
+
+  it('closes a posting and refreshes the list', async () => {
+    const closeSpy = vi
+      .spyOn(postingsApi, 'closePosting')
+      .mockResolvedValue({ ...samplePostings[0]!, status: 'closed' })
+
+    renderWithProviders(<JobPostingsPage />)
+
+    expect(await screen.findByText('Alpha Frontend Engineer')).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /open options menu for alpha frontend engineer/i }),
+    )
+    fireEvent.click(await screen.findByText('Close Posting'))
+    fireEvent.click(screen.getByRole('button', { name: 'Close Posting' }))
+
+    await waitFor(() => expect(closeSpy).toHaveBeenCalledWith('post-1', expect.anything()))
+    await waitFor(() => expect(postingsApi.fetchMyPostings).toHaveBeenCalledTimes(2))
   })
 })
