@@ -24,6 +24,7 @@ export interface CommonSidebarProps {
   brandTitle?: string
   homeHref?: string
   className?: string
+  footerAction?: React.ReactNode
 }
 
 export default function Sidebar({
@@ -31,6 +32,7 @@ export default function Sidebar({
   brandTitle = 'CareerLink',
   homeHref = '/',
   className,
+  footerAction,
 }: CommonSidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const currentPath = usePathname()
@@ -141,6 +143,7 @@ export default function Sidebar({
             <CircleHelp className="w-4 h-4 text-text-muted shrink-0" />
             <span>Help & Support</span>
           </Link>
+          {footerAction}
         </div>
       </aside>
     </>

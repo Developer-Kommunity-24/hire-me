@@ -1,5 +1,5 @@
 import { and, asc, eq } from 'drizzle-orm'
-import { badgeRevocation, clubMemberships, studentProfiles } from '@repo/db'
+import { badgeRevocation, clubMemberships, studentProfiles, verificationRequests } from '@repo/db'
 import type { Database, ClubMembership } from '@repo/db'
 
 const ACTIVE_CLUB_MEMBER = eq(clubMemberships.isActive, true)
@@ -276,6 +276,27 @@ export async function deleteClubMember(
         studentId: membership.userId,
         clubMembershipId: membership.id,
       })
+
+      await db
+        .update(studentProfiles)
+        .set({
+          dk24Status: 'revoked',
+          updatedAt: new Date(),
+        })
+        .where(eq(studentProfiles.userId, membership.userId))
+
+      await db
+        .update(verificationRequests)
+        .set({
+          autoMatched: false,
+          appliedAt: null,
+        })
+        .where(
+          and(
+            eq(verificationRequests.studentId, membership.userId),
+            eq(verificationRequests.matchedClubMembershipId, membership.id),
+          ),
+        )
     }
   }
 

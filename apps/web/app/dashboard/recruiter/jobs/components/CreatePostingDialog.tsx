@@ -25,6 +25,19 @@ interface CreatePostingDialogProps {
   isSubmitting?: boolean
 }
 
+const EMPLOYMENT_TYPE_OPTIONS: Record<BackendEmploymentType, string> = {
+  full_time: 'Full-time',
+  internship: 'Internship',
+  part_time: 'Part-time',
+  contract: 'Contract',
+}
+
+const WORK_ARRANGEMENT_OPTIONS: Record<BackendWorkArrangement, string> = {
+  in_person: 'On-site',
+  hybrid: 'Hybrid',
+  remote: 'Remote',
+}
+
 export default function CreatePostingDialog({
   isOpen,
   onClose,
@@ -113,10 +126,10 @@ export default function CreatePostingDialog({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1 text-muted-foreground transition hover:bg-muted hover:text-text-main"
+            className="flex h-8 w-8 items-center justify-center rounded-xl border border-border-subtle bg-white text-text-muted transition-all hover:bg-slate-50 hover:text-text-main hover:border-slate-300 active:scale-95 shadow-2xs cursor-pointer"
             aria-label="Close dialog"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
         </div>
 
@@ -167,6 +180,7 @@ export default function CreatePostingDialog({
               <Label>Employment Type *</Label>
               <div className="w-full">
                 <Select
+                  items={EMPLOYMENT_TYPE_OPTIONS}
                   value={employmentType}
                   onValueChange={(val) => setEmploymentType(val as BackendEmploymentType)}
                 >
@@ -187,6 +201,7 @@ export default function CreatePostingDialog({
               <Label>Work Arrangement *</Label>
               <div className="w-full">
                 <Select
+                  items={WORK_ARRANGEMENT_OPTIONS}
                   value={workArrangement}
                   onValueChange={(val) => setWorkArrangement(val as BackendWorkArrangement)}
                 >

@@ -190,7 +190,7 @@ function ExperienceItemEditor({ index, itemErrors, onDelete }: ExperienceItemEdi
               <button
                 type="button"
                 onClick={() => removeAchievement(aIdx)}
-                className="h-8 w-8 p-1.5 text-text-muted hover:text-red-500 hover:bg-red-50 rounded-lg flex items-center justify-center transition-colors"
+                className="h-8 w-8 p-1.5 text-text-muted hover:text-red-500 hover:bg-red-50 rounded-xl flex items-center justify-center transition-all active:scale-95 cursor-pointer"
                 title="Remove bullet point"
                 aria-label={`Remove achievement bullet ${aIdx + 1}`}
               >
@@ -199,14 +199,10 @@ function ExperienceItemEditor({ index, itemErrors, onDelete }: ExperienceItemEdi
             </div>
           ))}
 
-          <button
-            type="button"
-            onClick={() => appendAchievement('')}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-brand-dark hover:text-brand transition-colors"
-          >
+          <Button type="button" variant="outline" size="xs" onClick={() => appendAchievement('')}>
             <Plus className="w-3.5 h-3.5" />
             Add Bullet Point
-          </button>
+          </Button>
         </div>
       </div>
     </div>

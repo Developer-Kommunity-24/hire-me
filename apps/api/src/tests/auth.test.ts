@@ -260,6 +260,22 @@ describe('authenticated routes', () => {
     expect(res.status).toBe(401)
   })
 
+  it('401s POST /api/verifications without a token', async () => {
+    const res = await app.request('/api/verifications', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ usn: '1CS21CS010' }),
+    })
+
+    expect(res.status).toBe(401)
+  })
+
+  it('401s GET /api/verifications/me without a token', async () => {
+    const res = await app.request('/api/verifications/me')
+
+    expect(res.status).toBe(401)
+  })
+
   it('leaves public routes open', async () => {
     const res = await app.request('/health')
 

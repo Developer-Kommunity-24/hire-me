@@ -14,6 +14,7 @@ import {
   updatePosting,
   closePosting,
 } from '../controllers/postings.controller.js'
+import { listApplicantsForPosting } from '../controllers/applications.controller.js'
 import { buildPaginationMeta, PAGINATION_DEFAULTS } from '../utils/pagination.js'
 import { createPostingSchema, updatePostingSchema } from './postings.schemas.js'
 
@@ -138,6 +139,22 @@ postingsRouter.post('/:id/close', requireAuth, requireRecruiter, async (c) => {
     return c.json({ error: 'Posting not found' }, 404)
   }
   return c.json({ data: closed })
+})
+
+/** Registered before '/:id' so "applications" is not treated as a posting ID. */
+postingsRouter.get('/:id/applications', requireAuth, requireRecruiter, async (c) => {
+  const rawId = c.req.param('id')
+
+  if (!uuidSchema.safeParse(rawId).success) {
+    return c.json({ error: 'Posting not found' }, 404)
+  }
+
+  const rows = await listApplicantsForPosting(c.var.db, c.var.recruiterId, rawId)
+  if (!rows) {
+    return c.json({ error: 'Posting not found' }, 404)
+  }
+
+  return c.json({ data: rows })
 })
 
 /** Registered last so parameterized routes don't swallow specific paths. */

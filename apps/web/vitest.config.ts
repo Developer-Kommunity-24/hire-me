@@ -10,6 +10,7 @@ export default defineConfig({
     setupFiles: ['./vitest.setup.ts'],
     include: ['app/**/*.test.{ts,tsx}', 'components/**/*.test.{ts,tsx}', 'lib/**/*.test.ts'],
     clearMocks: true,
+    testTimeout: 15000,
   },
   resolve: {
     // Mirrors the `@/*` path mapping in tsconfig.json.

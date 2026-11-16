@@ -148,3 +148,9 @@ export function useProfile(): ProfileContextValue {
   }
   return context
 }
+
+export function useOptionalProfile(): ProfileContextValue | null {
+  return useContext(ProfileContext)
+}
+
+export { ProfileContext }

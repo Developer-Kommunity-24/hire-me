@@ -52,7 +52,7 @@ export function MetricCards({ metrics, selectedStatus, onSelectStatus }: MetricC
             aria-label={`Filter by ${item.label}`}
             aria-pressed={isSelected}
             className={cn(
-              'flex flex-col text-left group p-1 rounded-xl transition-all duration-150 focus:outline-none',
+              'flex flex-col text-left group p-1.5 rounded-xl transition-all duration-150 focus:outline-none cursor-pointer active:scale-95',
               isSelected && 'opacity-100',
             )}
           >

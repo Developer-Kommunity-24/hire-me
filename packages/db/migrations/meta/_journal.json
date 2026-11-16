@@ -15,6 +15,13 @@
       "when": 1787803290302,
       "tag": "0001_marvelous_la_nuit",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791994834881,
+      "tag": "0002_useful_living_mummy",
+      "breakpoints": true
     }
   ]
 }

@@ -143,7 +143,7 @@ export default function AllMembersTable() {
                     type="button"
                     onClick={() => setPendingDeleteIds([member.id])}
                     disabled={deleteMutation.isPending}
-                    className="text-gray-400 hover:text-red-600 p-1 rounded transition-colors inline-flex items-center justify-center"
+                    className="text-gray-400 hover:text-red-600 p-1.5 rounded-xl hover:bg-rose-50 transition-all active:scale-95 inline-flex items-center justify-center cursor-pointer disabled:opacity-50"
                     aria-label={`Delete ${member.name}`}
                   >
                     <Trash2 className="w-4 h-4" />

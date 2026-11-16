@@ -1,0 +1,1 @@
+CREATE INDEX "idx_applications_student" ON "applications" USING btree ("student_id");

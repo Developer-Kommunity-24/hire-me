@@ -185,7 +185,7 @@ function ProjectCardEditor({ index, onDelete, errors }: ProjectCardEditorProps) 
                     <button
                       type="button"
                       onClick={() => handleRemoveTag(tIdx)}
-                      className="h-4 w-4 p-0.5 text-text-muted hover:text-red-500 hover:bg-red-50 rounded flex items-center justify-center transition-colors"
+                      className="h-4 w-4 p-0.5 text-text-muted hover:text-red-500 hover:bg-red-50 rounded-md flex items-center justify-center transition-all active:scale-95 cursor-pointer"
                       title="Remove tag"
                       aria-label={`Remove tag ${tag}`}
                     >

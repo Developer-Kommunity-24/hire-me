@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Briefcase, FileText, Users, HelpCircle, Layers } from 'lucide-react'
+import { Briefcase, FileText, Users } from 'lucide-react'
+import Header from '@/components/common/Header'
 
 const navItems = [
   { label: 'Job Feed', href: '/student-admin/job-feed', icon: Briefcase },
@@ -14,28 +15,21 @@ export default function StudentAdminLayout({ children }: { children: React.React
   const pathname = usePathname()
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex flex-col font-sans">
+    <div className="min-h-screen bg-bg-page flex flex-col font-sans">
       {/* Top Header Bar */}
-      <header className="h-14 border-b border-gray-200 bg-white px-6 flex items-center justify-between shrink-0">
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="w-6 h-6 rounded-md bg-emerald-600 flex items-center justify-center text-white shadow-xs">
-            <Layers className="w-3.5 h-3.5" />
-          </div>
-          <span className="font-bold text-gray-900 text-base tracking-tight">CareerLink</span>
-        </Link>
-
-        <Link
-          href="/help"
-          className="text-xs font-medium text-gray-500 hover:text-gray-900 flex items-center gap-1.5 transition-colors"
-        >
-          <HelpCircle className="w-4 h-4 text-gray-400" />
-          <span>Need Help?</span>
-        </Link>
-      </header>
+      <Header
+        role="admin"
+        showLogo
+        showDesktopLogo
+        hasMobileSidebar={false}
+        showNotifications={false}
+        showProfile={false}
+        showHelp
+      />
 
       {/* Main Layout: Sidebar + Content */}
       <div className="flex flex-1">
-        <aside className="w-56 bg-white border-r border-gray-200 py-4 shrink-0">
+        <aside className="w-56 bg-white border-r border-border-subtle py-4 shrink-0">
           <nav className="flex flex-col">
             {navItems.map((item) => {
               const Icon = item.icon

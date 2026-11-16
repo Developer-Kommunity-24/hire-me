@@ -16,6 +16,7 @@ import type { StudentApplicationItem } from '@/lib/student-applications-api'
 import { formatEmploymentType, formatWorkArrangement } from '@/lib/student-applications-api'
 import { ApplicationStatusBadge } from './ApplicationStatusBadge'
 import { MilestoneStepper } from './MilestoneStepper'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 interface ApplicationCardProps {
@@ -151,7 +152,7 @@ export function ApplicationCard({
             }}
             aria-expanded={isExpanded}
             aria-label={isExpanded ? 'Hide details' : 'Show milestones'}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors pt-1 focus:outline-none"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-800 active:scale-95 transition-all pt-1 focus:outline-none cursor-pointer"
           >
             <span>{isExpanded ? 'Hide Details' : 'Milestones'}</span>
             {isExpanded ? (
@@ -177,28 +178,28 @@ export function ApplicationCard({
           {/* Quick Actions Footer inside the expanded card */}
           <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-200/60 text-xs">
             {onWithdraw && application.status !== 'rejected' && (
-              <button
+              <Button
                 type="button"
+                variant="destructive"
+                size="xs"
                 onClick={() => onWithdraw(application.id)}
-                className="inline-flex items-center gap-1.5 text-rose-600 hover:text-rose-700 font-medium transition-colors"
                 aria-label={`Withdraw application for ${application.roleTitle}`}
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Withdraw Application</span>
-              </button>
+              </Button>
             )}
 
             <div className="flex items-center gap-2 ml-auto">
-              <Link
-                href={`/jobs/${application.postingId}`}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 font-semibold hover:bg-slate-50 transition-colors shadow-2xs"
-              >
-                <span>View Job Posting</span>
-                <ExternalLink className="w-3 h-3 opacity-60" />
-              </Link>
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/jobs/${application.postingId}`}>
+                  <span>View Job Posting</span>
+                  <ExternalLink className="w-3 h-3 opacity-60" />
+                </Link>
+              </Button>
 
               {application.status === 'accepted' && (
-                <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-semibold text-xs shadow-xs">
+                <span className="inline-flex items-center px-3.5 py-1.5 rounded-xl bg-action-dark text-white font-semibold text-xs shadow-xs">
                   Offer Available
                 </span>
               )}

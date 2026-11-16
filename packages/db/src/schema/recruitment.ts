@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, date, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, text, date, timestamp, uniqueIndex, index } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 import {
   employmentTypeEnum,
@@ -60,7 +60,10 @@ export const applications = pgTable(
       .notNull()
       .default(sql`now()`),
   },
-  (table) => [uniqueIndex('idx_applications_posting_student').on(table.postingId, table.studentId)],
+  (table) => [
+    uniqueIndex('idx_applications_posting_student').on(table.postingId, table.studentId),
+    index('idx_applications_student').on(table.studentId),
+  ],
 )
 
 export type Posting = typeof postings.$inferSelect
