@@ -6,7 +6,6 @@ export type Member = {
   name: string
   usn: string
   email: string
-  /** The API does not return a join date yet; null renders as "—". */
   joinedDate: string | null
 }
 
@@ -28,19 +27,21 @@ type ApiMember = {
   fullName: string
   usn: string
   email: string
-  createdAt?: string
+  addedAt?: string | null
+  createdAt?: string | null
 }
 
 export const membersQueryKey = ['members'] as const
 
 function toMember(api: ApiMember): Member {
+  const dateStr = api.addedAt ?? api.createdAt
   return {
     id: api.id,
     name: api.fullName,
     usn: api.usn,
     email: api.email,
-    joinedDate: api.createdAt
-      ? new Date(api.createdAt).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+    joinedDate: dateStr
+      ? new Date(dateStr).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
       : null,
   }
 }

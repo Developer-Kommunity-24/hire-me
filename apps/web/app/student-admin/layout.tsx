@@ -1,18 +1,50 @@
 'use client'
 
+import { useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Briefcase, FileText, Users } from 'lucide-react'
 import Header from '@/components/common/Header'
+import { useAuth } from '@/lib/hooks/use-auth'
 
 const navItems = [
-  { label: 'Job Feed', href: '/student-admin/job-feed', icon: Briefcase },
-  { label: 'My Applications', href: '/student-admin/applications', icon: FileText },
+  { label: 'Job Feed', href: '/student/jobs', icon: Briefcase },
+  { label: 'My Applications', href: '/student/applications', icon: FileText },
   { label: 'Members', href: '/student-admin/members', icon: Users },
 ]
 
 export default function StudentAdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const router = useRouter()
+  const { user, isLoading } = useAuth()
+
+  const isClubAdmin = user?.roles?.includes('club_admin') ?? false
+
+  useEffect(() => {
+    if (!isLoading && user && !isClubAdmin) {
+      router.replace('/student/jobs')
+    }
+  }, [user, isLoading, isClubAdmin, router])
+
+  if (!isLoading && user && !isClubAdmin) {
+    return (
+      <div className="min-h-screen bg-bg-page flex items-center justify-center p-4">
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-xs max-w-md text-center">
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Access Restricted</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            You do not have student administrator privileges. Only students assigned as a club
+            administrator by a Super Admin can access this page.
+          </p>
+          <Link
+            href="/student/jobs"
+            className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
+          >
+            Return to Job Feed
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-bg-page flex flex-col font-sans">

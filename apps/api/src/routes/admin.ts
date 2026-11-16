@@ -8,7 +8,9 @@ import {
   createClub,
   deactivateClub,
   getAdminStats,
+  listClubAdmins,
   listClubs,
+  listEligibleStudents,
   removeClubAdmin,
   removeCoreAdmin,
   updateClub,
@@ -245,6 +247,27 @@ adminRouter.delete('/club-admins/:userId', async (c) => {
   }
 
   return c.json({ data: { user: result.user, clubAdmin: result.clubAdmin } })
+})
+
+/**
+ * GET /api/admin/club-admins
+ *
+ * Lists all currently appointed club administrators with member and club details.
+ */
+adminRouter.get('/club-admins', async (c) => {
+  const admins = await listClubAdmins(c.var.db)
+  return c.json({ data: admins })
+})
+
+/**
+ * GET /api/admin/students
+ *
+ * Lists students eligible for appointment as club administrators.
+ */
+adminRouter.get('/students', async (c) => {
+  const search = c.req.query('q')
+  const students = await listEligibleStudents(c.var.db, search)
+  return c.json({ data: students })
 })
 
 /**

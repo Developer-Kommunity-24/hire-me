@@ -328,6 +328,70 @@ export async function removeClubAdmin(
   return { ok: true, user: updated, clubAdmin: deleted }
 }
 
+export interface ClubAdminWithDetails {
+  userId: string
+  clubId: string
+  userName: string
+  userEmail: string
+  clubName: string
+}
+
+/**
+ * Lists all assigned club admins with their user and club details.
+ */
+export async function listClubAdmins(db: Database): Promise<ClubAdminWithDetails[]> {
+  const rows = await db
+    .select({
+      userId: clubAdmins.userId,
+      clubId: clubAdmins.clubId,
+      userName: users.fullName,
+      userEmail: users.email,
+      clubName: clubs.name,
+    })
+    .from(clubAdmins)
+    .innerJoin(users, eq(users.id, clubAdmins.userId))
+    .innerJoin(clubs, eq(clubs.id, clubAdmins.clubId))
+    .orderBy(asc(users.fullName))
+
+  return rows
+}
+
+/**
+ * Lists students eligible to be assigned as club admins.
+ */
+export async function listEligibleStudents(
+  db: Database,
+  search?: string,
+): Promise<Array<{ id: string; fullName: string; email: string }>> {
+  if (search && search.trim()) {
+    const q = `%${search.trim().toLowerCase()}%`
+    return await db
+      .select({
+        id: users.id,
+        fullName: users.fullName,
+        email: users.email,
+      })
+      .from(users)
+      .where(
+        and(
+          sql`${users.roles} @> ARRAY['student']::user_role[]`,
+          sql`(lower(${users.fullName}) LIKE ${q} OR lower(${users.email}) LIKE ${q})`,
+        ),
+      )
+      .limit(50)
+  }
+
+  return await db
+    .select({
+      id: users.id,
+      fullName: users.fullName,
+      email: users.email,
+    })
+    .from(users)
+    .where(sql`${users.roles} @> ARRAY['student']::user_role[]`)
+    .limit(50)
+}
+
 // ==========================================
 // CLUB MANAGEMENT
 // ==========================================
