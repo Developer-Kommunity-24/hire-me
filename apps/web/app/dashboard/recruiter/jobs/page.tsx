@@ -70,6 +70,8 @@ export default function JobPostingsPage() {
     mutationFn: closePosting,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: recruiterPostingsQueryKey })
+      queryClient.invalidateQueries({ queryKey: ['postings'] })
+      queryClient.invalidateQueries({ queryKey: ['recruiter', 'metrics'] })
       toast.success('Job posting closed successfully')
     },
     onError: (err) => {
@@ -82,6 +84,8 @@ export default function JobPostingsPage() {
     mutationFn: createPosting,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: recruiterPostingsQueryKey })
+      queryClient.invalidateQueries({ queryKey: ['postings'] })
+      queryClient.invalidateQueries({ queryKey: ['recruiter', 'metrics'] })
       toast.success('Job posting published successfully')
     },
     onError: (err) => {
