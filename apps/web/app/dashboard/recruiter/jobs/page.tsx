@@ -18,8 +18,7 @@ import {
   closePosting,
   createPosting,
   fetchMyPostings,
-  type CreatePostingInput,
-  type JobPostingItem,
+  recruiterPostingsQueryKey,
 } from '@/lib/postings-api'
 import MetricCard from '../components/MetricCard'
 import Sidebar from '../components/Sidebar'
@@ -29,73 +28,6 @@ import JobPostingCard from './components/JobPostingCard'
 
 type StatusFilter = 'all' | 'active' | 'closed' | 'expired'
 type SortOption = 'newest' | 'oldest' | 'most-applicants' | 'least-applicants' | 'a-z' | 'z-a'
-
-const fallbackMockPostings: JobPostingItem[] = [
-  {
-    id: '1',
-    title: 'Senior Frontend Engineer',
-    description: 'Lead frontend architecture using React, Next.js, and TypeScript.',
-    stack: ['React', 'TypeScript', 'Next.js', 'Tailwind CSS'],
-    location: 'San Francisco, CA (Hybrid)',
-    employmentType: 'full_time',
-    workArrangement: 'hybrid',
-    status: 'active',
-    deadline: '2026-12-31',
-    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    applicants: 42,
-    inReview: 12,
-    interviewing: 5,
-  },
-  {
-    id: '2',
-    title: 'Product Designer',
-    description: 'Design intuitive interfaces and collaborate with engineers.',
-    stack: ['Figma', 'Design Systems', 'Prototyping'],
-    location: 'New York, NY (Remote)',
-    employmentType: 'full_time',
-    workArrangement: 'remote',
-    status: 'active',
-    deadline: '2026-12-15',
-    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    applicants: 89,
-    inReview: 24,
-    interviewing: 8,
-  },
-  {
-    id: '3',
-    title: 'Backend Systems Engineer',
-    description: 'Build scalable distributed systems and databases.',
-    stack: ['Go', 'PostgreSQL', 'Docker', 'Kubernetes'],
-    location: 'Seattle, WA (On-site)',
-    employmentType: 'full_time',
-    workArrangement: 'in_person',
-    status: 'closed',
-    deadline: '2026-11-01',
-    createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-    applicants: 64,
-    inReview: 18,
-    interviewing: 0,
-  },
-  {
-    id: '4',
-    title: 'Data Analyst Intern',
-    description: 'Analyze user metrics and generate insightful reports.',
-    stack: ['Python', 'SQL', 'Pandas'],
-    location: 'Austin, TX',
-    employmentType: 'internship',
-    workArrangement: 'in_person',
-    status: 'expired',
-    deadline: '2026-10-15',
-    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-    applicants: 0,
-    inReview: 0,
-    interviewing: 0,
-  },
-]
 
 export default function JobPostingsPage() {
   const router = useRouter()
@@ -113,24 +45,15 @@ export default function JobPostingsPage() {
     refetch,
     isRefetching,
   } = useQuery({
-    queryKey: ['recruiter', 'postings'],
-    queryFn: async () => {
-      try {
-        return await fetchMyPostings()
-      } catch {
-        // Fall back to demo data in local dev or when session is not yet active
-        return fallbackMockPostings
-      }
-    },
+    queryKey: recruiterPostingsQueryKey,
+    queryFn: fetchMyPostings,
   })
 
   // Mutation for closing a posting (POST /api/postings/:id/close)
   const closeMutation = useMutation({
-    mutationFn: (id: string) => closePosting(id),
-    onSuccess: (updated) => {
-      queryClient.setQueryData<JobPostingItem[]>(['recruiter', 'postings'], (old = []) =>
-        old.map((p) => (p.id === updated.id ? updated : p)),
-      )
+    mutationFn: closePosting,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: recruiterPostingsQueryKey })
       toast.success('Job posting closed successfully')
     },
     onError: (err) => {
@@ -140,12 +63,9 @@ export default function JobPostingsPage() {
 
   // Mutation for creating a posting (POST /api/postings)
   const createMutation = useMutation({
-    mutationFn: (input: CreatePostingInput) => createPosting(input),
-    onSuccess: (newPosting) => {
-      queryClient.setQueryData<JobPostingItem[]>(['recruiter', 'postings'], (old = []) => [
-        newPosting,
-        ...old,
-      ])
+    mutationFn: createPosting,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: recruiterPostingsQueryKey })
       toast.success('Job posting published successfully')
     },
     onError: (err) => {
@@ -409,7 +329,11 @@ export default function JobPostingsPage() {
                     key={job.id}
                     job={job}
                     onClosePosting={async (id) => {
-                      await closeMutation.mutateAsync(id)
+                      try {
+                        await closeMutation.mutateAsync(id)
+                      } catch {
+                        // Failure is already surfaced by the mutation's onError toast.
+                      }
                     }}
                     onViewPosting={(id) => {
                       router.push(`/jobs/${id}`)

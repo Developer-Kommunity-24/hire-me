@@ -4,6 +4,9 @@ export type BackendEmploymentType = 'internship' | 'full_time' | 'part_time' | '
 export type BackendWorkArrangement = 'in_person' | 'remote' | 'hybrid'
 export type BackendPostingStatus = 'active' | 'closed' | 'expired'
 
+/** Shared React Query key for the current recruiter's postings. */
+export const recruiterPostingsQueryKey = ['recruiter', 'postings'] as const
+
 export interface ApiPosting {
   id: string
   recruiterId: string
