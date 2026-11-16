@@ -11,7 +11,11 @@ import {
   AcademicsCard,
 } from '@/components/student-profile'
 import { mapStudentProfileToFullProfileState } from '@/components/student-profile/api'
-import { useStudentProfile } from '@/lib/hooks/use-student-profile'
+import {
+  useStudentExperiences,
+  useStudentProfile,
+  useStudentProjects,
+} from '@/lib/hooks/use-student-profile'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -85,22 +89,35 @@ function ProfileEmptyState() {
 }
 
 export default function StudentProfileView() {
-  const { data, isPending, isError, refetch } = useStudentProfile()
+  const profileQuery = useStudentProfile()
+  const projectsQuery = useStudentProjects()
+  const experiencesQuery = useStudentExperiences()
 
-  if (isPending) {
+  if (profileQuery.isPending) {
     return <ProfileLoadingState />
   }
 
-  if (isError && !data) {
-    return <ProfileErrorState onRetry={() => void refetch()} />
+  if (profileQuery.isError && !profileQuery.data) {
+    return (
+      <ProfileErrorState
+        onRetry={() => {
+          void profileQuery.refetch()
+          void projectsQuery.refetch()
+          void experiencesQuery.refetch()
+        }}
+      />
+    )
   }
 
-  if (!data) {
+  if (!profileQuery.data) {
     return <ProfileEmptyState />
   }
 
-  const { profile, experiences, projects, skills, academics } =
-    mapStudentProfileToFullProfileState(data)
+  const { profile, experiences, projects, skills, academics } = mapStudentProfileToFullProfileState(
+    profileQuery.data,
+    projectsQuery.data ?? [],
+    experiencesQuery.data ?? [],
+  )
 
   const hasExperiences = experiences.length > 0
   const hasProjects = projects.length > 0

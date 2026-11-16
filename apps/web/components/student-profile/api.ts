@@ -1,15 +1,19 @@
 import { apiFetch } from '@/lib/api-client'
-import { parseGpa, parseGraduationYear } from './schema'
+import { parseDateString, parseGpa, parseGraduationYear } from './schema'
+import { formatDuration } from './utils'
 import type {
   AcademicData,
   Experience,
   FullProfileState,
   ProfileData,
   ProfileLink,
+  Project,
   SkillCategory,
 } from './types'
 
 export const STUDENT_PROFILE_PATH = '/api/student/profile'
+export const STUDENT_PROJECTS_PATH = '/api/student-data/projects'
+export const STUDENT_EXPERIENCE_PATH = '/api/student-data/experience'
 
 export type Dk24Status = 'none' | 'pending' | 'verified' | 'rejected'
 
@@ -63,12 +67,68 @@ export interface UpdateStudentProfileInput {
   portfolioUrl?: string | null
 }
 
+/** Shape returned by GET/POST/PATCH /api/student-data/projects. */
+export interface ApiProject {
+  id: string
+  studentId: string
+  title: string
+  description: string | null
+  role: string | null
+  contributions: string | null
+  learnings: string | null
+  skillsUsed: string[] | null
+  liveUrl: string | null
+  githubUrl: string | null
+  displayOrder: number
+  createdAt: string
+}
+
+export interface CreateProjectInput {
+  title: string
+  description?: string | null
+  role?: string | null
+  contributions?: string | null
+  learnings?: string | null
+  skillsUsed?: string[] | null
+  liveUrl?: string | null
+  githubUrl?: string | null
+  displayOrder?: number
+}
+
+/** Shape returned by GET/POST/PATCH /api/student-data/experience. */
+export interface ApiExperience {
+  id: string
+  studentId: string
+  companyName: string
+  role: string
+  startDate: string | null
+  endDate: string | null
+  contributions: string | null
+  createdAt: string
+}
+
+export interface CreateExperienceInput {
+  companyName: string
+  role: string
+  startDate?: string | null
+  endDate?: string | null
+  contributions?: string | null
+}
+
+export interface FullStudentProfileData {
+  profile: StudentProfileResponse
+  projects: ApiProject[]
+  experiences: ApiExperience[]
+}
+
 const RESERVED_OTHER_LINK_KEYS = new Set([
   'school',
   'degree',
   'gpa',
   'specialization',
   'portfolioUrl',
+  'location',
+  'honors',
 ])
 
 function humanizeLinkLabel(key: string): string {
@@ -111,6 +171,46 @@ function toNullableString(value: string | undefined | null): string | null {
   return trimmed ? trimmed : null
 }
 
+export function toIsoDate(dateStr?: string | null): string | null {
+  if (!dateStr) return null
+  const trimmed = dateStr.trim()
+  if (!trimmed) return null
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed
+  if (/^(present|current|now)$/i.test(trimmed)) return null
+
+  const d = parseDateString(trimmed)
+  if (!d || isNaN(d.getTime()) || d.getFullYear() === 9999) return null
+
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+export function formatExperienceDate(dateStr?: string | null): string {
+  if (!dateStr) return ''
+  const trimmed = dateStr.trim()
+  if (!trimmed) return ''
+  const d = parseDateString(trimmed)
+  if (!d || isNaN(d.getTime())) return trimmed
+  if (d.getFullYear() === 9999) return 'Present'
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ]
+  return `${months[d.getMonth()]} ${d.getFullYear()}`
+}
+
 function flattenSkills(categories: SkillCategory[]): string[] {
   return Array.from(
     new Set(
@@ -135,22 +235,227 @@ export async function updateStudentProfile(
   })
 }
 
+export async function fetchStudentProjects(): Promise<ApiProject[]> {
+  const res = await apiFetch<{ data: ApiProject[] }>(STUDENT_PROJECTS_PATH)
+  return res.data ?? []
+}
+
+export async function createStudentProject(input: CreateProjectInput): Promise<ApiProject> {
+  const res = await apiFetch<{ data: ApiProject }>(STUDENT_PROJECTS_PATH, {
+    method: 'POST',
+    body: input,
+  })
+  return res.data
+}
+
+export async function updateStudentProject(
+  id: string,
+  input: Partial<CreateProjectInput>,
+): Promise<ApiProject> {
+  const res = await apiFetch<{ data: ApiProject }>(`${STUDENT_PROJECTS_PATH}/${id}`, {
+    method: 'PATCH',
+    body: input,
+  })
+  return res.data
+}
+
+export async function deleteStudentProject(id: string): Promise<void> {
+  await apiFetch<void>(`${STUDENT_PROJECTS_PATH}/${id}`, {
+    method: 'DELETE',
+  })
+}
+
+export async function fetchStudentExperiences(): Promise<ApiExperience[]> {
+  const res = await apiFetch<{ data: ApiExperience[] }>(STUDENT_EXPERIENCE_PATH)
+  return res.data ?? []
+}
+
+export async function createStudentExperience(
+  input: CreateExperienceInput,
+): Promise<ApiExperience> {
+  const res = await apiFetch<{ data: ApiExperience }>(STUDENT_EXPERIENCE_PATH, {
+    method: 'POST',
+    body: input,
+  })
+  return res.data
+}
+
+export async function updateStudentExperience(
+  id: string,
+  input: Partial<CreateExperienceInput>,
+): Promise<ApiExperience> {
+  const res = await apiFetch<{ data: ApiExperience }>(`${STUDENT_EXPERIENCE_PATH}/${id}`, {
+    method: 'PATCH',
+    body: input,
+  })
+  return res.data
+}
+
+export async function deleteStudentExperience(id: string): Promise<void> {
+  await apiFetch<void>(`${STUDENT_EXPERIENCE_PATH}/${id}`, {
+    method: 'DELETE',
+  })
+}
+
+export async function syncStudentProjects(projects: Project[]): Promise<void> {
+  const existing = await fetchStudentProjects()
+  const existingById = new Map(existing.map((p) => [p.id, p]))
+  const keptIds = new Set<string>()
+  const tasks: Promise<unknown>[] = []
+
+  for (const [index, proj] of projects.entries()) {
+    if (!proj || !proj.title.trim()) continue
+
+    const payload: CreateProjectInput = {
+      title: proj.title.trim(),
+      description: proj.description?.trim() || null,
+      skillsUsed: proj.tags && proj.tags.length > 0 ? proj.tags : null,
+      displayOrder: index,
+    }
+
+    if (proj.id && existingById.has(proj.id)) {
+      keptIds.add(proj.id)
+      tasks.push(
+        updateStudentProject(proj.id, payload).catch((err) => {
+          console.error(`Failed to update project ${proj.id}:`, err)
+        }),
+      )
+    } else {
+      tasks.push(
+        createStudentProject(payload).catch((err) => {
+          console.error('Failed to create project:', err)
+          return null
+        }),
+      )
+    }
+  }
+
+  for (const item of existing) {
+    if (!keptIds.has(item.id)) {
+      tasks.push(
+        deleteStudentProject(item.id).catch((err) => {
+          console.error(`Failed to delete project ${item.id}:`, err)
+        }),
+      )
+    }
+  }
+
+  await Promise.all(tasks)
+}
+
+export async function syncStudentExperiences(experiences: Experience[]): Promise<void> {
+  const existing = await fetchStudentExperiences()
+  const existingById = new Map(existing.map((e) => [e.id, e]))
+  const keptIds = new Set<string>()
+  const tasks: Promise<unknown>[] = []
+
+  for (const exp of experiences) {
+    if (!exp.title?.trim() || !exp.company?.trim()) continue
+
+    const contributions =
+      exp.achievements
+        ?.map((a) => a.trim())
+        .filter(Boolean)
+        .join('\n') || null
+
+    const payload: CreateExperienceInput = {
+      companyName: exp.company.trim(),
+      role: exp.title.trim(),
+      startDate: toIsoDate(exp.startDate),
+      endDate: toIsoDate(exp.endDate),
+      contributions,
+    }
+
+    if (exp.id && existingById.has(exp.id)) {
+      keptIds.add(exp.id)
+      tasks.push(
+        updateStudentExperience(exp.id, payload).catch((err) => {
+          console.error(`Failed to update experience ${exp.id}:`, err)
+        }),
+      )
+    } else {
+      tasks.push(
+        createStudentExperience(payload).catch((err) => {
+          console.error('Failed to create experience:', err)
+          return null
+        }),
+      )
+    }
+  }
+
+  for (const item of existing) {
+    if (!keptIds.has(item.id)) {
+      tasks.push(
+        deleteStudentExperience(item.id).catch((err) => {
+          console.error(`Failed to delete experience ${item.id}:`, err)
+        }),
+      )
+    }
+  }
+
+  await Promise.all(tasks)
+}
+
+export async function fetchFullStudentProfile(): Promise<FullStudentProfileData> {
+  const profile = await fetchStudentProfile()
+  const [projects, experiences] = await Promise.all([
+    fetchStudentProjects().catch(() => []),
+    fetchStudentExperiences().catch(() => []),
+  ])
+
+  return { profile, projects, experiences }
+}
+
+export async function saveFullStudentProfile(
+  state: FullProfileState,
+): Promise<StudentProfileResponse> {
+  const updatedProfile = await updateStudentProfile(mapFullProfileStateToUpdateInput(state))
+  await Promise.allSettled([
+    syncStudentProjects(state.projects),
+    syncStudentExperiences(state.experiences),
+  ])
+
+  return updatedProfile
+}
+
 /**
  * Converts the backend profile payload into the view/form model used by the
- * existing profile components.
+ * profile components.
  */
 export function mapStudentProfileToFullProfileState(
-  profile: StudentProfileResponse,
+  input: StudentProfileResponse | FullStudentProfileData,
+  extraProjects: ApiProject[] = [],
+  extraExperiences: ApiExperience[] = [],
 ): FullProfileState {
-  const graduationYear = profile.gradYear !== null ? String(profile.gradYear) : ''
+  const isFullData =
+    'profile' in input && typeof input.profile === 'object' && input.profile !== null
+  const profile = isFullData
+    ? (input as FullStudentProfileData).profile
+    : (input as StudentProfileResponse)
+  const apiProjects = isFullData ? (input as FullStudentProfileData).projects : extraProjects
+  const apiExperiences = isFullData
+    ? (input as FullStudentProfileData).experiences
+    : extraExperiences
+
+  const otherLinksRaw =
+    profile.otherLinks &&
+    typeof profile.otherLinks === 'object' &&
+    !Array.isArray(profile.otherLinks)
+      ? (profile.otherLinks as Record<string, unknown>)
+      : {}
+
+  const graduationYear =
+    profile.gradYear !== null && profile.gradYear !== undefined ? String(profile.gradYear) : ''
   const subtitle = profile.headline || profile.degree || ''
+  const location = typeof otherLinksRaw.location === 'string' ? otherLinksRaw.location : ''
+  const honors = typeof otherLinksRaw.honors === 'string' ? otherLinksRaw.honors : ''
 
   const profileData: ProfileData = {
     name: profile.fullName || '',
     degree: subtitle,
     university: profile.school || '',
     graduationYear,
-    location: '',
+    location,
     github: profile.githubUrl || '',
     email: profile.email || '',
     resumeLink: profile.resumeUrl || '',
@@ -165,11 +470,33 @@ export function mapStudentProfileToFullProfileState(
     otherLinks: mapOtherLinks(profile.otherLinks),
   }
 
-  const achievements = splitSummary(profile.experienceSummary)
-  const hasExperience = Boolean(profile.experienceRole || profile.experienceCompany)
+  let experiences: Experience[] = []
+  if (apiExperiences.length > 0) {
+    experiences = apiExperiences.map((exp, idx) => {
+      const achievements = splitSummary(exp.contributions)
+      const startDateFormatted = formatExperienceDate(exp.startDate)
+      const endDateFormatted = exp.endDate ? formatExperienceDate(exp.endDate) : 'Present'
+      const duration =
+        startDateFormatted || exp.endDate
+          ? formatDuration(startDateFormatted, endDateFormatted)
+          : ''
 
-  const experiences: Experience[] = hasExperience
-    ? [
+      return {
+        id: exp.id || `experience-${idx}`,
+        title: exp.role || '',
+        company: exp.companyName || '',
+        location: '',
+        startDate: startDateFormatted || exp.startDate || '',
+        endDate: exp.endDate ? endDateFormatted || exp.endDate : 'Present',
+        duration,
+        achievements,
+      }
+    })
+  } else {
+    const achievements = splitSummary(profile.experienceSummary)
+    const hasExperience = Boolean(profile.experienceRole || profile.experienceCompany)
+    if (hasExperience) {
+      experiences = [
         {
           id: 'experience-0',
           title: profile.experienceRole || '',
@@ -179,7 +506,18 @@ export function mapStudentProfileToFullProfileState(
           achievements,
         },
       ]
-    : []
+    }
+  }
+
+  let projects: Project[] = []
+  if (apiProjects.length > 0) {
+    projects = apiProjects.map((p, idx) => ({
+      id: p.id || `project-${idx}`,
+      title: p.title || '',
+      description: p.description || '',
+      tags: p.skillsUsed || [],
+    }))
+  }
 
   const skills: SkillCategory[] = [
     {
@@ -192,7 +530,7 @@ export function mapStudentProfileToFullProfileState(
     gpa: profile.gpa !== null && profile.gpa !== undefined ? String(profile.gpa) : '',
     major: profile.degree || '',
     minor: profile.specialization || '',
-    honors: '',
+    honors,
     expectedGraduation: graduationYear,
     school: profile.school || '',
   }
@@ -200,17 +538,15 @@ export function mapStudentProfileToFullProfileState(
   return {
     profile: profileData,
     experiences,
-    // The merged profile API does not expose project persistence.
-    projects: [],
+    projects,
     skills,
     academics,
   }
 }
 
 /**
- * Converts the existing profile form state into the PUT /api/student/profile
- * payload. Fields without backend support (projects, extra experiences,
- * location, email, honors) are intentionally not sent.
+ * Converts the profile form state into the PUT /api/student/profile
+ * payload. Unsupported top-level fields like location and honors are saved into otherLinks.
  */
 export function mapFullProfileStateToUpdateInput(
   state: FullProfileState,
@@ -225,6 +561,19 @@ export function mapFullProfileStateToUpdateInput(
       .map((achievement) => achievement.trim())
       .filter(Boolean)
       .join('\n') ?? ''
+
+  const otherLinks: Record<string, unknown> = {}
+  for (const link of state.profile.otherLinks) {
+    if (link.label && link.url) {
+      otherLinks[link.label] = link.url
+    }
+  }
+  if (state.profile.location?.trim()) {
+    otherLinks.location = state.profile.location.trim()
+  }
+  if (state.academics.honors?.trim()) {
+    otherLinks.honors = state.academics.honors.trim()
+  }
 
   return {
     fullName: state.profile.name.trim(),
@@ -245,5 +594,6 @@ export function mapFullProfileStateToUpdateInput(
     gpa: parsedGpa?.score ?? null,
     specialization: toNullableString(state.academics.minor),
     portfolioUrl: toNullableString(state.profile.portfolio),
+    otherLinks: Object.keys(otherLinks).length > 0 ? otherLinks : null,
   }
 }

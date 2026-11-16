@@ -14,8 +14,13 @@ import ExperienceEditSection from './ExperienceEditSection'
 import ProjectsEditSection from './ProjectsEditSection'
 import AcademicsEditSection from './AcademicsEditSection'
 import { profileFormSchema } from '../schema'
-import { mapFullProfileStateToUpdateInput, mapStudentProfileToFullProfileState } from '../api'
-import { useStudentProfile, useUpdateStudentProfile } from '@/lib/hooks/use-student-profile'
+import { mapStudentProfileToFullProfileState } from '../api'
+import {
+  useStudentExperiences,
+  useStudentProfile,
+  useStudentProjects,
+  useUpdateStudentProfile,
+} from '@/lib/hooks/use-student-profile'
 import type { FullProfileState, ProfileData, AcademicData, Experience, Project } from '../types'
 
 function EditProfileLoadingState() {
@@ -154,7 +159,7 @@ function EditProfileFormContent({ initialData }: { initialData: FullProfileState
 
   const onSubmit = async (data: FullProfileState) => {
     try {
-      await updateProfile.mutateAsync(mapFullProfileStateToUpdateInput(data))
+      await updateProfile.mutateAsync(data)
       router.push('/student/profile')
     } catch {
       // The mutation hook surfaces the failure through a toast.
@@ -269,19 +274,39 @@ function EditProfileFormContent({ initialData }: { initialData: FullProfileState
 }
 
 export default function EditProfileForm() {
-  const { data, isPending, isError, refetch } = useStudentProfile()
+  const profileQuery = useStudentProfile()
+  const projectsQuery = useStudentProjects()
+  const experiencesQuery = useStudentExperiences()
+
+  const isPending = profileQuery.isPending || projectsQuery.isPending || experiencesQuery.isPending
 
   if (isPending) {
     return <EditProfileLoadingState />
   }
 
-  if (isError && !data) {
-    return <EditProfileErrorState onRetry={() => void refetch()} />
+  if (profileQuery.isError && !profileQuery.data) {
+    return (
+      <EditProfileErrorState
+        onRetry={() => {
+          void profileQuery.refetch()
+          void projectsQuery.refetch()
+          void experiencesQuery.refetch()
+        }}
+      />
+    )
   }
 
-  if (!data) {
+  if (!profileQuery.data) {
     return <EditProfileEmptyState />
   }
 
-  return <EditProfileFormContent initialData={mapStudentProfileToFullProfileState(data)} />
+  return (
+    <EditProfileFormContent
+      initialData={mapStudentProfileToFullProfileState(
+        profileQuery.data,
+        projectsQuery.data ?? [],
+        experiencesQuery.data ?? [],
+      )}
+    />
+  )
 }
