@@ -25,8 +25,10 @@ export {
   projectItemSchema,
   skillCategorySchema,
   gpaSchema,
+  optionalGpaSchema,
   githubUrlSchema,
   parseDateString,
+  parseGraduationYear,
   isDateOrderValid,
   parseGpa,
 } from './schema'
@@ -40,10 +42,43 @@ export type {
   ExperienceItem,
   ProjectItem,
 } from './schema'
-export { saveProfileToApi } from './api'
+export {
+  fetchStudentProfile,
+  updateStudentProfile,
+  mapStudentProfileToFullProfileState,
+  mapFullProfileStateToUpdateInput,
+  STUDENT_PROFILE_PATH,
+  STUDENT_PROJECTS_PATH,
+  STUDENT_EXPERIENCE_PATH,
+  fetchStudentProjects,
+  createStudentProject,
+  updateStudentProject,
+  deleteStudentProject,
+  fetchStudentExperiences,
+  createStudentExperience,
+  updateStudentExperience,
+  deleteStudentExperience,
+  syncStudentProjects,
+  syncStudentExperiences,
+  fetchFullStudentProfile,
+  saveFullStudentProfile,
+  toIsoDate,
+  formatExperienceDate,
+} from './api'
+export type {
+  StudentProfileResponse,
+  UpdateStudentProfileInput,
+  Dk24Status,
+  ApiProject,
+  CreateProjectInput,
+  ApiExperience,
+  CreateExperienceInput,
+  FullStudentProfileData,
+} from './api'
 
 export type {
   ProfileData,
+  ProfileLink,
   Experience,
   Project,
   SkillCategory,

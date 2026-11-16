@@ -1,6 +1,11 @@
 import type { LucideIcon } from 'lucide-react'
 import type { Control } from 'react-hook-form'
 
+export interface ProfileLink {
+  label: string
+  url: string
+}
+
 export interface ProfileData {
   name: string
   degree: string
@@ -12,6 +17,13 @@ export interface ProfileData {
   resumeLink?: string
   photoUrl: string
   isVerified: boolean
+  bio: string
+  phone: string
+  linkedin: string
+  portfolio: string
+  openToWork: boolean
+  completionPercentage: number
+  otherLinks: ProfileLink[]
 }
 
 export interface Experience {
@@ -46,6 +58,7 @@ export interface AcademicData {
   minor: string
   honors: string
   expectedGraduation: string
+  school: string
 }
 
 export interface FullProfileState {

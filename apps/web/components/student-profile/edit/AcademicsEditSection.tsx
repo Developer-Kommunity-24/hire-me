@@ -19,7 +19,7 @@ export default function AcademicsEditSection({
         <div className="border-b border-border-subtle pb-4 mb-6">
           <h2 className="text-xl font-bold tracking-tight text-text-main">Academics</h2>
           <p className="text-xs text-text-muted mt-1">
-            Keep your GPA, degree major, minor, academic honors, and graduation date up-to-date.
+            Keep your GPA, degree, specialization, and graduation year up-to-date.
           </p>
         </div>
 
@@ -29,12 +29,11 @@ export default function AcademicsEditSection({
               htmlFor="edit-gpa"
               className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5"
             >
-              GPA <span className="text-red-500">*</span>
+              GPA
             </label>
             <Input
               id="edit-gpa"
               type="text"
-              required
               value={academics.gpa}
               onChange={(e) => handleFieldChange('gpa', e.target.value)}
               placeholder="e.g. 3.9 / 4.0"
@@ -52,12 +51,11 @@ export default function AcademicsEditSection({
               htmlFor="edit-expected-grad"
               className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5"
             >
-              Graduation Date / Expected Graduation <span className="text-red-500">*</span>
+              Graduation Date / Expected Graduation
             </label>
             <Input
               id="edit-expected-grad"
               type="text"
-              required
               value={academics.expectedGraduation}
               onChange={(e) => handleFieldChange('expectedGraduation', e.target.value)}
               placeholder="e.g. May 2025"
@@ -75,15 +73,14 @@ export default function AcademicsEditSection({
               htmlFor="edit-major"
               className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5"
             >
-              Major <span className="text-red-500">*</span>
+              Degree
             </label>
             <Input
               id="edit-major"
               type="text"
-              required
               value={academics.major}
               onChange={(e) => handleFieldChange('major', e.target.value)}
-              placeholder="e.g. Computer Science"
+              placeholder="e.g. B.S. Computer Science"
               aria-invalid={Boolean(errors?.major)}
             />
             {errors?.major && (
@@ -98,14 +95,14 @@ export default function AcademicsEditSection({
               htmlFor="edit-minor"
               className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5"
             >
-              Minor
+              Specialization
             </label>
             <Input
               id="edit-minor"
               type="text"
               value={academics.minor}
               onChange={(e) => handleFieldChange('minor', e.target.value)}
-              placeholder="e.g. Mathematics or None"
+              placeholder="e.g. Artificial Intelligence"
             />
           </div>
 

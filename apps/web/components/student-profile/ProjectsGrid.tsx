@@ -1,5 +1,4 @@
 import { Badge } from '@/components/ui/badge'
-import { defaultProjects } from './ProfileContext'
 import type { Project } from './types'
 
 function ProjectCard({ project }: { project: Project }) {
@@ -20,7 +19,7 @@ function ProjectCard({ project }: { project: Project }) {
   )
 }
 
-export default function ProjectsGrid({ projects = defaultProjects }: { projects?: Project[] }) {
+export default function ProjectsGrid({ projects }: { projects: Project[] }) {
   return (
     <section aria-labelledby="projects-heading">
       <h2 className="text-lg sm:text-xl font-bold tracking-tight text-text-main mb-3.5">

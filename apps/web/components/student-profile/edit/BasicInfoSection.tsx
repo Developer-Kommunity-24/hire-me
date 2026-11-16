@@ -30,7 +30,6 @@ export default function BasicInfoSection({ data, onChange, errors }: BasicInfoSe
             <Input
               id="edit-name"
               type="text"
-              required
               value={data.name}
               onChange={(e) => handleFieldChange('name', e.target.value)}
               placeholder="e.g. Alex Mercer"
@@ -48,12 +47,11 @@ export default function BasicInfoSection({ data, onChange, errors }: BasicInfoSe
               htmlFor="edit-degree"
               className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5"
             >
-              Headline / Degree Description <span className="text-red-500">*</span>
+              Headline / Degree Description
             </label>
             <Input
               id="edit-degree"
               type="text"
-              required
               value={data.degree}
               onChange={(e) => handleFieldChange('degree', e.target.value)}
               placeholder="e.g. B.S. Computer Science, Stanford University '25"
