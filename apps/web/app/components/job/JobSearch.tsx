@@ -43,8 +43,8 @@ export default function JobSearch({
           className="h-12 w-full appearance-none rounded-xl border border-border-subtle bg-card px-4 pr-10 text-sm font-medium text-text-main outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/10"
         >
           <option value="newest">Sort by: Newest</option>
-          <option value="compensation-high">Compensation: High to Low</option>
-          <option value="compensation-low">Compensation: Low to High</option>
+          <option value="deadline">Sort by: Deadline</option>
+          <option value="title">Sort by: Title (A-Z)</option>
         </select>
 
         <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />

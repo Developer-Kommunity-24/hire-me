@@ -1,12 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { Briefcase, Loader2, RefreshCw } from 'lucide-react'
 import JobCard, { type Job } from '@/app/components/job/JobCard'
 import JobFilters, { type RoleType, type WorkModel } from '@/app/components/job/JobFilters'
 import JobSearch, { type SortOption } from '@/app/components/job/JobSearch'
-import { apiFetch, ApiError } from '@/lib/api-client'
+import { ApiError } from '@/lib/api-client'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import Header from '@/components/common/Header'
@@ -37,28 +38,99 @@ type JobsResponse = {
   }
 }
 
-function formatRoleType(type: ApiJob['employmentType']): Job['roleType'] {
-  switch (type) {
-    case 'internship':
-      return 'Internship'
-    case 'full_time':
-      return 'Full-time'
-    case 'part_time':
-      return 'Part-time'
-    case 'contract':
-      return 'Contract'
+type JobFiltersState = {
+  search: string
+  roleType: RoleType
+  workModel: WorkModel
+  sortBy: SortOption
+}
+
+const ROLE_TYPE_LABELS: Record<string, Job['roleType']> = {
+  internship: 'Internship',
+  full_time: 'Full-time',
+  part_time: 'Part-time',
+  contract: 'Contract',
+}
+
+const WORK_MODEL_LABELS: Record<string, Job['workModel']> = {
+  remote: 'Remote',
+  hybrid: 'Hybrid',
+  in_person: 'On-site',
+}
+
+const ROLE_TYPE_PARAMS: Record<Exclude<RoleType, 'All'>, ApiJob['employmentType']> = {
+  Internship: 'internship',
+  'Full-time': 'full_time',
+  'Part-time': 'part_time',
+  Contract: 'contract',
+}
+
+const WORK_MODEL_PARAMS: Record<Exclude<WorkModel, 'All'>, ApiJob['workArrangement']> = {
+  Remote: 'remote',
+  Hybrid: 'hybrid',
+  'On-site': 'in_person',
+}
+
+const SORT_PARAMS: Record<SortOption, { sortBy: string; order: string }> = {
+  newest: { sortBy: 'createdAt', order: 'desc' },
+  deadline: { sortBy: 'deadline', order: 'asc' },
+  title: { sortBy: 'title', order: 'asc' },
+}
+
+function formatRoleType(type: string): Job['roleType'] {
+  return ROLE_TYPE_LABELS[type] ?? 'Full-time'
+}
+
+function formatWorkModel(model: string): Job['workModel'] {
+  return WORK_MODEL_LABELS[model] ?? 'On-site'
+}
+
+function toJob(job: ApiJob): Job {
+  return {
+    id: job.id,
+    title: job.title,
+    company: job.recruiter?.companyName ?? 'Company',
+    location: job.location,
+    roleType: formatRoleType(job.employmentType),
+    workModel: formatWorkModel(job.workArrangement),
+    compensation: job.compensation ?? 'Compensation not specified',
+    techStack: job.stack ?? [],
   }
 }
 
-function formatWorkModel(model: ApiJob['workArrangement']): Job['workModel'] {
-  switch (model) {
-    case 'remote':
-      return 'Remote'
-    case 'hybrid':
-      return 'Hybrid'
-    case 'in_person':
-      return 'On-site'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8787'
+
+async function fetchJobs(filters: JobFiltersState, signal: AbortSignal) {
+  const params = new URLSearchParams()
+
+  if (filters.search.trim()) {
+    params.set('q', filters.search.trim())
   }
+
+  if (filters.roleType !== 'All') {
+    params.set('employmentType', ROLE_TYPE_PARAMS[filters.roleType])
+  }
+
+  if (filters.workModel !== 'All') {
+    params.set('workArrangement', WORK_MODEL_PARAMS[filters.workModel])
+  }
+
+  const sort = SORT_PARAMS[filters.sortBy]
+  params.set('sortBy', sort.sortBy)
+  params.set('order', sort.order)
+  params.set('page', '1')
+  params.set('limit', '20')
+
+  // /api/postings is public, so no bearer token is needed.
+  const response = await fetch(`${API_BASE_URL}/api/postings?${params.toString()}`, { signal })
+
+  if (!response.ok) {
+    throw new ApiError(response.status, `Request failed (${response.status})`)
+  }
+
+  const body = (await response.json()) as JobsResponse
+
+  return { jobs: body.data.map(toJob), total: body.meta.total }
 }
 
 export default function StudentJobsPage() {
@@ -72,109 +144,36 @@ export default function StudentJobsPage() {
     }
   }, [authLoading, isAuthenticated, router])
 
-  const [jobs, setJobs] = useState<Job[]>([])
-  const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [roleType, setRoleType] = useState<RoleType>('All')
   const [workModel, setWorkModel] = useState<WorkModel>('All')
   const [sortBy, setSortBy] = useState<SortOption>('newest')
 
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [totalJobs, setTotalJobs] = useState(0)
-
-  const loadJobs = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-
-    try {
-      const params = new URLSearchParams()
-
-      if (search.trim()) {
-        params.set('q', search.trim())
-      }
-
-      if (roleType !== 'All') {
-        const roleMap: Record<Exclude<RoleType, 'All'>, ApiJob['employmentType']> = {
-          Internship: 'internship',
-          'Full-time': 'full_time',
-          'Part-time': 'part_time',
-          Contract: 'contract',
-        }
-        params.set('employmentType', roleMap[roleType])
-      }
-
-      if (workModel !== 'All') {
-        const workMap: Record<Exclude<WorkModel, 'All'>, ApiJob['workArrangement']> = {
-          Remote: 'remote',
-          Hybrid: 'hybrid',
-          'On-site': 'in_person',
-        }
-        params.set('workArrangement', workMap[workModel])
-      }
-
-      if (sortBy === 'newest') {
-        params.set('sortBy', 'createdAt')
-        params.set('order', 'desc')
-      } else if (sortBy === 'deadline') {
-        params.set('sortBy', 'deadline')
-        params.set('order', 'asc')
-      } else {
-        params.set('sortBy', 'title')
-        params.set('order', 'asc')
-      }
-
-      params.set('page', '1')
-      params.set('limit', '20')
-
-      const queryString = params.toString()
-      let response: JobsResponse
-
-      try {
-        response = await apiFetch<JobsResponse>(`/api/postings?${queryString}`)
-      } catch (err) {
-        if (err instanceof ApiError && err.status === 401) {
-          router.replace('/login')
-          return
-        }
-        throw err
-      }
-
-      const formattedJobs: Job[] = response.data.map((job) => ({
-        id: job.id,
-        title: job.title,
-        company: job.recruiter?.companyName ?? 'Company',
-        location: job.location,
-        roleType: formatRoleType(job.employmentType),
-        workModel: formatWorkModel(job.workArrangement),
-        compensation: job.compensation ?? 'Compensation not specified',
-        techStack: job.stack ?? [],
-      }))
-
-      setJobs(formattedJobs)
-      setTotalJobs(response.meta.total)
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message)
-      } else {
-        setError('Unable to load job postings. Please check that the API is running.')
-      }
-      setJobs([])
-      setTotalJobs(0)
-    } finally {
-      setLoading(false)
-    }
-  }, [search, roleType, workModel, sortBy, router])
-
+  // Debounce only the text input; filters and sort apply immediately.
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      loadJobs()
-    }, 300)
-
+    const timeout = setTimeout(() => setDebouncedSearch(searchInput), 300)
     return () => clearTimeout(timeout)
-  }, [loadJobs])
+  }, [searchInput])
+
+  const { data, isLoading, isFetching, isError, error, refetch } = useQuery({
+    queryKey: ['postings', { search: debouncedSearch, roleType, workModel, sortBy }],
+    queryFn: ({ signal }) =>
+      fetchJobs({ search: debouncedSearch, roleType, workModel, sortBy }, signal),
+    placeholderData: keepPreviousData,
+    enabled: isAuthenticated,
+  })
+
+  const jobs = data?.jobs ?? []
+  const totalJobs = data?.total ?? 0
+  const errorMessage =
+    error instanceof ApiError
+      ? error.message
+      : 'Unable to load job postings. Please check that the API is running.'
 
   const handleResetFilters = () => {
-    setSearch('')
+    setSearchInput('')
+    setDebouncedSearch('')
     setRoleType('All')
     setWorkModel('All')
     setSortBy('newest')
@@ -206,30 +205,28 @@ export default function StudentJobsPage() {
         </div>
 
         <JobSearch
-          search={search}
-          onSearchChange={setSearch}
+          search={searchInput}
+          onSearchChange={setSearchInput}
           sortBy={sortBy}
           onSortChange={setSortBy}
         />
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[240px_1fr]">
-          <aside>
-            <JobFilters
-              roleType={roleType}
-              onRoleTypeChange={setRoleType}
-              workModel={workModel}
-              onWorkModelChange={setWorkModel}
-            />
-          </aside>
+          <JobFilters
+            roleType={roleType}
+            onRoleTypeChange={setRoleType}
+            workModel={workModel}
+            onWorkModelChange={setWorkModel}
+          />
 
           <section className="space-y-4">
             <div className="flex items-center justify-between px-1">
               <p className="text-xs font-semibold text-text-muted uppercase tracking-wider">
-                {loading
+                {isFetching
                   ? 'Refreshing opportunities...'
                   : `${totalJobs} ${totalJobs === 1 ? 'position' : 'positions'} found`}
               </p>
-              {(search || roleType !== 'All' || workModel !== 'All') && (
+              {(searchInput || roleType !== 'All' || workModel !== 'All') && (
                 <button
                   type="button"
                   onClick={handleResetFilters}
@@ -240,7 +237,7 @@ export default function StudentJobsPage() {
               )}
             </div>
 
-            {loading ? (
+            {isLoading ? (
               <div className="space-y-3">
                 {[1, 2, 3].map((skeletonId) => (
                   <div
@@ -261,13 +258,13 @@ export default function StudentJobsPage() {
                   </div>
                 ))}
               </div>
-            ) : error ? (
+            ) : isError ? (
               <div className="rounded-2xl border border-border-subtle bg-card p-8 text-center shadow-xs">
-                <p className="font-semibold text-red-600 mb-1">{error}</p>
+                <p className="font-semibold text-red-600 mb-1">{errorMessage}</p>
                 <p className="text-xs text-text-muted mb-4">
                   Please verify that the backend API worker is running and reachable.
                 </p>
-                <Button variant="outline" size="sm" onClick={() => loadJobs()}>
+                <Button variant="outline" size="sm" onClick={() => refetch()}>
                   <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
                   Try Again
                 </Button>
