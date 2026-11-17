@@ -1,50 +1,54 @@
 // components/job/JobHeader.tsx
+
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Job } from '../../types/job'
 import { Button } from '@/components/ui/button'
 import { Bookmark, Share2, MapPin, Building2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { ApplyButton } from './ApplyButton'
+
+const SAVED_JOBS_KEY = 'hireme_saved_jobs'
 
 export const JobHeader = ({ job }: { job: Job }) => {
   const [isSaved, setIsSaved] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  // 1. Handle Save Toggle with Optimistic Updates & Rollback
-  const handleToggleSave = async () => {
-    if (isSaving) return
-
-    const previousState = isSaved
-    // Optimistically toggle UI state
-    setIsSaved(!previousState)
-    setIsSaving(true)
-
+  // Hydrate saved state from localStorage on mount
+  useEffect(() => {
     try {
-      const res = await fetch(`/api/postings/${job.id}/save`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      })
+      const stored = JSON.parse(localStorage.getItem(SAVED_JOBS_KEY) || '[]') as string[]
+      setIsSaved(stored.includes(job.id))
+    } catch {
+      setIsSaved(false)
+    }
+  }, [job.id])
 
-      if (!res.ok) {
-        // Rollback state if backend returns an error
-        setIsSaved(previousState)
-      }
+  // Toggle Save state in localStorage
+  const handleToggleSave = () => {
+    try {
+      const stored = JSON.parse(localStorage.getItem(SAVED_JOBS_KEY) || '[]') as string[]
+      const nextSaved = !isSaved
+      const updated = nextSaved
+        ? Array.from(new Set([...stored, job.id]))
+        : stored.filter((id) => id !== job.id)
+
+      localStorage.setItem(SAVED_JOBS_KEY, JSON.stringify(updated))
+      setIsSaved(nextSaved)
+      toast.success(nextSaved ? 'Job saved to bookmarks' : 'Removed from saved jobs')
     } catch (err) {
-      console.error('Failed to save job:', err)
-      // Rollback state if network request fails / running without backend
-      setIsSaved(previousState)
-    } finally {
-      setIsSaving(false)
+      console.error('Failed to update saved jobs:', err)
+      toast.error('Could not update saved state')
     }
   }
 
-  // 2. Safe Share / Copy Link Handler
+  // Safe Share / Copy Link Handler
   const handleShare = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href)
       setCopied(true)
+      toast.success('Link copied to clipboard')
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
       console.error('Failed to copy URL:', err)
@@ -77,11 +81,7 @@ export const JobHeader = ({ job }: { job: Job }) => {
           <ApplyButton job={job} />
 
           <div className="flex-1 sm:flex-initial">
-            <Button
-              variant={isSaved ? 'default' : 'outline'}
-              onClick={handleToggleSave}
-              disabled={isSaving}
-            >
+            <Button variant={isSaved ? 'default' : 'outline'} onClick={handleToggleSave}>
               <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
               {isSaved ? 'Saved' : 'Save'}
             </Button>
