@@ -19,7 +19,7 @@ export default function MembersPage() {
     queryFn: fetchMembers,
   })
 
-  const totalMembers = members.length > 0 ? members.length : 128
+  const totalMembers = members.length
 
   return (
     <div className="w-full">

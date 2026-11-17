@@ -1,11 +1,22 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Briefcase, FileText, User, Menu, X, CircleHelp, type LucideIcon } from 'lucide-react'
+import {
+  Briefcase,
+  FileText,
+  User,
+  Menu,
+  X,
+  CircleHelp,
+  ShieldCheck,
+  Users,
+  type LucideIcon,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/lib/hooks/use-auth'
 
 export interface NavItem {
   label: string
@@ -28,7 +39,7 @@ export interface CommonSidebarProps {
 }
 
 export default function Sidebar({
-  items = DEFAULT_STUDENT_NAV,
+  items,
   brandTitle = 'CareerLink',
   homeHref = '/',
   className,
@@ -37,6 +48,22 @@ export default function Sidebar({
   const [mobileOpen, setMobileOpen] = useState(false)
   const currentPath = usePathname()
   const pathname = currentPath || ''
+  const { user } = useAuth()
+
+  const isClubAdmin = user?.roles?.includes('club_admin') ?? false
+  const isCoreAdmin = user?.roles?.includes('core_admin') ?? false
+
+  const navItems = useMemo(() => {
+    if (items) return items
+    const list = [...DEFAULT_STUDENT_NAV]
+    if (isClubAdmin) {
+      list.push({ label: 'Student Admin', href: '/student-admin/members', icon: Users })
+    }
+    if (isCoreAdmin) {
+      list.push({ label: 'Super Admin', href: '/admin', icon: ShieldCheck })
+    }
+    return list
+  }, [items, isClubAdmin, isCoreAdmin])
 
   return (
     <>
@@ -103,7 +130,7 @@ export default function Sidebar({
             Menu
           </p>
           <ul className="space-y-1" role="list">
-            {items.map((item) => {
+            {navItems.map((item) => {
               const isActive =
                 pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
               const IconComp = item.icon

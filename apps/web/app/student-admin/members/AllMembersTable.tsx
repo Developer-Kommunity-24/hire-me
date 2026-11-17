@@ -20,9 +20,9 @@ import { deleteMembers, fetchMembers, membersQueryKey } from './members-data'
 
 export default function AllMembersTable() {
   const queryClient = useQueryClient()
-  const [selectedIds, setSelectedIds] = useState<number[]>([])
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [search, setSearch] = useState('')
-  const [pendingDeleteIds, setPendingDeleteIds] = useState<number[] | null>(null)
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<string[] | null>(null)
 
   const {
     data: members = [],
@@ -36,8 +36,11 @@ export default function AllMembersTable() {
   const deleteMutation = useMutation({
     mutationFn: deleteMembers,
     onSuccess: (_data, deletedIds) => {
-      queryClient.invalidateQueries({ queryKey: membersQueryKey })
       setSelectedIds((prev) => prev.filter((id) => !deletedIds.includes(id)))
+    },
+    // Refetch even on partial failure so the table matches what the server now has.
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: membersQueryKey })
     },
   })
 
@@ -55,7 +58,7 @@ export default function AllMembersTable() {
   const filteredIds = filteredMembers.map((m) => m.id)
   const allSelected = filteredIds.length > 0 && filteredIds.every((id) => selectedIds.includes(id))
 
-  function toggle(id: number) {
+  function toggle(id: string) {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]))
   }
 
@@ -137,7 +140,7 @@ export default function AllMembersTable() {
                     {member.email}
                   </a>
                 </td>
-                <td className="py-3 px-4 text-sm text-gray-500">{member.joinedDate}</td>
+                <td className="py-3 px-4 text-sm text-gray-500">{member.joinedDate ?? '—'}</td>
                 <td className="py-3 px-4 text-right">
                   <button
                     type="button"

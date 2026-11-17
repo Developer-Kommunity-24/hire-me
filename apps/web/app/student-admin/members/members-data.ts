@@ -1,9 +1,12 @@
+import { ApiError, apiFetch } from '@/lib/api-client'
+
+// ---- Types ----
 export type Member = {
-  id: number
+  id: string
   name: string
   usn: string
   email: string
-  joinedDate: string
+  joinedDate: string | null
 }
 
 export type NewMember = {
@@ -12,83 +15,93 @@ export type NewMember = {
   email: string
 }
 
-export const defaultMembers: Member[] = [
-  {
-    id: 1,
-    name: 'Priya Nair',
-    usn: 'priyan',
-    email: 'priyan@stanford.edu',
-    joinedDate: 'January 2026',
-  },
-  {
-    id: 2,
-    name: 'Marcus Webb',
-    usn: 'mwebb22',
-    email: 'mwebb22@stanford.edu',
-    joinedDate: 'February 2026',
-  },
-  {
-    id: 3,
-    name: 'Sara Kim',
-    usn: 'sarak',
-    email: 'sarak@stanford.edu',
-    joinedDate: 'March 2026',
-  },
-]
+export type ImportResult = {
+  total: number
+  imported: number
+  failures: { index: number; message: string }[]
+}
+
+/** Shape returned by /api/clubs/members (API doc, Domain 10). */
+type ApiMember = {
+  id: string
+  fullName: string
+  usn: string
+  email: string
+  addedAt?: string | null
+  createdAt?: string | null
+}
 
 export const membersQueryKey = ['members'] as const
 
-// ---- API calls ----
+function toMember(api: ApiMember): Member {
+  const dateStr = api.addedAt ?? api.createdAt
+  return {
+    id: api.id,
+    name: api.fullName,
+    usn: api.usn,
+    email: api.email,
+    joinedDate: dateStr
+      ? new Date(dateStr).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+      : null,
+  }
+}
+
+// ---- API calls (all require the club_admin role) ----
 export async function fetchMembers(): Promise<Member[]> {
-  try {
-    const res = await fetch('/api/members')
-    if (res.ok) {
-      return await res.json()
+  const { data } = await apiFetch<{ data: ApiMember[] }>('/api/clubs/members')
+  return data.map(toMember)
+}
+
+export async function createMember(member: NewMember): Promise<Member> {
+  const { data } = await apiFetch<{ data: ApiMember }>('/api/clubs/members', {
+    method: 'POST',
+    body: { fullName: member.name, usn: member.usn, email: member.email },
+  })
+  return toMember(data)
+}
+
+/**
+ * The API has no bulk-delete endpoint, so this fires one DELETE per id.
+ * A 404 counts as success (the member is already gone), which keeps retries safe.
+ */
+export async function deleteMembers(ids: string[]): Promise<void> {
+  const results = await Promise.allSettled(
+    ids.map((id) =>
+      apiFetch<{ data: null }>(`/api/clubs/members/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      }),
+    ),
+  )
+
+  const failed = results.filter(
+    (r) => r.status === 'rejected' && !(r.reason instanceof ApiError && r.reason.status === 404),
+  )
+
+  if (failed.length > 0) {
+    throw new Error(`Failed to delete ${failed.length} of ${ids.length} member(s)`)
+  }
+}
+
+/**
+ * The API has no bulk-import endpoint, so rows are POSTed one at a time (in order)
+ * and the per-row outcome is reported back instead of failing the whole batch.
+ */
+export async function importMembers(members: NewMember[]): Promise<ImportResult> {
+  const failures: ImportResult['failures'] = []
+
+  for (let index = 0; index < members.length; index++) {
+    const member = members[index]
+    if (!member) continue
+
+    try {
+      await createMember(member)
+    } catch (error) {
+      failures.push({
+        index,
+        message: error instanceof Error ? error.message : 'Failed to import this row',
+      })
     }
-  } catch {
-    // Fall back to default mock members if API route is not running
   }
-  return defaultMembers
-}
 
-export async function createMember(member: NewMember) {
-  try {
-    const res = await fetch('/api/members', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(member),
-    })
-    if (res.ok) return await res.json()
-  } catch {
-    // Mock success for standalone dev
-  }
-  return { success: true, ...member, id: Date.now(), joinedDate: 'Just now' }
-}
-
-export async function deleteMembers(ids: number[]) {
-  try {
-    const res = await fetch('/api/members', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids }),
-    })
-    if (res.ok) return await res.json()
-  } catch {
-    // Mock success for standalone dev
-  }
-  return { success: true, ids }
-}
-
-export async function importMembers(members: NewMember[]) {
-  try {
-    const res = await fetch('/api/members/bulk', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ members }),
-    })
-    if (res.ok) return await res.json()
-  } catch {
-    // Mock success for standalone dev
-  }
-  return { success: true, count: members.length }
+  return { total: members.length, imported: members.length - failures.length, failures }
 }
