@@ -2,9 +2,10 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Bell, CircleHelp, Search, type LucideIcon } from 'lucide-react'
+import { ArrowLeft, CircleHelp, Search, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BrandLogo } from './BrandLogo'
+import NotificationsPopover from './NotificationsPopover'
 import UserAvatar from '@/components/student-profile/UserAvatar'
 import { useOptionalProfile } from '@/components/student-profile/ProfileContext'
 
@@ -172,16 +173,7 @@ export default function Header({
             )}
 
             {/* Notification Bell */}
-            {showNotifications && (
-              <button
-                type="button"
-                className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-border-subtle bg-white text-text-muted transition-all hover:bg-slate-50 hover:text-text-main hover:border-slate-300 active:scale-95 shadow-2xs cursor-pointer"
-                aria-label="Notifications"
-              >
-                <Bell className="h-4 w-4" />
-                <span className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-brand" />
-              </button>
-            )}
+            {showNotifications && <NotificationsPopover />}
 
             {/* User Profile Avatar */}
             {showProfile && (
