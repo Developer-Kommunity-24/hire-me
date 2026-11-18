@@ -1,7 +1,7 @@
-export type CandidateStatus = 'applied' | 'under_review' | 'shortlisted'
+export type CandidateStatus = 'applied' | 'under_review' | 'shortlisted' | 'accepted' | 'rejected'
 
 export interface Candidate {
-  id: number
+  id: string
   name: string
   position: string
   email: string
@@ -9,7 +9,14 @@ export interface Candidate {
   skills: string[]
   status: CandidateStatus
   appliedAt: string
+  postingId?: string
+  studentId?: string
+  resumeUrl?: string | null
+  githubUrl?: string | null
+  linkedinUrl?: string | null
+  gradYear?: number | null
 }
+
 export const candidates: Candidate[] = []
 
 export const dashboardMetrics = {

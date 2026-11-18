@@ -19,6 +19,7 @@ export function useStudentApplications() {
     queryKey: STUDENT_APPLICATIONS_QUERY_KEYS.all,
     queryFn: fetchStudentApplications,
     initialData: DEFAULT_STUDENT_APPLICATIONS,
+    initialDataUpdatedAt: 0,
     staleTime: 1000 * 60 * 2, // 2 minutes
   })
 }

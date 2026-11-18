@@ -1,6 +1,6 @@
 'use client'
 
-import { type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import {
   BadgeCheck,
@@ -14,10 +14,12 @@ import {
   MapPin,
   Pencil,
   Phone,
+  ShieldCheck,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import UserAvatar from './UserAvatar'
+import StudentVerificationDialog from './StudentVerificationDialog'
 import type { ProfileData } from './types'
 
 const AVATAR_SIZE = '88'
@@ -41,6 +43,7 @@ function normalizeUrl(url: string): string {
 }
 
 export default function ProfileHeader({ profile }: { profile: ProfileData }) {
+  const [isVerifyOpen, setIsVerifyOpen] = useState(false)
   const githubUrl = normalizeUrl(profile.github)
   const linkedinUrl = normalizeUrl(profile.linkedin)
   const portfolioUrl = normalizeUrl(profile.portfolio)
@@ -194,6 +197,20 @@ export default function ProfileHeader({ profile }: { profile: ProfileData }) {
                 </Button>
               </div>
 
+              {!profile.isVerified && (
+                <div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsVerifyOpen(true)}
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Get Verified</span>
+                  </Button>
+                </div>
+              )}
+
               {resumeUrl && (
                 <div>
                   <Button asChild variant="outline" size="sm">
@@ -212,6 +229,8 @@ export default function ProfileHeader({ profile }: { profile: ProfileData }) {
           </div>
         </div>
       </CardContent>
+
+      <StudentVerificationDialog isOpen={isVerifyOpen} onClose={() => setIsVerifyOpen(false)} />
     </Card>
   )
 }
