@@ -2,12 +2,13 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ArrowRight, Loader2, Globe } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 
 import { FormField } from '@/components/ui/form-field'
 import { Input } from '@/components/ui/input'
-import { useSocialSignIn } from '@/lib/hooks/use-auth'
+import { useAuth, useSocialSignIn } from '@/lib/hooks/use-auth'
 import { loginSchema, type LoginInput } from '@/lib/schemas/auth.schema'
 import { CharactersScene, type CharacterSceneState } from './CharactersScene'
 
@@ -17,6 +18,9 @@ const DEFAULT_VALUES: LoginInput = {
 }
 
 export default function LoginPage() {
+  const router = useRouter()
+  const { user, isLoading: isAuthLoading } = useAuth()
+
   const [state, setState] = useState<CharacterSceneState>({
     focusedField: 'none',
     emailLength: 0,
@@ -31,6 +35,21 @@ export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false)
   const [isRedirecting, setIsRedirecting] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+
+  // If user is already authenticated and has an account, navigate directly to dashboard
+  useEffect(() => {
+    if (isAuthLoading || !user) return
+
+    if (user.hasAccount && user.dashboardUrl) {
+      router.replace(user.dashboardUrl)
+    } else if (user.roles?.includes('recruiter')) {
+      router.replace('/dashboard/recruiter')
+    } else if (user.roles?.includes('core_admin')) {
+      router.replace('/admin')
+    } else if (user.roles?.includes('club_admin')) {
+      router.replace('/student-admin/members')
+    }
+  }, [user, isAuthLoading, router])
 
   const socialSignInMutation = useSocialSignIn()
 
@@ -49,8 +68,33 @@ export default function LoginPage() {
     setState((s) => ({ ...s, isError: true }))
   }
 
-  const onSubmit = () => {
-    failWith("Email sign-in isn't available yet — continue with Google.")
+  const onSubmit = async (data: LoginInput) => {
+    setErrorMsg('')
+    setState((s) => ({ ...s, isSubmitting: true, isError: false }))
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8787'
+      const res = await fetch(
+        `${apiUrl}/api/users/check-email?email=${encodeURIComponent(data.email)}`,
+      )
+      const result = await res.json()
+
+      if (result.exists) {
+        // User already has an account - redirect directly to their dashboard
+        const targetUrl = result.dashboardUrl || '/student/jobs'
+        router.push(targetUrl)
+      } else {
+        if (isSignUp) {
+          router.push('/role-select')
+        } else {
+          failWith('Account not found with this email. Please sign up or continue with Google.')
+        }
+      }
+    } catch {
+      failWith('Could not verify account. Please check your connection or continue with Google.')
+    } finally {
+      setState((s) => ({ ...s, isSubmitting: false }))
+    }
   }
 
   const handleGoogleLogin = async () => {
