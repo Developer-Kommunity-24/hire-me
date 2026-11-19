@@ -693,14 +693,10 @@ export async function listClubVerificationRequests(
 }
 
 export type AcceptClubVerificationError =
-  | 'not_found'
-  | 'already_processed'
-  | 'badge_revoked'
-  | 'student_not_found'
+  'not_found' | 'already_processed' | 'badge_revoked' | 'student_not_found'
 
 export type AcceptClubVerificationResult =
-  | { ok: true; data: ClubMemberResponse }
-  | { ok: false; error: AcceptClubVerificationError }
+  { ok: true; data: ClubMemberResponse } | { ok: false; error: AcceptClubVerificationError }
 
 /**
  * Accepts a student verification request:
@@ -879,8 +875,7 @@ export async function acceptClubVerificationRequest(
 export type RejectClubVerificationError = 'not_found' | 'already_processed'
 
 export type RejectClubVerificationResult =
-  | { ok: true }
-  | { ok: false; error: RejectClubVerificationError }
+  { ok: true } | { ok: false; error: RejectClubVerificationError }
 
 /**
  * Rejects a student's verification request:

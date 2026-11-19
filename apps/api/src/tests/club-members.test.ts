@@ -49,16 +49,22 @@ describe('Club Members API', () => {
   })
 
   it('401s on POST /api/clubs/members/requests/:id/accept without token', async () => {
-    const res = await app.request('/api/clubs/members/requests/00000000-0000-0000-0000-000000000001/accept', {
-      method: 'POST',
-    })
+    const res = await app.request(
+      '/api/clubs/members/requests/00000000-0000-0000-0000-000000000001/accept',
+      {
+        method: 'POST',
+      },
+    )
     expect(res.status).toBe(401)
   })
 
   it('401s on POST /api/clubs/members/requests/:id/reject without token', async () => {
-    const res = await app.request('/api/clubs/members/requests/00000000-0000-0000-0000-000000000001/reject', {
-      method: 'POST',
-    })
+    const res = await app.request(
+      '/api/clubs/members/requests/00000000-0000-0000-0000-000000000001/reject',
+      {
+        method: 'POST',
+      },
+    )
     expect(res.status).toBe(401)
   })
 

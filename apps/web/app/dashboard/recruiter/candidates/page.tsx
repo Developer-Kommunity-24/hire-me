@@ -305,9 +305,7 @@ function CandidatesContent() {
                                 <p className="text-xs text-text-muted truncate">
                                   {candidate.headline || 'Student on Hire-Me'}
                                 </p>
-                                {candidate.openToWork && (
-                                  <Badge variant="outline">Available</Badge>
-                                )}
+                                {candidate.openToWork && <Badge variant="outline">Available</Badge>}
                               </div>
                             </div>
                           </div>
