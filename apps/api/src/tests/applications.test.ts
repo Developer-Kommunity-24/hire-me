@@ -363,6 +363,19 @@ describe('DELETE /api/applications/:id', () => {
     expect(withdrawApplication).toHaveBeenCalledWith(expect.anything(), 'student-1', applicationId)
   })
 
+  it('returns 400 when the application cannot be withdrawn due to its status', async () => {
+    vi.mocked(withdrawApplication).mockResolvedValue({ ok: false, error: 'cannot_withdraw' })
+
+    const res = await request(`/api/applications/${applicationId}`, {
+      method: 'DELETE',
+    })
+
+    expect(res.status).toBe(400)
+    const body = await json(res)
+    expect(body.error).toBe('Application cannot be withdrawn in its current status')
+    expect(withdrawApplication).toHaveBeenCalledWith(expect.anything(), 'student-1', applicationId)
+  })
+
   it('returns 200 with success status when successfully withdrawn', async () => {
     vi.mocked(withdrawApplication).mockResolvedValue({ ok: true, id: applicationId })
 

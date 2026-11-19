@@ -1,8 +1,6 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { asc, eq } from 'drizzle-orm'
-import { clubs } from '@repo/db'
 import { requireAuth } from '../middleware/auth.js'
 import { requireCoreAdmin } from '../middleware/core-admin.js'
 import type { AuthVariables } from '../middleware/auth.js'
@@ -10,6 +8,7 @@ import type { DbVariables } from '../middleware/db.js'
 import {
   flagBadgeRevocation,
   getStudentVerificationStatus,
+  listActiveClubs,
   listPendingRevocations,
   listVerificationRequests,
   resolveBadgeRevocation,
@@ -77,16 +76,7 @@ verificationRouter.use('*', requireAuth)
  * Lists all active clubs for students to select from when requesting verification.
  */
 verificationRouter.get('/clubs', async (c) => {
-  const activeClubs = await c.var.db
-    .select({
-      id: clubs.id,
-      name: clubs.name,
-      slug: clubs.slug,
-    })
-    .from(clubs)
-    .where(eq(clubs.isActive, true))
-    .orderBy(asc(clubs.name))
-
+  const activeClubs = await listActiveClubs(c.var.db)
   return c.json({ data: activeClubs })
 })
 

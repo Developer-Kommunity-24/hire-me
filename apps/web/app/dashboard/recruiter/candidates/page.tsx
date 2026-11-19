@@ -301,9 +301,14 @@ function CandidatesContent() {
                                   <Dk24VerifiedBadge iconOnly size="sm" label="DK24 Verified" />
                                 )}
                               </h3>
-                              <p className="text-xs text-text-muted truncate">
-                                {candidate.headline || 'Student on Hire-Me'}
-                              </p>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <p className="text-xs text-text-muted truncate">
+                                  {candidate.headline || 'Student on Hire-Me'}
+                                </p>
+                                {candidate.openToWork && (
+                                  <Badge variant="outline">Available</Badge>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>

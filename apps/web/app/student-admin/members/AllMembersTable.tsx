@@ -143,7 +143,11 @@ export default function AllMembersTable() {
                   </a>
                 </td>
                 <td className="py-3 px-4">
-                  <Dk24VerifiedBadge size="sm" label="DK24 Verified" />
+                  {member.isVerified ? (
+                    <Dk24VerifiedBadge size="sm" label="DK24 Verified" />
+                  ) : (
+                    <span className="text-xs text-gray-400">Unverified</span>
+                  )}
                 </td>
                 <td className="py-3 px-4 text-sm text-gray-500">{member.joinedDate ?? '—'}</td>
                 <td className="py-3 px-4 text-right">

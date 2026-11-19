@@ -1,10 +1,9 @@
-import { and, eq, or, sql } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import type { Database } from '@repo/db'
 import {
   users,
   studentProfiles,
   contactDetails,
-  clubMemberships,
   skills as skillsTable,
   experience as experienceTable,
 } from '@repo/db'
@@ -128,37 +127,6 @@ export async function getStudentProfile(db: Database, userId: string) {
 
   if (!dbProfile) {
     throw new Error('Failed to initialize student profile')
-  }
-
-  // Auto-verify if user exists in active club memberships
-  if (dbProfile.dk24Status !== 'verified') {
-    const [matchingMembership] = await db
-      .select({ id: clubMemberships.id })
-      .from(clubMemberships)
-      .where(
-        and(
-          eq(clubMemberships.isActive, true),
-          or(
-            sql`lower(${clubMemberships.email}) = ${dbUser.email.toLowerCase()}`,
-            eq(clubMemberships.userId, userId),
-          ),
-        ),
-      )
-      .limit(1)
-
-    if (matchingMembership) {
-      await db
-        .update(clubMemberships)
-        .set({ userId })
-        .where(eq(clubMemberships.id, matchingMembership.id))
-
-      await db
-        .update(studentProfiles)
-        .set({ dk24Status: 'verified', updatedAt: new Date() })
-        .where(eq(studentProfiles.userId, userId))
-
-      dbProfile.dk24Status = 'verified'
-    }
   }
 
   // 3. Fetch or initialize contact details record

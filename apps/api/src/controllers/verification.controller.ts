@@ -1,13 +1,15 @@
-import { and, desc, eq, inArray, isNull } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNull, or } from 'drizzle-orm'
 import {
   badgeRevocation,
   clubMemberships,
   clubs,
   notifications,
   studentProfiles,
+  users,
   verificationRequests,
 } from '@repo/db'
-import type { BadgeRevocation, Database, VerificationRequest } from '@repo/db'
+import type { BadgeRevocation, ClubMembership, Database, VerificationRequest } from '@repo/db'
+import type { ClubMemberResponse } from './club-members.controller.js'
 
 // ==========================================
 // TYPES
@@ -614,4 +616,342 @@ export async function listVerificationRequests(
     .orderBy(desc(verificationRequests.submittedAt))
     .limit(limit)
     .offset(offset)
+}
+
+// ==========================================
+// ACTIVE CLUBS & CLUB VERIFICATION WORKFLOWS
+// ==========================================
+
+export interface ClubVerificationRequestItem {
+  id: string
+  studentId: string
+  fullName: string
+  email: string
+  usn: string
+  clubId: string | null
+  submittedAt: Date | string
+  resubmitCount: number
+  status: 'pending'
+}
+
+/**
+ * Lists all active clubs for students to request verification from.
+ */
+export async function listActiveClubs(db: Database) {
+  return db
+    .select({
+      id: clubs.id,
+      name: clubs.name,
+      slug: clubs.slug,
+    })
+    .from(clubs)
+    .where(eq(clubs.isActive, true))
+    .orderBy(asc(clubs.name))
+}
+
+/**
+ * Lists pending verification requests that students have sent to this club
+ * (or without a club specified).
+ */
+export async function listClubVerificationRequests(
+  db: Database,
+  clubId: string,
+): Promise<ClubVerificationRequestItem[]> {
+  const rows = await db
+    .select({
+      id: verificationRequests.id,
+      studentId: verificationRequests.studentId,
+      fullName: users.fullName,
+      email: users.email,
+      usn: verificationRequests.usn,
+      clubId: verificationRequests.clubId,
+      submittedAt: verificationRequests.submittedAt,
+      resubmitCount: verificationRequests.resubmitCount,
+    })
+    .from(verificationRequests)
+    .innerJoin(users, eq(verificationRequests.studentId, users.id))
+    .where(
+      and(
+        or(eq(verificationRequests.clubId, clubId), isNull(verificationRequests.clubId)),
+        isNull(verificationRequests.appliedAt),
+        eq(verificationRequests.autoMatched, false),
+      ),
+    )
+    .orderBy(desc(verificationRequests.submittedAt))
+
+  return rows.map((r) => ({
+    id: r.id,
+    studentId: r.studentId,
+    fullName: r.fullName,
+    email: r.email,
+    usn: r.usn,
+    clubId: r.clubId,
+    submittedAt: r.submittedAt,
+    resubmitCount: r.resubmitCount,
+    status: 'pending' as const,
+  }))
+}
+
+export type AcceptClubVerificationError =
+  | 'not_found'
+  | 'already_processed'
+  | 'badge_revoked'
+  | 'student_not_found'
+
+export type AcceptClubVerificationResult =
+  | { ok: true; data: ClubMemberResponse }
+  | { ok: false; error: AcceptClubVerificationError }
+
+/**
+ * Accepts a student verification request:
+ * - Ensures request is still pending
+ * - Verifies student has no active badge revocations
+ * - Adds or reactivates them in club_memberships
+ * - Updates studentProfile to verified (badge awarded)
+ * - Updates verificationRequest as applied (autoMatched = false for manual approval)
+ * - Emits a notification
+ * - All wrapped in a database transaction
+ */
+export async function acceptClubVerificationRequest(
+  db: Database,
+  clubId: string,
+  requestId: string,
+): Promise<AcceptClubVerificationResult> {
+  const [request] = await db
+    .select()
+    .from(verificationRequests)
+    .where(
+      and(
+        eq(verificationRequests.id, requestId),
+        or(eq(verificationRequests.clubId, clubId), isNull(verificationRequests.clubId)),
+      ),
+    )
+    .limit(1)
+
+  if (!request) {
+    return { ok: false, error: 'not_found' }
+  }
+
+  if (request.appliedAt !== null) {
+    return { ok: false, error: 'already_processed' }
+  }
+
+  // Guard against active badge revocations
+  const [activeRevocation] = await db
+    .select()
+    .from(badgeRevocation)
+    .where(
+      and(eq(badgeRevocation.studentId, request.studentId), isNull(badgeRevocation.resolvedAt)),
+    )
+    .limit(1)
+
+  if (activeRevocation) {
+    return { ok: false, error: 'badge_revoked' }
+  }
+
+  const [studentUser] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, request.studentId))
+    .limit(1)
+
+  if (!studentUser) {
+    return { ok: false, error: 'student_not_found' }
+  }
+
+  const [club] = await db
+    .select({ name: clubs.name })
+    .from(clubs)
+    .where(eq(clubs.id, clubId))
+    .limit(1)
+
+  const clubName = club?.name ?? 'club'
+  const normalizedEmail = studentUser.email.trim().toLowerCase()
+  const normalizedUsn = request.usn.trim().toUpperCase()
+
+  // NOTE: neon-http driver does not support interactive transactions.
+  // Sequential writes are used matching student.controller pattern.
+  const [existingMembership] = await db
+    .select()
+    .from(clubMemberships)
+    .where(
+      and(
+        eq(clubMemberships.clubId, clubId),
+        or(eq(clubMemberships.usn, normalizedUsn), eq(clubMemberships.email, normalizedEmail)),
+      ),
+    )
+    .limit(1)
+
+  let finalMemberRow: ClubMembership
+
+  if (existingMembership) {
+    const [updated] = await db
+      .update(clubMemberships)
+      .set({
+        userId: studentUser.id,
+        fullName: studentUser.fullName,
+        usn: normalizedUsn,
+        email: normalizedEmail,
+        isActive: true,
+        addedAt: new Date(),
+      })
+      .where(eq(clubMemberships.id, existingMembership.id))
+      .returning()
+
+    if (!updated) {
+      throw new Error('Failed to update club membership')
+    }
+    finalMemberRow = updated
+  } else {
+    const [inserted] = await db
+      .insert(clubMemberships)
+      .values({
+        clubId,
+        userId: studentUser.id,
+        fullName: studentUser.fullName,
+        usn: normalizedUsn,
+        email: normalizedEmail,
+        role: 'member',
+        isActive: true,
+      })
+      .returning()
+
+    if (!inserted) {
+      throw new Error('Failed to insert club membership')
+    }
+    finalMemberRow = inserted
+  }
+
+  // Award verified status to student profile
+  await db
+    .insert(studentProfiles)
+    .values({
+      userId: studentUser.id,
+      dk24Status: 'verified',
+    })
+    .onConflictDoUpdate({
+      target: studentProfiles.userId,
+      set: {
+        dk24Status: 'verified',
+        updatedAt: new Date(),
+      },
+    })
+
+  // Update verification request
+  await db
+    .update(verificationRequests)
+    .set({
+      clubId,
+      matchedClubMembershipId: finalMemberRow.id,
+      autoMatched: false,
+      appliedAt: new Date(),
+    })
+    .where(eq(verificationRequests.id, request.id))
+
+  // Send notification
+  await db.insert(notifications).values({
+    userId: studentUser.id,
+    type: 'verification_result',
+    payload: {
+      status: 'verified',
+      message: `Your verification request has been accepted! You are now a verified member of ${clubName}.`,
+      clubName,
+      usn: normalizedUsn,
+    },
+  })
+
+  return {
+    ok: true as const,
+    data: {
+      id: finalMemberRow.id,
+      clubId: finalMemberRow.clubId,
+      fullName: finalMemberRow.fullName,
+      usn: finalMemberRow.usn,
+      email: finalMemberRow.email,
+      role: finalMemberRow.role,
+      addedAt: finalMemberRow.addedAt,
+      userId: finalMemberRow.userId,
+      isVerified: true,
+    },
+  }
+}
+
+export type RejectClubVerificationError = 'not_found' | 'already_processed'
+
+export type RejectClubVerificationResult =
+  | { ok: true }
+  | { ok: false; error: RejectClubVerificationError }
+
+/**
+ * Rejects a student's verification request:
+ * - Ensures request is still pending
+ * - Marks verificationRequest as resolved (appliedAt = now(), autoMatched = false)
+ * - Updates studentProfile to rejected
+ * - Emits a notification
+ * - All wrapped in a database transaction
+ */
+export async function rejectClubVerificationRequest(
+  db: Database,
+  clubId: string,
+  requestId: string,
+): Promise<RejectClubVerificationResult> {
+  const [request] = await db
+    .select()
+    .from(verificationRequests)
+    .where(
+      and(
+        eq(verificationRequests.id, requestId),
+        or(eq(verificationRequests.clubId, clubId), isNull(verificationRequests.clubId)),
+      ),
+    )
+    .limit(1)
+
+  if (!request) {
+    return { ok: false, error: 'not_found' }
+  }
+
+  if (request.appliedAt !== null) {
+    return { ok: false, error: 'already_processed' }
+  }
+
+  const [club] = await db
+    .select({ name: clubs.name })
+    .from(clubs)
+    .where(eq(clubs.id, clubId))
+    .limit(1)
+
+  const clubName = club?.name ?? 'club'
+
+  // Mark request as resolved
+  await db
+    .update(verificationRequests)
+    .set({
+      clubId,
+      appliedAt: new Date(),
+      autoMatched: false,
+    })
+    .where(eq(verificationRequests.id, request.id))
+
+  // Update student profile dk24Status to rejected
+  await db
+    .update(studentProfiles)
+    .set({
+      dk24Status: 'rejected',
+      updatedAt: new Date(),
+    })
+    .where(eq(studentProfiles.userId, request.studentId))
+
+  // Send notification
+  await db.insert(notifications).values({
+    userId: request.studentId,
+    type: 'verification_result',
+    payload: {
+      status: 'rejected',
+      message: `Your verification request for ${clubName} was rejected.`,
+      clubName,
+      usn: request.usn,
+    },
+  })
+
+  return { ok: true as const }
 }

@@ -342,15 +342,31 @@ export async function listOwnApplications(
   return rows
 }
 
+export type WithdrawApplicationError = 'not_found' | 'cannot_withdraw'
+
 /**
  * Allows an authenticated student to withdraw their own application.
- * Deletes the application row from the applications table.
+ * Deletes the application row from the applications table if in 'applied' or 'under_review' status.
  */
 export async function withdrawApplication(
   db: Database,
   studentId: string,
   applicationId: string,
-): Promise<{ ok: true; id: string } | { ok: false; error: 'not_found' }> {
+): Promise<{ ok: true; id: string } | { ok: false; error: WithdrawApplicationError }> {
+  const [existing] = await db
+    .select({ id: applications.id, status: applications.status })
+    .from(applications)
+    .where(and(eq(applications.id, applicationId), eq(applications.studentId, studentId)))
+    .limit(1)
+
+  if (!existing) {
+    return { ok: false, error: 'not_found' }
+  }
+
+  if (existing.status !== 'applied' && existing.status !== 'under_review') {
+    return { ok: false, error: 'cannot_withdraw' }
+  }
+
   const [deleted] = await db
     .delete(applications)
     .where(and(eq(applications.id, applicationId), eq(applications.studentId, studentId)))

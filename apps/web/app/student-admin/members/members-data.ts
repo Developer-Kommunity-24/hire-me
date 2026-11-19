@@ -7,6 +7,7 @@ export type Member = {
   usn: string
   email: string
   joinedDate: string | null
+  isVerified?: boolean
 }
 
 export type NewMember = {
@@ -39,6 +40,7 @@ type ApiMember = {
   email: string
   addedAt?: string | null
   createdAt?: string | null
+  isVerified?: boolean
 }
 
 type ApiMemberRequest = {
@@ -61,6 +63,7 @@ function toMember(api: ApiMember): Member {
     name: api.fullName,
     usn: api.usn,
     email: api.email,
+    ...(api.isVerified !== undefined ? { isVerified: api.isVerified } : {}),
     joinedDate: dateStr
       ? new Date(dateStr).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
       : null,

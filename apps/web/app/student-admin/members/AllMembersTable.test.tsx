@@ -34,6 +34,7 @@ describe('AllMembersTable', () => {
           usn: '1RV21CS001',
           email: 'priya@example.com',
           addedAt: '2026-03-01T00:00:00.000Z',
+          isVerified: true,
         },
         {
           id: '2',
@@ -41,6 +42,7 @@ describe('AllMembersTable', () => {
           usn: '1RV21CS002',
           email: 'marcus@example.com',
           addedAt: '2026-03-02T00:00:00.000Z',
+          isVerified: true,
         },
       ],
     })

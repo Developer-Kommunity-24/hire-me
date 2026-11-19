@@ -1,13 +1,5 @@
-import { and, asc, desc, eq, isNull, or, sql } from 'drizzle-orm'
-import {
-  badgeRevocation,
-  clubMemberships,
-  clubs,
-  notifications,
-  studentProfiles,
-  users,
-  verificationRequests,
-} from '@repo/db'
+import { and, asc, eq } from 'drizzle-orm'
+import { badgeRevocation, clubMemberships, studentProfiles, verificationRequests } from '@repo/db'
 import type { Database, ClubMembership } from '@repo/db'
 
 const ACTIVE_CLUB_MEMBER = eq(clubMemberships.isActive, true)
@@ -41,6 +33,7 @@ function toClubMemberResponse(
     ClubMembership,
     'id' | 'clubId' | 'fullName' | 'usn' | 'email' | 'role' | 'addedAt' | 'userId'
   >,
+  isVerified = false,
 ): ClubMemberResponse {
   return {
     id: member.id,
@@ -51,7 +44,7 @@ function toClubMemberResponse(
     role: member.role,
     addedAt: member.addedAt,
     userId: member.userId,
-    isVerified: true,
+    isVerified,
   }
 }
 
@@ -135,12 +128,14 @@ export async function listClubMembers(db: Database, clubId: string): Promise<Clu
       role: clubMemberships.role,
       addedAt: clubMemberships.addedAt,
       userId: clubMemberships.userId,
+      dk24Status: studentProfiles.dk24Status,
     })
     .from(clubMemberships)
+    .leftJoin(studentProfiles, eq(clubMemberships.userId, studentProfiles.userId))
     .where(and(eq(clubMemberships.clubId, clubId), ACTIVE_CLUB_MEMBER))
     .orderBy(asc(clubMemberships.fullName))
 
-  return members.map(toClubMemberResponse)
+  return members.map((m) => toClubMemberResponse(m, m.dk24Status === 'verified'))
 }
 
 // ==========================================
@@ -165,34 +160,10 @@ export async function addClubMember(
   const normalized = normalizeMemberInput(input)
 
   try {
-    // Check if an existing user matches by email
-    const [existingUserByEmail] = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(sql`lower(${users.email}) = ${normalized.email}`)
-      .limit(1)
-
-    let matchedUserId: string | null = existingUserByEmail?.id ?? null
-
-    // If no user found by email, check if there's a pending verification request with this USN
-    if (!matchedUserId) {
-      const [pendingReq] = await db
-        .select({ studentId: verificationRequests.studentId })
-        .from(verificationRequests)
-        .where(eq(verificationRequests.usn, normalized.usn))
-        .orderBy(desc(verificationRequests.submittedAt))
-        .limit(1)
-
-      if (pendingReq) {
-        matchedUserId = pendingReq.studentId
-      }
-    }
-
     const [member] = await db
       .insert(clubMemberships)
       .values({
         clubId,
-        userId: matchedUserId,
         fullName: normalized.fullName,
         usn: normalized.usn,
         email: normalized.email,
@@ -203,56 +174,7 @@ export async function addClubMember(
       throw new Error('Insert returned no rows')
     }
 
-    // Award verified badge if a user account is linked
-    if (matchedUserId) {
-      await db
-        .insert(studentProfiles)
-        .values({
-          userId: matchedUserId,
-          dk24Status: 'verified',
-        })
-        .onConflictDoUpdate({
-          target: studentProfiles.userId,
-          set: {
-            dk24Status: 'verified',
-            updatedAt: new Date(),
-          },
-        })
-
-      await db
-        .update(verificationRequests)
-        .set({
-          clubId,
-          matchedClubMembershipId: member.id,
-          autoMatched: true,
-          appliedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(verificationRequests.studentId, matchedUserId),
-            isNull(verificationRequests.appliedAt),
-          ),
-        )
-
-      const [club] = await db
-        .select({ name: clubs.name })
-        .from(clubs)
-        .where(eq(clubs.id, clubId))
-        .limit(1)
-
-      await db.insert(notifications).values({
-        userId: matchedUserId,
-        type: 'verification_result',
-        payload: {
-          status: 'verified',
-          message: `You have been added to the ${club?.name ?? 'club'} roster and awarded the Verified Student badge!`,
-          clubName: club?.name,
-          usn: normalized.usn,
-        },
-      })
-    }
-
-    return { ok: true, data: toClubMemberResponse(member) }
+    return { ok: true, data: toClubMemberResponse(member, false) }
   } catch (err) {
     const constraintError = classifyConstraintError(err)
 
@@ -393,274 +315,4 @@ export async function deleteClubMember(
     )
 
   return true
-}
-
-// ==========================================
-// CLUB VERIFICATION REQUESTS
-// ==========================================
-
-export interface ClubVerificationRequestItem {
-  id: string
-  studentId: string
-  fullName: string
-  email: string
-  usn: string
-  clubId: string | null
-  submittedAt: Date | string
-  resubmitCount: number
-  status: 'pending' | 'verified' | 'rejected'
-}
-
-/**
- * Lists pending verification requests that students have sent to this club
- * (or without a club specified).
- */
-export async function listClubVerificationRequests(
-  db: Database,
-  clubId: string,
-): Promise<ClubVerificationRequestItem[]> {
-  const rows = await db
-    .select({
-      id: verificationRequests.id,
-      studentId: verificationRequests.studentId,
-      fullName: users.fullName,
-      email: users.email,
-      usn: verificationRequests.usn,
-      clubId: verificationRequests.clubId,
-      submittedAt: verificationRequests.submittedAt,
-      resubmitCount: verificationRequests.resubmitCount,
-    })
-    .from(verificationRequests)
-    .innerJoin(users, eq(verificationRequests.studentId, users.id))
-    .where(
-      and(
-        or(eq(verificationRequests.clubId, clubId), isNull(verificationRequests.clubId)),
-        isNull(verificationRequests.appliedAt),
-        eq(verificationRequests.autoMatched, false),
-      ),
-    )
-    .orderBy(desc(verificationRequests.submittedAt))
-
-  return rows.map((r) => ({
-    id: r.id,
-    studentId: r.studentId,
-    fullName: r.fullName,
-    email: r.email,
-    usn: r.usn,
-    clubId: r.clubId,
-    submittedAt: r.submittedAt,
-    resubmitCount: r.resubmitCount,
-    status: 'pending' as const,
-  }))
-}
-
-/**
- * Accepts a student's verification request:
- * - Adds or reactivates them in club_memberships
- * - Updates studentProfile to verified (badge awarded!)
- * - Updates verificationRequest as applied/autoMatched
- * - Emits a notification
- */
-export async function acceptClubVerificationRequest(
-  db: Database,
-  clubId: string,
-  requestId: string,
-): Promise<{ ok: true; data: ClubMemberResponse } | { ok: false; error: string; status: number }> {
-  const [request] = await db
-    .select()
-    .from(verificationRequests)
-    .where(
-      and(
-        eq(verificationRequests.id, requestId),
-        or(eq(verificationRequests.clubId, clubId), isNull(verificationRequests.clubId)),
-      ),
-    )
-    .limit(1)
-
-  if (!request) {
-    return { ok: false, error: 'Request not found', status: 404 }
-  }
-
-  const [studentUser] = await db
-    .select()
-    .from(users)
-    .where(eq(users.id, request.studentId))
-    .limit(1)
-
-  if (!studentUser) {
-    return { ok: false, error: 'Student user not found', status: 404 }
-  }
-
-  const [club] = await db
-    .select({ name: clubs.name })
-    .from(clubs)
-    .where(eq(clubs.id, clubId))
-    .limit(1)
-
-  const clubName = club?.name ?? 'campus club'
-
-  const normalizedEmail = studentUser.email.trim().toLowerCase()
-  const normalizedUsn = request.usn.trim().toUpperCase()
-
-  const [existingMembership] = await db
-    .select()
-    .from(clubMemberships)
-    .where(
-      and(
-        eq(clubMemberships.clubId, clubId),
-        or(eq(clubMemberships.usn, normalizedUsn), eq(clubMemberships.email, normalizedEmail)),
-      ),
-    )
-    .limit(1)
-
-  let finalMember: ClubMemberResponse
-  let targetMembershipId: string
-
-  if (existingMembership) {
-    const [updated] = await db
-      .update(clubMemberships)
-      .set({
-        userId: studentUser.id,
-        fullName: studentUser.fullName,
-        usn: normalizedUsn,
-        email: normalizedEmail,
-        isActive: true,
-        addedAt: new Date(),
-      })
-      .where(eq(clubMemberships.id, existingMembership.id))
-      .returning()
-
-    if (!updated) {
-      throw new Error('Failed to update club membership')
-    }
-    targetMembershipId = updated.id
-    finalMember = toClubMemberResponse(updated)
-  } else {
-    const [inserted] = await db
-      .insert(clubMemberships)
-      .values({
-        clubId,
-        userId: studentUser.id,
-        fullName: studentUser.fullName,
-        usn: normalizedUsn,
-        email: normalizedEmail,
-        role: 'member',
-        isActive: true,
-      })
-      .returning()
-
-    if (!inserted) {
-      throw new Error('Failed to insert club membership')
-    }
-    targetMembershipId = inserted.id
-    finalMember = toClubMemberResponse(inserted)
-  }
-
-  // Update studentProfile dk24Status to 'verified'
-  await db
-    .insert(studentProfiles)
-    .values({
-      userId: studentUser.id,
-      dk24Status: 'verified',
-    })
-    .onConflictDoUpdate({
-      target: studentProfiles.userId,
-      set: {
-        dk24Status: 'verified',
-        updatedAt: new Date(),
-      },
-    })
-
-  // Update verificationRequests row
-  await db
-    .update(verificationRequests)
-    .set({
-      clubId,
-      matchedClubMembershipId: targetMembershipId,
-      autoMatched: true,
-      appliedAt: new Date(),
-    })
-    .where(eq(verificationRequests.id, request.id))
-
-  // Send notification
-  await db.insert(notifications).values({
-    userId: studentUser.id,
-    type: 'verification_result',
-    payload: {
-      status: 'verified',
-      message: `Your verification request has been accepted! You are now a verified member of ${clubName}.`,
-      clubName,
-      usn: normalizedUsn,
-    },
-  })
-
-  return { ok: true, data: finalMember }
-}
-
-/**
- * Rejects a student's verification request:
- * - Marks verificationRequest as rejected (appliedAt = now(), autoMatched = false)
- * - Updates studentProfile to rejected
- * - Emits a notification
- */
-export async function rejectClubVerificationRequest(
-  db: Database,
-  clubId: string,
-  requestId: string,
-): Promise<{ ok: true } | { ok: false; error: string; status: number }> {
-  const [request] = await db
-    .select()
-    .from(verificationRequests)
-    .where(
-      and(
-        eq(verificationRequests.id, requestId),
-        or(eq(verificationRequests.clubId, clubId), isNull(verificationRequests.clubId)),
-      ),
-    )
-    .limit(1)
-
-  if (!request) {
-    return { ok: false, error: 'Request not found', status: 404 }
-  }
-
-  const [club] = await db
-    .select({ name: clubs.name })
-    .from(clubs)
-    .where(eq(clubs.id, clubId))
-    .limit(1)
-
-  const clubName = club?.name ?? 'campus club'
-
-  // Mark request as resolved/rejected
-  await db
-    .update(verificationRequests)
-    .set({
-      clubId,
-      appliedAt: new Date(),
-      autoMatched: false,
-    })
-    .where(eq(verificationRequests.id, request.id))
-
-  // Update student profile dk24Status to rejected
-  await db
-    .update(studentProfiles)
-    .set({
-      dk24Status: 'rejected',
-      updatedAt: new Date(),
-    })
-    .where(eq(studentProfiles.userId, request.studentId))
-
-  // Send notification
-  await db.insert(notifications).values({
-    userId: request.studentId,
-    type: 'verification_result',
-    payload: {
-      status: 'rejected',
-      message: `Your verification request for ${clubName} was rejected.`,
-      clubName,
-      usn: request.usn,
-    },
-  })
-
-  return { ok: true }
 }

@@ -11,10 +11,12 @@ import {
   addClubMember,
   editClubMember,
   deleteClubMember,
+} from '../controllers/club-members.controller.js'
+import {
   listClubVerificationRequests,
   acceptClubVerificationRequest,
   rejectClubVerificationRequest,
-} from '../controllers/club-members.controller.js'
+} from '../controllers/verification.controller.js'
 
 // ==========================================
 // TYPES
@@ -95,7 +97,19 @@ clubMembersRouter.post('/requests/:id/accept', async (c) => {
   const result = await acceptClubVerificationRequest(c.var.db, c.var.clubId, rawId)
 
   if (!result.ok) {
-    return c.json({ error: result.error }, result.status as 400 | 404)
+    if (result.error === 'not_found' || result.error === 'student_not_found') {
+      return c.json({ error: 'Request not found' }, 404)
+    }
+    if (result.error === 'already_processed') {
+      return c.json({ error: 'Verification request has already been processed' }, 409)
+    }
+    if (result.error === 'badge_revoked') {
+      return c.json(
+        { error: 'Cannot verify student with an active, unresolved badge revocation' },
+        403,
+      )
+    }
+    return c.json({ error: 'Failed to accept verification request' }, 400)
   }
 
   return c.json({ data: result.data }, 200)
@@ -116,7 +130,13 @@ clubMembersRouter.post('/requests/:id/reject', async (c) => {
   const result = await rejectClubVerificationRequest(c.var.db, c.var.clubId, rawId)
 
   if (!result.ok) {
-    return c.json({ error: result.error }, result.status as 400 | 404)
+    if (result.error === 'not_found') {
+      return c.json({ error: 'Request not found' }, 404)
+    }
+    if (result.error === 'already_processed') {
+      return c.json({ error: 'Verification request has already been processed' }, 409)
+    }
+    return c.json({ error: 'Failed to reject verification request' }, 400)
   }
 
   return c.json({ data: null }, 200)

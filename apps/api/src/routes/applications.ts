@@ -119,6 +119,9 @@ applicationsRouter.delete('/:id', requireStudent, async (c) => {
   const result = await withdrawApplication(c.var.db, c.var.studentId, rawId)
 
   if (!result.ok) {
+    if (result.error === 'cannot_withdraw') {
+      return c.json({ error: 'Application cannot be withdrawn in its current status' }, 400)
+    }
     return c.json({ error: 'Application not found' }, 404)
   }
 
