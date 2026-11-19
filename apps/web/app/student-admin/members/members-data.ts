@@ -21,6 +21,16 @@ export type ImportResult = {
   failures: { index: number; message: string }[]
 }
 
+export type MemberRequest = {
+  id: string
+  studentId: string
+  name: string
+  email: string
+  usn: string
+  submittedAt: string | null
+  status: 'pending'
+}
+
 /** Shape returned by /api/clubs/members (API doc, Domain 10). */
 type ApiMember = {
   id: string
@@ -31,7 +41,18 @@ type ApiMember = {
   createdAt?: string | null
 }
 
+type ApiMemberRequest = {
+  id: string
+  studentId: string
+  fullName: string
+  email: string
+  usn: string
+  submittedAt?: string | null
+  status: 'pending'
+}
+
 export const membersQueryKey = ['members'] as const
+export const clubRequestsQueryKey = ['club', 'requests'] as const
 
 function toMember(api: ApiMember): Member {
   const dateStr = api.addedAt ?? api.createdAt
@@ -104,4 +125,38 @@ export async function importMembers(members: NewMember[]): Promise<ImportResult>
   }
 
   return { total: members.length, imported: members.length - failures.length, failures }
+}
+
+export async function fetchClubRequests(): Promise<MemberRequest[]> {
+  const { data } = await apiFetch<{ data: ApiMemberRequest[] }>('/api/clubs/members/requests')
+  return data.map((r) => ({
+    id: r.id,
+    studentId: r.studentId,
+    name: r.fullName,
+    email: r.email,
+    usn: r.usn,
+    submittedAt: r.submittedAt
+      ? new Date(r.submittedAt).toLocaleDateString('en-IN', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        })
+      : null,
+    status: r.status,
+  }))
+}
+
+export async function acceptMemberRequest(id: string): Promise<void> {
+  await apiFetch<{ data: unknown }>(
+    `/api/clubs/members/requests/${encodeURIComponent(id)}/accept`,
+    {
+      method: 'POST',
+    },
+  )
+}
+
+export async function rejectMemberRequest(id: string): Promise<void> {
+  await apiFetch<{ data: null }>(`/api/clubs/members/requests/${encodeURIComponent(id)}/reject`, {
+    method: 'POST',
+  })
 }

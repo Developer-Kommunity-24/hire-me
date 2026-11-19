@@ -3,7 +3,6 @@
 import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import {
-  BadgeCheck,
   Briefcase,
   Download,
   ExternalLink,
@@ -18,6 +17,7 @@ import {
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import Dk24VerifiedBadge from '@/components/common/Dk24VerifiedBadge'
 import UserAvatar from './UserAvatar'
 import StudentVerificationDialog from './StudentVerificationDialog'
 import type { ProfileData } from './types'
@@ -78,12 +78,7 @@ export default function ProfileHeader({ profile }: { profile: ProfileData }) {
               <h1 className="text-2xl font-extrabold text-text-main tracking-tight leading-tight">
                 {profile.name}
               </h1>
-              {profile.isVerified && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs bg-brand-light text-brand-dark border border-brand-mint uppercase tracking-wide font-bold">
-                  <BadgeCheck className="w-3.5 h-3.5 text-brand" />
-                  Verified Student
-                </span>
-              )}
+              {profile.isVerified && <Dk24VerifiedBadge size="md" label="DK24 Verified" />}
               {profile.openToWork && (
                 <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase tracking-wide font-bold">
                   <Briefcase className="w-3.5 h-3.5" />

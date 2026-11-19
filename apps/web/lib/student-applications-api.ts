@@ -243,121 +243,161 @@ interface RawApplicationData {
 }
 
 export async function fetchStudentApplications(): Promise<StudentApplicationItem[]> {
-  try {
-    const json = await apiFetch<{ data: RawApplicationData[] }>('/api/applications')
+  const json = await apiFetch<{ data: RawApplicationData[] }>('/api/applications')
 
-    if (Array.isArray(json.data)) {
-      const mapped = json.data.map((raw, index): StudentApplicationItem => ({
-        id: raw.id ?? `app-${index}`,
-        postingId: raw.postingId ?? raw.posting?.id ?? `post-${index}`,
-        companyName:
-          raw.companyName ||
-          raw.recruiter?.companyName ||
-          raw.posting?.companyName ||
-          'Verified Partner',
-        companyLogoText:
-          raw.companyLogoText ||
-          (raw.companyName || raw.recruiter?.companyName || raw.posting?.companyName || 'VP')
-            .slice(0, 2)
-            .toUpperCase(),
-        companyLogoBg: raw.companyLogoBg || 'bg-slate-100 text-slate-800',
-        companyUrl: raw.companyUrl || raw.recruiter?.companyUrl,
-        roleTitle: raw.roleTitle || raw.posting?.title || 'Open Position',
-        employmentType: raw.employmentType || raw.posting?.employmentType || 'full_time',
-        workArrangement: raw.workArrangement || raw.posting?.workArrangement || 'remote',
-        location: raw.location || raw.posting?.location || 'Remote',
-        compensation: raw.compensation ?? raw.posting?.compensation,
-        appliedAt: raw.appliedAt || new Date().toISOString(),
-        updatedAt: raw.updatedAt || new Date().toISOString(),
-        status:
-          raw.status === 'shortlisted'
-            ? 'interviewing'
-            : (raw.status as ApplicationStatus) || 'applied',
-        currentMilestone:
-          raw.currentMilestone ||
-          (raw.status === 'accepted'
-            ? 'Offer Extended'
-            : raw.status === 'interviewing' || raw.status === 'shortlisted'
-              ? 'Technical Screen'
-              : raw.status === 'rejected'
-                ? 'Application Closed'
-                : raw.status === 'under_review'
-                  ? 'Application Under Review'
-                  : 'Application Submitted'),
-        currentMilestoneDate: raw.currentMilestoneDate,
-        interviewFormat: raw.interviewFormat,
-        recruiterName: raw.recruiterName,
-        recruiterEmail: raw.recruiterEmail,
-        description: raw.description || raw.posting?.description,
-        stack:
-          Array.isArray(raw.stack) && raw.stack.length > 0
-            ? raw.stack
-            : Array.isArray(raw.posting?.stack)
-              ? raw.posting.stack
-              : [],
-        milestones:
-          Array.isArray(raw.milestones) && raw.milestones.length > 0
-            ? raw.milestones
-            : [
-                {
-                  id: '1',
-                  label: 'Application Submitted',
-                  status: 'completed',
-                  date: new Date(raw.appliedAt || Date.now()).toLocaleDateString(),
-                },
-                {
-                  id: '2',
-                  label: 'Screening',
-                  status: raw.status === 'applied' ? 'upcoming' : 'completed',
-                },
-                {
-                  id: '3',
-                  label: 'Interview',
-                  status:
-                    raw.status === 'shortlisted' || raw.status === 'interviewing'
-                      ? 'current'
-                      : raw.status === 'accepted'
-                        ? 'completed'
-                        : 'upcoming',
-                },
-                {
-                  id: '4',
-                  label: 'Decision',
-                  status:
-                    raw.status === 'accepted' || raw.status === 'rejected'
-                      ? 'completed'
-                      : 'upcoming',
-                },
-              ],
-      }))
-
-      const parsed = studentApplicationListSchema.safeParse(mapped)
-      if (parsed.success) {
-        return parsed.data
-      }
-    }
-  } catch {
-    // Graceful fallback to default mock applications if backend is offline or unauthenticated test
-    return studentApplicationListSchema.parse(DEFAULT_STUDENT_APPLICATIONS)
+  if (!Array.isArray(json.data)) {
+    return []
   }
 
-  return studentApplicationListSchema.parse(DEFAULT_STUDENT_APPLICATIONS)
+  const mapped = json.data.map((raw, index): StudentApplicationItem => {
+    const compName =
+      raw.companyName || raw.recruiter?.companyName || raw.posting?.companyName || 'Company'
+
+    let cleanCompanyUrl: string | undefined = undefined
+    const rawUrl = raw.companyUrl || raw.recruiter?.companyUrl
+    if (rawUrl) {
+      try {
+        const parsed = new URL(rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`)
+        cleanCompanyUrl = parsed.toString()
+      } catch {
+        cleanCompanyUrl = undefined
+      }
+    }
+
+    let cleanEmail: string | undefined = undefined
+    const rawEmail = raw.recruiterEmail
+    if (rawEmail && rawEmail.includes('@')) {
+      cleanEmail = rawEmail
+    }
+
+    const employmentType = raw.employmentType || raw.posting?.employmentType || 'full_time'
+    const safeEmploymentType = ['internship', 'full_time', 'part_time', 'contract'].includes(
+      employmentType,
+    )
+      ? (employmentType as StudentApplicationItem['employmentType'])
+      : 'full_time'
+
+    const workArrangement = raw.workArrangement || raw.posting?.workArrangement || 'remote'
+    const safeWorkArrangement = ['in_person', 'remote', 'hybrid'].includes(workArrangement)
+      ? (workArrangement as StudentApplicationItem['workArrangement'])
+      : 'remote'
+
+    const normalizedStatus: ApplicationStatus =
+      raw.status === 'shortlisted' ? 'interviewing' : (raw.status as ApplicationStatus) || 'applied'
+
+    const appliedDateStr = raw.appliedAt
+      ? new Date(raw.appliedAt).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        })
+      : 'Recently'
+
+    return {
+      id: raw.id ?? `app-${index}`,
+      postingId: raw.postingId ?? raw.posting?.id ?? `post-${index}`,
+      companyName: compName,
+      companyLogoText:
+        raw.companyLogoText ||
+        compName
+          .split(' ')
+          .map((w) => w[0])
+          .join('')
+          .slice(0, 2)
+          .toUpperCase() ||
+        'CO',
+      companyLogoBg: raw.companyLogoBg || 'bg-slate-100 text-slate-800',
+      companyUrl: cleanCompanyUrl,
+      roleTitle: raw.roleTitle || raw.posting?.title || 'Open Position',
+      employmentType: safeEmploymentType,
+      workArrangement: safeWorkArrangement,
+      location: raw.location || raw.posting?.location || 'Remote',
+      compensation: raw.compensation ?? raw.posting?.compensation ?? undefined,
+      appliedAt: raw.appliedAt || new Date().toISOString(),
+      updatedAt: raw.updatedAt || new Date().toISOString(),
+      status: normalizedStatus,
+      currentMilestone:
+        raw.currentMilestone ||
+        (normalizedStatus === 'accepted'
+          ? 'Offer Extended'
+          : normalizedStatus === 'interviewing'
+            ? 'Technical Screen'
+            : normalizedStatus === 'rejected'
+              ? 'Application Closed'
+              : normalizedStatus === 'under_review'
+                ? 'Application Under Review'
+                : 'Application Submitted'),
+      currentMilestoneDate: raw.currentMilestoneDate || appliedDateStr,
+      interviewFormat: raw.interviewFormat,
+      recruiterName: raw.recruiterName,
+      recruiterEmail: cleanEmail,
+      description: raw.description || raw.posting?.description,
+      stack:
+        Array.isArray(raw.stack) && raw.stack.length > 0
+          ? raw.stack
+          : Array.isArray(raw.posting?.stack)
+            ? raw.posting.stack
+            : [],
+      milestones:
+        Array.isArray(raw.milestones) && raw.milestones.length > 0
+          ? raw.milestones
+          : [
+              {
+                id: '1',
+                label: 'Application Submitted',
+                status: 'completed',
+                date: appliedDateStr,
+              },
+              {
+                id: '2',
+                label: 'Application Under Review',
+                status:
+                  normalizedStatus === 'applied'
+                    ? 'upcoming'
+                    : normalizedStatus === 'under_review'
+                      ? 'current'
+                      : 'completed',
+              },
+              {
+                id: '3',
+                label: 'Interview / Technical Screen',
+                status:
+                  normalizedStatus === 'interviewing'
+                    ? 'current'
+                    : normalizedStatus === 'accepted'
+                      ? 'completed'
+                      : 'upcoming',
+              },
+              {
+                id: '4',
+                label: 'Final Decision',
+                status:
+                  normalizedStatus === 'accepted' || normalizedStatus === 'rejected'
+                    ? 'completed'
+                    : 'upcoming',
+              },
+            ],
+    }
+  })
+
+  const parsed = studentApplicationListSchema.safeParse(mapped)
+  if (parsed.success) {
+    return parsed.data
+  }
+
+  return mapped
 }
 
 export async function withdrawStudentApplication(
   applicationId: string,
 ): Promise<{ success: boolean; id: string }> {
-  try {
-    const res = await fetch(`/api/student/applications/${applicationId}`, {
+  const res = await apiFetch<{ data: { id: string; success: boolean } }>(
+    `/api/applications/${applicationId}`,
+    {
       method: 'DELETE',
-    })
-    if (res.ok) {
-      return { success: true, id: applicationId }
-    }
-  } catch {
-    // Fall back to client success
-  }
-  return { success: true, id: applicationId }
+    },
+  )
+  return res.data
 }
 
 export function formatEmploymentType(type: StudentApplicationItem['employmentType']): string {

@@ -25,9 +25,10 @@ describe('StudentApplicationsPage with Zod, Zustand, and TanStack Query', () => 
     vi.clearAllMocks()
     window.scrollTo = vi.fn()
     useApplicationsStore.setState(initialStoreState)
+    vi.spyOn(api, 'fetchStudentApplications').mockResolvedValue(api.DEFAULT_STUDENT_APPLICATIONS)
   })
 
-  it('renders application dashboard with header and metric cards matching design', () => {
+  it('renders application dashboard with header and metric cards matching design', async () => {
     renderWithProviders(<StudentApplicationsPage />)
 
     expect(screen.getByText('My Applications')).toBeInTheDocument()
@@ -35,23 +36,27 @@ describe('StudentApplicationsPage with Zod, Zustand, and TanStack Query', () => 
       screen.getByText('Track and manage your ongoing job and internship applications.'),
     ).toBeInTheDocument()
 
+    // Wait for applications to settle
+    await waitFor(() => {
+      expect(screen.getByTestId('pagination-summary')).toHaveTextContent(
+        'Showing 1–5 of 5 applications',
+      )
+    })
+
     // Metric cards
     expect(screen.getByRole('button', { name: /Filter by TOTAL APPLIED/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Filter by INTERVIEWING/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Filter by OFFERS/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Filter by REJECTED/i })).toBeInTheDocument()
-
-    // 5 total applications
-    expect(screen.getByTestId('pagination-summary')).toHaveTextContent(
-      'Showing 1–5 of 5 applications',
-    )
   })
 
-  it('renders status badges, applied date, and stages for application cards', () => {
+  it('renders status badges, applied date, and stages for application cards', async () => {
     renderWithProviders(<StudentApplicationsPage />)
 
-    // Items from design screenshot
-    expect(screen.getByText('Product Design Intern')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('Product Design Intern')).toBeInTheDocument()
+    })
+
     expect(screen.getByText('Backend Engineer (Full-Time)')).toBeInTheDocument()
     expect(screen.getByText('ML Engineer (Contract)')).toBeInTheDocument()
 
@@ -66,6 +71,10 @@ describe('StudentApplicationsPage with Zod, Zustand, and TanStack Query', () => 
 
   it('filters applications using Zustand store when clicking a metric card', async () => {
     renderWithProviders(<StudentApplicationsPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Product Design Intern')).toBeInTheDocument()
+    })
 
     // Click "INTERVIEWING" metric card
     const interviewingCard = screen.getByRole('button', { name: /Filter by INTERVIEWING/i })
@@ -84,6 +93,10 @@ describe('StudentApplicationsPage with Zod, Zustand, and TanStack Query', () => 
   it('filters applications using Zustand store via search input', async () => {
     renderWithProviders(<StudentApplicationsPage />)
 
+    await waitFor(() => {
+      expect(screen.getByText('Product Design Intern')).toBeInTheDocument()
+    })
+
     const searchInput = screen.getByPlaceholderText(/Search by role, company, or status/i)
     await act(async () => {
       fireEvent.change(searchInput, { target: { value: 'Kreative' } })
@@ -98,6 +111,10 @@ describe('StudentApplicationsPage with Zod, Zustand, and TanStack Query', () => 
 
   it('switches between List and Grid view modes via Zustand store', async () => {
     renderWithProviders(<StudentApplicationsPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Product Design Intern')).toBeInTheDocument()
+    })
 
     const gridBtn = screen.getByRole('button', { name: /Grid view/i })
     await act(async () => {
@@ -116,6 +133,10 @@ describe('StudentApplicationsPage with Zod, Zustand, and TanStack Query', () => 
 
   it('expands and collapses milestone history inline without opening a popup dialog', async () => {
     renderWithProviders(<StudentApplicationsPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Backend Engineer (Full-Time)')).toBeInTheDocument()
+    })
 
     // Initially collapsed: milestone history is not shown
     expect(screen.queryByText('APPLICATION MILESTONE HISTORY')).not.toBeInTheDocument()
@@ -189,5 +210,35 @@ describe('StudentApplicationsPage with Zod, Zustand, and TanStack Query', () => 
     await waitFor(() => {
       expect(screen.queryByText('Backend Engineer (Full-Time)')).not.toBeInTheDocument()
     })
+  })
+
+  it('renders empty state with Explore Job Postings link when user has no applications', async () => {
+    vi.spyOn(api, 'fetchStudentApplications').mockResolvedValue([])
+
+    renderWithProviders(<StudentApplicationsPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('No applications found')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText('You have not submitted any job applications yet.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Explore Job Postings/i })).toHaveAttribute(
+      'href',
+      '/student/jobs',
+    )
+  })
+
+  it('renders error banner with retry option when application fetch fails', async () => {
+    vi.spyOn(api, 'fetchStudentApplications').mockRejectedValueOnce(new Error('Network error'))
+
+    renderWithProviders(<StudentApplicationsPage />)
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Failed to synchronize applications with the server. Using cached data.'),
+      ).toBeInTheDocument()
+    })
+
+    expect(screen.getByRole('button', { name: /Retry/i })).toBeInTheDocument()
   })
 })

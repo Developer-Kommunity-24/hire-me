@@ -52,6 +52,7 @@ describe('AllMembersTable', () => {
     await waitFor(() => {
       expect(screen.getByText('Priya Nair')).toBeInTheDocument()
       expect(screen.getByText('Marcus Webb')).toBeInTheDocument()
+      expect(screen.getAllByText('DK24 Verified')).toHaveLength(2)
     })
 
     const searchInput = screen.getByPlaceholderText('Search by name, USN, or email')

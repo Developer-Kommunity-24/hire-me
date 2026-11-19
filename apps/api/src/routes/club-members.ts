@@ -11,6 +11,9 @@ import {
   addClubMember,
   editClubMember,
   deleteClubMember,
+  listClubVerificationRequests,
+  acceptClubVerificationRequest,
+  rejectClubVerificationRequest,
 } from '../controllers/club-members.controller.js'
 
 // ==========================================
@@ -64,6 +67,60 @@ export const clubMembersRouter = new Hono<ClubMembersEnv>()
 // Every route requires a valid Neon Auth bearer token and a club_admins row.
 clubMembersRouter.use('*', requireAuth)
 clubMembersRouter.use('*', requireClubAdmin)
+
+/**
+ * GET /api/clubs/members/requests
+ *
+ * Lists all pending student verification/join requests for the authenticated
+ * club admin's assigned club.
+ */
+clubMembersRouter.get('/requests', async (c) => {
+  const requests = await listClubVerificationRequests(c.var.db, c.var.clubId)
+  return c.json({ data: requests })
+})
+
+/**
+ * POST /api/clubs/members/requests/:id/accept
+ *
+ * Accepts a student verification request, adding them to the club roster with
+ * the 'verified' badge status.
+ */
+clubMembersRouter.post('/requests/:id/accept', async (c) => {
+  const rawId = c.req.param('id')
+
+  if (!uuidSchema.safeParse(rawId).success) {
+    return c.json({ error: 'Request not found' }, 404)
+  }
+
+  const result = await acceptClubVerificationRequest(c.var.db, c.var.clubId, rawId)
+
+  if (!result.ok) {
+    return c.json({ error: result.error }, result.status as 400 | 404)
+  }
+
+  return c.json({ data: result.data }, 200)
+})
+
+/**
+ * POST /api/clubs/members/requests/:id/reject
+ *
+ * Rejects a student verification request, updating their status and notifying them.
+ */
+clubMembersRouter.post('/requests/:id/reject', async (c) => {
+  const rawId = c.req.param('id')
+
+  if (!uuidSchema.safeParse(rawId).success) {
+    return c.json({ error: 'Request not found' }, 404)
+  }
+
+  const result = await rejectClubVerificationRequest(c.var.db, c.var.clubId, rawId)
+
+  if (!result.ok) {
+    return c.json({ error: result.error }, result.status as 400 | 404)
+  }
+
+  return c.json({ data: null }, 200)
+})
 
 /**
  * GET /api/clubs/members

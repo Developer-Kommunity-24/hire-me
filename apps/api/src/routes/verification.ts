@@ -1,6 +1,8 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
+import { asc, eq } from 'drizzle-orm'
+import { clubs } from '@repo/db'
 import { requireAuth } from '../middleware/auth.js'
 import { requireCoreAdmin } from '../middleware/core-admin.js'
 import type { AuthVariables } from '../middleware/auth.js'
@@ -68,6 +70,25 @@ export const verificationRouter = new Hono<VerificationEnv>()
 
 // All verification endpoints require an authenticated bearer token.
 verificationRouter.use('*', requireAuth)
+
+/**
+ * GET /api/verifications/clubs
+ *
+ * Lists all active clubs for students to select from when requesting verification.
+ */
+verificationRouter.get('/clubs', async (c) => {
+  const activeClubs = await c.var.db
+    .select({
+      id: clubs.id,
+      name: clubs.name,
+      slug: clubs.slug,
+    })
+    .from(clubs)
+    .where(eq(clubs.isActive, true))
+    .orderBy(asc(clubs.name))
+
+  return c.json({ data: activeClubs })
+})
 
 /**
  * POST /api/verifications

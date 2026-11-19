@@ -6,7 +6,6 @@ import {
   fetchStudentApplications,
   withdrawStudentApplication,
   computeMetrics,
-  DEFAULT_STUDENT_APPLICATIONS,
 } from '@/lib/student-applications-api'
 import type { StudentApplicationItem } from '@/lib/schemas/student-applications.schema'
 
@@ -18,9 +17,8 @@ export function useStudentApplications() {
   return useQuery({
     queryKey: STUDENT_APPLICATIONS_QUERY_KEYS.all,
     queryFn: fetchStudentApplications,
-    initialData: DEFAULT_STUDENT_APPLICATIONS,
-    initialDataUpdatedAt: 0,
-    staleTime: 1000 * 60 * 2, // 2 minutes
+    staleTime: 1000 * 30, // 30 seconds
+    refetchOnWindowFocus: true,
   })
 }
 
@@ -34,14 +32,17 @@ export function useWithdrawApplication() {
         STUDENT_APPLICATIONS_QUERY_KEYS.all,
         (old) => (old ? old.filter((item) => item.id !== result.id) : []),
       )
+      queryClient.invalidateQueries({ queryKey: ['my-applications'] })
       toast.success('Application successfully withdrawn.')
     },
-    onError: () => {
-      toast.error('Failed to withdraw application. Please try again.')
+    onError: (err: unknown) => {
+      const message =
+        err instanceof Error ? err.message : 'Failed to withdraw application. Please try again.'
+      toast.error(message)
     },
   })
 }
 
 export function useApplicationsMetrics(applications?: StudentApplicationItem[]) {
-  return computeMetrics(applications ?? DEFAULT_STUDENT_APPLICATIONS)
+  return computeMetrics(applications ?? [])
 }

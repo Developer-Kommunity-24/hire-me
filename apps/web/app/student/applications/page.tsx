@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import Link from 'next/link'
 import {
   Search,
   SlidersHorizontal,
@@ -12,11 +13,7 @@ import {
   ChevronDown,
   Loader2,
 } from 'lucide-react'
-import {
-  DEFAULT_STUDENT_APPLICATIONS,
-  type ApplicationStatus,
-  type SortOption,
-} from '@/lib/student-applications-api'
+import { type ApplicationStatus, type SortOption } from '@/lib/student-applications-api'
 import {
   useStudentApplications,
   useWithdrawApplication,
@@ -32,12 +29,7 @@ import { cn } from '@/lib/utils'
 
 export default function StudentApplicationsPage() {
   // TanStack Query (Server State)
-  const {
-    data: applications = DEFAULT_STUDENT_APPLICATIONS,
-    isLoading,
-    isError,
-    refetch,
-  } = useStudentApplications()
+  const { data: applications = [], isLoading, isError, refetch } = useStudentApplications()
   const withdrawMutation = useWithdrawApplication()
 
   // Zustand Store (Client UI State)
@@ -368,10 +360,14 @@ export default function StudentApplicationsPage() {
                   ? 'No applications match your active search or filters.'
                   : 'You have not submitted any job applications yet.'}
               </p>
-              {(searchQuery || selectedStatus !== 'all') && (
+              {searchQuery || selectedStatus !== 'all' ? (
                 <Button type="button" variant="outline" size="sm" onClick={resetFilters}>
                   <RotateCcw className="w-3.5 h-3.5" />
                   <span>Reset Filters</span>
+                </Button>
+              ) : (
+                <Button asChild size="sm">
+                  <Link href="/student/jobs">Explore Job Postings</Link>
                 </Button>
               )}
             </div>
