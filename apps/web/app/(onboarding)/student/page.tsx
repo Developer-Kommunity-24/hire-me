@@ -27,6 +27,7 @@ const DEFAULT_STUDENT_VALUES: StudentOnboardingInput = {
   fullName: '',
   headline: '',
   bio: '',
+  avatarKey: 'avatar:panda',
   school: '',
   degree: '',
   graduationYear: '2026',

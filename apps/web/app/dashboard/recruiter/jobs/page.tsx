@@ -177,7 +177,7 @@ export default function JobPostingsPage() {
     <div className="flex min-h-screen bg-bg-page">
       <Sidebar />
 
-      <div className="min-w-0 flex-1 lg:ml-64">
+      <div className="min-w-0 flex-1 lg:ml-64 flex flex-col">
         <Topbar />
 
         <main className="p-6 lg:p-8">

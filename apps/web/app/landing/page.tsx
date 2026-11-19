@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { ArrowUpRight } from 'lucide-react'
+import { Button } from '@/components/common/Button'
 
 export default function LandingPage() {
   return (
@@ -19,12 +20,9 @@ export default function LandingPage() {
 
           {/* Trailing Actions */}
           <div className="flex items-center gap-3 sm:gap-4">
-            <Link
-              href="/login"
-              className="flex items-center justify-center px-5 py-2.5 rounded-xl bg-action-dark hover:bg-black active:scale-95 text-white font-semibold text-xs sm:text-sm transition-all shadow-xs"
-            >
-              Get Started
-            </Link>
+            <Button asChild>
+              <Link href="/login">Get Started</Link>
+            </Button>
           </div>
         </div>
       </nav>

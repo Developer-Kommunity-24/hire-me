@@ -1,15 +1,17 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { BriefcaseBusiness, LayoutDashboard, Users } from 'lucide-react'
 import Sidebar from './Sidebar'
 
 const mockUser = vi.fn()
+const mockPathname = vi.fn(() => '/student/jobs')
 
 vi.mock('@/lib/hooks/use-auth', () => ({
   useAuth: () => mockUser(),
 }))
 
 vi.mock('next/navigation', () => ({
-  usePathname: () => '/student/jobs',
+  usePathname: () => mockPathname(),
 }))
 
 describe('Sidebar Navigation', () => {
@@ -77,5 +79,47 @@ describe('Sidebar Navigation', () => {
     const superAdminLink = screen.getByText('Super Admin')
     expect(superAdminLink).toBeInTheDocument()
     expect(superAdminLink.closest('a')).toHaveAttribute('href', '/admin')
+  })
+
+  it('only highlights Job Postings and not Dashboard when on /dashboard/recruiter/jobs', () => {
+    mockPathname.mockReturnValue('/dashboard/recruiter/jobs')
+    mockUser.mockReturnValue({ user: null, isLoading: false })
+
+    const recruiterNav = [
+      { label: 'Dashboard', href: '/dashboard/recruiter', icon: LayoutDashboard },
+      { label: 'Job Postings', href: '/dashboard/recruiter/jobs', icon: BriefcaseBusiness },
+      { label: 'Candidates', href: '/dashboard/recruiter/candidates', icon: Users },
+    ]
+
+    render(<Sidebar items={recruiterNav} />)
+
+    const dashboardLink = screen.getByText('Dashboard').closest('a')
+    const jobsLink = screen.getByText('Job Postings').closest('a')
+    const candidatesLink = screen.getByText('Candidates').closest('a')
+
+    expect(jobsLink).toHaveAttribute('aria-current', 'page')
+    expect(dashboardLink).not.toHaveAttribute('aria-current')
+    expect(candidatesLink).not.toHaveAttribute('aria-current')
+  })
+
+  it('only highlights Candidates and not Dashboard when on /dashboard/recruiter/candidates', () => {
+    mockPathname.mockReturnValue('/dashboard/recruiter/candidates')
+    mockUser.mockReturnValue({ user: null, isLoading: false })
+
+    const recruiterNav = [
+      { label: 'Dashboard', href: '/dashboard/recruiter', icon: LayoutDashboard },
+      { label: 'Job Postings', href: '/dashboard/recruiter/jobs', icon: BriefcaseBusiness },
+      { label: 'Candidates', href: '/dashboard/recruiter/candidates', icon: Users },
+    ]
+
+    render(<Sidebar items={recruiterNav} />)
+
+    const dashboardLink = screen.getByText('Dashboard').closest('a')
+    const jobsLink = screen.getByText('Job Postings').closest('a')
+    const candidatesLink = screen.getByText('Candidates').closest('a')
+
+    expect(candidatesLink).toHaveAttribute('aria-current', 'page')
+    expect(dashboardLink).not.toHaveAttribute('aria-current')
+    expect(jobsLink).not.toHaveAttribute('aria-current')
   })
 })

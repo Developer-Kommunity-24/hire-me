@@ -1,8 +1,7 @@
 'use client'
 
 import type { Candidate, CandidateStatus } from '../data'
-import { getInitials } from '@/lib/utils'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import UserAvatar from '@/components/student-profile/UserAvatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Check, CheckCircle2, ChevronRight, UserCheck, X, XCircle } from 'lucide-react'
@@ -26,9 +25,12 @@ export default function CandidateRow({
     <div className="flex flex-col gap-5 rounded-xl border bg-card p-5 transition-shadow hover:shadow-sm md:flex-row md:items-center md:justify-between">
       <div className="flex min-w-0 items-center gap-4">
         <div className="shrink-0">
-          <Avatar>
-            <AvatarFallback>{getInitials(candidate.name)}</AvatarFallback>
-          </Avatar>
+          <UserAvatar
+            name={candidate.name}
+            size="40"
+            round={false}
+            className="rounded-xl shadow-xs"
+          />
         </div>
 
         <div className="min-w-0">
