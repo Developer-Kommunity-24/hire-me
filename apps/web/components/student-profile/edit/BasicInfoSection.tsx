@@ -2,6 +2,7 @@
 
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import AvatarPicker from '../AvatarPicker'
 import type { BasicInfoSectionProps, ProfileData } from '../types'
 
 export default function BasicInfoSection({ data, onChange, errors }: BasicInfoSectionProps) {
@@ -17,6 +18,13 @@ export default function BasicInfoSection({ data, onChange, errors }: BasicInfoSe
           <p className="text-xs text-text-muted mt-1">
             Manage your personal details and public contact information.
           </p>
+        </div>
+
+        <div className="mb-6 pb-6 border-b border-border-subtle">
+          <AvatarPicker
+            value={data.photoUrl || 'avatar:panda'}
+            onChange={(newAvatar) => handleFieldChange('photoUrl', newAvatar)}
+          />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">

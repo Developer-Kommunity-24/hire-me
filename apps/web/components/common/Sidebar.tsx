@@ -65,6 +65,20 @@ export default function Sidebar({
     return list
   }, [items, isClubAdmin, isCoreAdmin])
 
+  const activeHref = useMemo(() => {
+    const exactMatch = navItems.find((item) => pathname === item.href)
+    if (exactMatch) return exactMatch.href
+
+    const prefixMatches = navItems
+      .filter(
+        (item) =>
+          item.href !== '/' && (pathname.startsWith(item.href + '/') || pathname === item.href),
+      )
+      .sort((a, b) => b.href.length - a.href.length)
+
+    return prefixMatches[0]?.href ?? null
+  }, [navItems, pathname])
+
   return (
     <>
       {/* Mobile Menu Trigger Button */}
@@ -131,8 +145,7 @@ export default function Sidebar({
           </p>
           <ul className="space-y-1" role="list">
             {navItems.map((item) => {
-              const isActive =
-                pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
+              const isActive = activeHref === item.href
               const IconComp = item.icon
               return (
                 <li key={item.label}>

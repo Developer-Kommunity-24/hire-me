@@ -4,6 +4,8 @@ export const studentStep1Schema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
   headline: z.string().optional(),
   bio: z.string().optional(),
+  avatarKey: z.string().optional(),
+  photoUrl: z.string().optional(),
 })
 
 export const studentStep2Schema = z.object({

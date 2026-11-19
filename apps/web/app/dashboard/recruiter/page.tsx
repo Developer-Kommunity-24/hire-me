@@ -1,9 +1,10 @@
 'use client'
 
 import { Suspense, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ExternalLink, FileText, Globe, Link2, Loader2, RefreshCw, X } from 'lucide-react'
+import { ExternalLink, FileText, Globe, Link2, Loader2, RefreshCw, Users, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import RecruiterProfileForm from './components/RecruiterProfileForm'
@@ -179,7 +180,7 @@ function RecruiterDashboardContent() {
     <div className="flex min-h-screen bg-bg-page font-sans">
       <Sidebar />
 
-      <div className="min-w-0 flex-1 lg:ml-64">
+      <div className="min-w-0 flex-1 lg:ml-64 flex flex-col">
         <Topbar />
 
         <main className="p-6 lg:p-8 max-w-7xl mx-auto">
@@ -198,6 +199,12 @@ function RecruiterDashboardContent() {
             </div>
 
             <div className="flex items-center gap-3">
+              <Button asChild variant="outline" size="sm">
+                <Link href="/dashboard/recruiter/candidates">
+                  <Users className="w-3.5 h-3.5 mr-1.5" />
+                  Find Candidates
+                </Link>
+              </Button>
               <Button
                 type="button"
                 variant="outline"

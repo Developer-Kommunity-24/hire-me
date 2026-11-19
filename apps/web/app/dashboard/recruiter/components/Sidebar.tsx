@@ -8,7 +8,7 @@ import CommonSidebar, { type NavItem } from '@/components/common/Sidebar'
 const RECRUITER_NAV: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard/recruiter', icon: LayoutDashboard },
   { label: 'Job Postings', href: '/dashboard/recruiter/jobs', icon: BriefcaseBusiness },
-  { label: 'Candidates', href: '/dashboard/recruiter#applicant-pipeline', icon: Users },
+  { label: 'Candidates', href: '/dashboard/recruiter/candidates', icon: Users },
 ]
 
 export default function Sidebar({ className }: { className?: string }) {

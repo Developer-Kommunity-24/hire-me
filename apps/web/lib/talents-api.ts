@@ -1,8 +1,21 @@
 import { apiFetch } from './api-client'
 
+export interface TalentProject {
+  id: string
+  title: string
+  description: string | null
+  role?: string | null
+  contributions?: string | null
+  learnings?: string | null
+  skillsUsed: string[] | null
+  liveUrl: string | null
+  githubUrl: string | null
+}
+
 export interface TalentCandidate {
   id: string
   fullName: string
+  email?: string
   headline: string | null
   bio: string | null
   gradYear: number | null
@@ -14,6 +27,8 @@ export interface TalentCandidate {
   resumeUrl?: string | null
   githubUrl?: string | null
   linkedinUrl?: string | null
+  projects?: TalentProject[]
+  updatedAt?: string
 }
 
 export interface TalentSearchFilters {

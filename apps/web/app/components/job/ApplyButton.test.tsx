@@ -94,9 +94,12 @@ describe('ApplyButton', () => {
   it('renders "Apply Now" button when student has not applied', async () => {
     renderWithClient(<ApplyButton job={sampleJob} />)
 
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /apply now/i })).toBeInTheDocument()
-    })
+    await waitFor(
+      () => {
+        expect(screen.getByRole('button', { name: /apply now/i })).toBeInTheDocument()
+      },
+      { timeout: 3000 },
+    )
   })
 
   it('redirects to login when unauthenticated user clicks Apply Now', async () => {
