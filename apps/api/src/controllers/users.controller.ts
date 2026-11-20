@@ -1,5 +1,5 @@
-import { eq } from 'drizzle-orm'
-import { users } from '@repo/db'
+import { and, eq } from 'drizzle-orm'
+import { recruiters, studentProfiles, users } from '@repo/db'
 import type { Database, User } from '@repo/db'
 
 // ==========================================
@@ -37,6 +37,66 @@ const PRIVILEGED_ROLES: readonly string[] = ['core_admin', 'club_admin']
 export async function getUserById(db: Database, id: string): Promise<User | null> {
   const [user] = await db.select().from(users).where(eq(users.id, id)).limit(1)
   return user ?? null
+}
+
+/**
+ * Looks up a user by email address.
+ *
+ * @param db - Request-scoped Drizzle client.
+ * @param email - User's email address.
+ */
+export async function getUserByEmail(db: Database, email: string): Promise<User | null> {
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, email.trim().toLowerCase()))
+    .limit(1)
+  return user ?? null
+}
+
+/**
+ * Checks whether a user has already finished onboarding, and resolves their dashboard URL.
+ */
+export async function getUserOnboardingStatus(
+  db: Database,
+  user: User,
+): Promise<{ hasAccount: boolean; dashboardUrl: string }> {
+  if (user.roles.includes('core_admin')) {
+    return { hasAccount: true, dashboardUrl: '/admin' }
+  }
+  if (user.roles.includes('club_admin')) {
+    return { hasAccount: true, dashboardUrl: '/student-admin/members' }
+  }
+  if (user.roles.includes('recruiter')) {
+    try {
+      const [recruiter] = await db
+        .select({ userId: recruiters.userId })
+        .from(recruiters)
+        .where(and(eq(recruiters.userId, user.id), eq(recruiters.isDeleted, false)))
+        .limit(1)
+      const hasAccount = Boolean(recruiter)
+      return { hasAccount, dashboardUrl: hasAccount ? '/dashboard/recruiter' : '/recruiter' }
+    } catch {
+      return { hasAccount: true, dashboardUrl: '/dashboard/recruiter' }
+    }
+  }
+
+  // student
+  try {
+    const [profile] = await db
+      .select({
+        headline: studentProfiles.headline,
+        gradYear: studentProfiles.gradYear,
+        bio: studentProfiles.bio,
+      })
+      .from(studentProfiles)
+      .where(eq(studentProfiles.userId, user.id))
+      .limit(1)
+    const hasAccount = Boolean(profile && (profile.headline || profile.gradYear || profile.bio))
+    return { hasAccount, dashboardUrl: hasAccount ? '/student/jobs' : '/student' }
+  } catch {
+    return { hasAccount: false, dashboardUrl: '/student' }
+  }
 }
 
 // ==========================================

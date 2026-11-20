@@ -16,6 +16,7 @@ import {
   StudentOnboardingStepper,
   type StepNumber,
 } from '@/components/onboarding/student-onboarding-stepper'
+import { useAuth } from '@/lib/hooks/use-auth'
 import { useSaveStudentProfile } from '@/lib/hooks/use-onboarding'
 import {
   studentCompleteOnboardingSchema,
@@ -56,9 +57,19 @@ const POPULAR_SKILL_SUGGESTIONS = [
 
 export default function StudentOnboardingPage() {
   const router = useRouter()
+  const { user, isLoading: isAuthLoading } = useAuth()
   const [step, setStep] = useState<StepNumber>(1)
   const [isCompleted, setIsCompleted] = useState(false)
   const [newSkillInput, setNewSkillInput] = useState('')
+
+  // If student already has an account, redirect directly to student dashboard (jobs feed)
+  useEffect(() => {
+    if (isAuthLoading || !user) return
+
+    if (user.hasAccount) {
+      router.replace(user.dashboardUrl || '/student/jobs')
+    }
+  }, [user, isAuthLoading, router])
 
   const saveStudentMutation = useSaveStudentProfile()
 

@@ -33,12 +33,19 @@ vi.mock('../middleware/auth.ts', () => ({
 
 vi.mock('../controllers/users.controller.ts', () => ({
   getUserById: vi.fn(),
+  getUserByEmail: vi.fn(),
   syncAuthUser: vi.fn(),
   setUserRole: vi.fn(),
+  getUserOnboardingStatus: vi.fn(),
 }))
 
 import { app } from '../app.js'
-import { setUserRole, syncAuthUser } from '../controllers/users.controller.js'
+import {
+  getUserByEmail,
+  getUserOnboardingStatus,
+  setUserRole,
+  syncAuthUser,
+} from '../controllers/users.controller.js'
 
 // ==========================================
 // FIXTURES
@@ -76,6 +83,10 @@ function patchRole(body: unknown) {
 describe('GET /api/users/me', () => {
   beforeEach(() => {
     vi.mocked(syncAuthUser).mockResolvedValue({ ok: true, user: makeUser() })
+    vi.mocked(getUserOnboardingStatus).mockResolvedValue({
+      hasAccount: true,
+      dashboardUrl: '/student/jobs',
+    })
   })
 
   it('returns the synced user', async () => {
@@ -174,5 +185,56 @@ describe('PATCH /api/users/me/role', () => {
     const res = await patchRole({ role: 'student' })
 
     expect(res.status).toBe(404)
+  })
+})
+
+// ==========================================
+// GET /api/users/check-email
+// ==========================================
+
+describe('GET /api/users/check-email', () => {
+  it('returns exists: false when user is not found', async () => {
+    vi.mocked(getUserByEmail).mockResolvedValue(null)
+
+    const res = await app.request('/api/users/check-email?email=unknown@example.com')
+    expect(res.status).toBe(200)
+
+    const body = (await res.json()) as { exists: boolean }
+    expect(body.exists).toBe(false)
+  })
+
+  it('returns recruiter dashboard when user has recruiter role', async () => {
+    vi.mocked(getUserByEmail).mockResolvedValue(makeUser({ roles: ['recruiter'] }))
+    vi.mocked(getUserOnboardingStatus).mockResolvedValue({
+      hasAccount: true,
+      dashboardUrl: '/dashboard/recruiter',
+    })
+
+    const res = await app.request('/api/users/check-email?email=recruiter@example.com')
+    expect(res.status).toBe(200)
+
+    const body = (await res.json()) as { exists: boolean; dashboardUrl: string }
+    expect(body.exists).toBe(true)
+    expect(body.dashboardUrl).toBe('/dashboard/recruiter')
+  })
+
+  it('returns student dashboard when user has student role', async () => {
+    vi.mocked(getUserByEmail).mockResolvedValue(makeUser({ roles: ['student'] }))
+    vi.mocked(getUserOnboardingStatus).mockResolvedValue({
+      hasAccount: true,
+      dashboardUrl: '/student/jobs',
+    })
+
+    const res = await app.request('/api/users/check-email?email=student@example.com')
+    expect(res.status).toBe(200)
+
+    const body = (await res.json()) as { exists: boolean; dashboardUrl: string }
+    expect(body.exists).toBe(true)
+    expect(body.dashboardUrl).toBe('/student/jobs')
+  })
+
+  it('returns 400 when email param is missing', async () => {
+    const res = await app.request('/api/users/check-email')
+    expect(res.status).toBe(400)
   })
 })

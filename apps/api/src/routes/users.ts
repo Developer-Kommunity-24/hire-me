@@ -1,7 +1,12 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { setUserRole, syncAuthUser } from '../controllers/users.controller.js'
+import {
+  getUserByEmail,
+  getUserOnboardingStatus,
+  setUserRole,
+  syncAuthUser,
+} from '../controllers/users.controller.js'
 import { requireAuth } from '../middleware/auth.js'
 import type { AuthVariables } from '../middleware/auth.js'
 import type { DbVariables } from '../middleware/db.js'
@@ -37,6 +42,38 @@ const EMAIL_CONFLICT_MESSAGE = 'An account with this email address already exist
 
 const usersRouter = new Hono<UsersEnv>()
 
+/**
+ * GET /api/users/check-email?email=...
+ *
+ * Public endpoint to check if an email already belongs to a registered user.
+ * Returns their role and direct dashboard URL if they already have an account.
+ */
+usersRouter.get('/check-email', async (c) => {
+  const email = c.req.query('email')
+  if (!email) {
+    return c.json({ error: 'Email query parameter is required' }, 400)
+  }
+
+  const user = await getUserByEmail(c.var.db, email)
+  if (!user) {
+    return c.json({ exists: false })
+  }
+
+  const { hasAccount, dashboardUrl } = await getUserOnboardingStatus(c.var.db, user)
+
+  return c.json({
+    exists: true,
+    user: {
+      id: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      roles: user.roles,
+    },
+    hasAccount,
+    dashboardUrl,
+  })
+})
+
 // Every route below requires a verified Neon Auth bearer token.
 usersRouter.use('*', requireAuth)
 
@@ -53,7 +90,16 @@ usersRouter.get('/me', async (c) => {
     return c.json({ error: EMAIL_CONFLICT_MESSAGE }, 409)
   }
 
-  return c.json({ user: result.user })
+  const user = result.user
+  const { hasAccount, dashboardUrl } = await getUserOnboardingStatus(c.var.db, user)
+
+  return c.json({
+    user: {
+      ...user,
+      hasAccount,
+      dashboardUrl,
+    },
+  })
 })
 
 /**

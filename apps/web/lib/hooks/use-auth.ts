@@ -18,6 +18,8 @@ export interface AuthUser {
   email: string
   roles: string[]
   role?: string
+  hasAccount?: boolean
+  dashboardUrl?: string
 }
 
 export function useAuth() {
@@ -28,7 +30,14 @@ export function useAuth() {
     queryFn: async () => {
       try {
         const res = await apiFetch<{
-          user: { id: string; email: string; fullName: string; roles: string[] }
+          user: {
+            id: string
+            email: string
+            fullName: string
+            roles: string[]
+            hasAccount?: boolean
+            dashboardUrl?: string
+          }
         }>('/api/users/me')
         return res.user
       } catch {
@@ -46,6 +55,8 @@ export function useAuth() {
   const email = dbUser?.email || sessionUser?.email || ''
   const roles = dbUser?.roles || []
   const role = roles[0]
+  const hasAccount = dbUser?.hasAccount
+  const dashboardUrl = dbUser?.dashboardUrl
 
   const user: AuthUser | null = id
     ? {
@@ -54,6 +65,8 @@ export function useAuth() {
         email,
         roles,
         role,
+        hasAccount,
+        dashboardUrl,
       }
     : null
 

@@ -8,13 +8,26 @@ import RoleSelectPage from './page'
 // MOCKS
 // ==========================================
 
-const { apiFetchMock, pushMock } = vi.hoisted(() => ({
+const { apiFetchMock, pushMock, replaceMock, sessionState } = vi.hoisted(() => ({
   apiFetchMock: vi.fn(),
   pushMock: vi.fn(),
+  replaceMock: vi.fn(),
+  sessionState: {
+    user: { id: 'test-user-id', name: 'Test User', email: 'test@example.com' } as unknown,
+  },
+}))
+
+vi.mock('@/lib/auth/client', () => ({
+  authClient: {
+    useSession: () => ({
+      data: sessionState.user ? { user: sessionState.user } : null,
+      isPending: false,
+    }),
+  },
 }))
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: pushMock }),
+  useRouter: () => ({ push: pushMock, replace: replaceMock }),
 }))
 
 // `ApiError` stays real so the page's `instanceof` checks behave as they do in
@@ -43,7 +56,24 @@ function clickRole(role: 'student' | 'recruiter') {
 
 describe('RoleSelectPage', () => {
   beforeEach(() => {
-    apiFetchMock.mockResolvedValue({ user: { roles: ['student'] } })
+    vi.clearAllMocks()
+    apiFetchMock.mockResolvedValue({ user: { roles: ['student'], hasAccount: false } })
+  })
+
+  it('redirects directly to dashboard when user already has an account', async () => {
+    apiFetchMock.mockResolvedValue({
+      user: {
+        roles: ['recruiter'],
+        hasAccount: true,
+        dashboardUrl: '/dashboard/recruiter',
+      },
+    })
+
+    renderWithProviders(<RoleSelectPage />)
+
+    await waitFor(() => {
+      expect(replaceMock).toHaveBeenCalledWith('/dashboard/recruiter')
+    })
   })
 
   it('persists the student role before navigating', async () => {

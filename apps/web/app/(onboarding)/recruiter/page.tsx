@@ -72,6 +72,13 @@ export default function RecruiterOnboardingPage() {
     retry: false,
   })
 
+  // If recruiter already has a profile, redirect directly to recruiter dashboard
+  useEffect(() => {
+    if (profileCheck?.recruiter) {
+      router.replace('/dashboard/recruiter')
+    }
+  }, [profileCheck, router])
+
   const {
     register,
     handleSubmit,

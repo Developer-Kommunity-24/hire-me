@@ -7,11 +7,12 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { BrandLogo } from '@/components/common/BrandLogo'
 import { ApiError } from '@/lib/api-client'
-import { useSetUserRole } from '@/lib/hooks/use-auth'
+import { useAuth, useSetUserRole } from '@/lib/hooks/use-auth'
 import { type SelfAssignableRole } from '@/lib/schemas/auth.schema'
 
 export default function RoleSelectPage() {
   const router = useRouter()
+  const { user, isLoading: isAuthLoading } = useAuth()
   const [selectedRole, setSelectedRole] = useState<SelfAssignableRole | null>(null)
   const [hoveredRole, setHoveredRole] = useState<SelfAssignableRole | null>(null)
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
@@ -19,6 +20,21 @@ export default function RoleSelectPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // If user already has an account, redirect directly to dashboard
+  useEffect(() => {
+    if (isAuthLoading || !user) return
+
+    if (user.hasAccount && user.dashboardUrl) {
+      router.replace(user.dashboardUrl)
+    } else if (user.roles?.includes('recruiter')) {
+      router.replace('/dashboard/recruiter')
+    } else if (user.roles?.includes('core_admin')) {
+      router.replace('/admin')
+    } else if (user.roles?.includes('club_admin')) {
+      router.replace('/student-admin/members')
+    }
+  }, [user, isAuthLoading, router])
 
   // Track mouse coordinates for interactive eye tracking
   const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
