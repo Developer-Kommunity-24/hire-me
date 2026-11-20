@@ -8,6 +8,7 @@ import type { DbVariables } from '../middleware/db.js'
 import {
   flagBadgeRevocation,
   getStudentVerificationStatus,
+  listActiveClubs,
   listPendingRevocations,
   listVerificationRequests,
   resolveBadgeRevocation,
@@ -68,6 +69,16 @@ export const verificationRouter = new Hono<VerificationEnv>()
 
 // All verification endpoints require an authenticated bearer token.
 verificationRouter.use('*', requireAuth)
+
+/**
+ * GET /api/verifications/clubs
+ *
+ * Lists all active clubs for students to select from when requesting verification.
+ */
+verificationRouter.get('/clubs', async (c) => {
+  const activeClubs = await listActiveClubs(c.var.db)
+  return c.json({ data: activeClubs })
+})
 
 /**
  * POST /api/verifications

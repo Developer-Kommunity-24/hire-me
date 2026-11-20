@@ -1,9 +1,19 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import StudentAdminLayout from './layout'
 
 const mockUser = vi.fn()
 const mockReplace = vi.fn()
+
+function renderWithClient(ui: React.ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+    },
+  })
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>)
+}
 
 vi.mock('@/lib/hooks/use-auth', () => ({
   useAuth: () => mockUser(),
@@ -30,7 +40,7 @@ describe('StudentAdminLayout Access Guard', () => {
       isLoading: false,
     })
 
-    render(
+    renderWithClient(
       <StudentAdminLayout>
         <div>Club Admin Protected Content</div>
       </StudentAdminLayout>,
@@ -51,7 +61,7 @@ describe('StudentAdminLayout Access Guard', () => {
       isLoading: false,
     })
 
-    render(
+    renderWithClient(
       <StudentAdminLayout>
         <div>Should Not Be Visible</div>
       </StudentAdminLayout>,

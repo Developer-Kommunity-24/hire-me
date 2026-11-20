@@ -1,12 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { BadgeCheck, Loader2, ShieldCheck, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { submitVerification } from '@/lib/verification-api'
+import { fetchActiveClubs, submitVerification } from '@/lib/verification-api'
 
 interface StudentVerificationDialogProps {
   isOpen: boolean
@@ -18,13 +18,25 @@ export default function StudentVerificationDialog({
   onClose,
 }: StudentVerificationDialogProps) {
   const [usn, setUsn] = useState('')
+  const [selectedClubId, setSelectedClubId] = useState('')
   const queryClient = useQueryClient()
 
+  const { data: clubs = [] } = useQuery({
+    queryKey: ['active-clubs'],
+    queryFn: fetchActiveClubs,
+    enabled: isOpen,
+  })
+
   const verifyMutation = useMutation({
-    mutationFn: (inputUsn: string) => submitVerification({ usn: inputUsn.trim().toUpperCase() }),
+    mutationFn: (vars: { usn: string; clubId?: string | null }) =>
+      submitVerification({
+        usn: vars.usn.trim().toUpperCase(),
+        clubId: vars.clubId || undefined,
+      }),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['student', 'profile'] })
       queryClient.invalidateQueries({ queryKey: ['verifications', 'me'] })
+      queryClient.invalidateQueries({ queryKey: ['club', 'requests'] })
       if (data.status === 'verified') {
         toast.success(
           data.clubName
@@ -33,7 +45,7 @@ export default function StudentVerificationDialog({
         )
       } else {
         toast.info(
-          'Verification submitted! Awaiting matching club roster or administrative review.',
+          'Verification request submitted! Awaiting matching club roster or student admin approval.',
         )
       }
       onClose()
@@ -51,7 +63,7 @@ export default function StudentVerificationDialog({
       toast.error('Please enter your University Seat Number (USN)')
       return
     }
-    verifyMutation.mutate(usn)
+    verifyMutation.mutate({ usn, clubId: selectedClubId || null })
   }
 
   return (
@@ -83,7 +95,8 @@ export default function StudentVerificationDialog({
         <p className="text-sm text-text-muted mb-4">
           Enter your official University Seat Number (USN). If your club administrator has
           registered you in an active club roster, your verified student badge will be awarded
-          automatically.
+          automatically. If not yet added, your request will be sent to the club administrator for
+          review.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -105,6 +118,31 @@ export default function StudentVerificationDialog({
             />
           </div>
 
+          {clubs.length > 0 && (
+            <div>
+              <label
+                htmlFor="club-select"
+                className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5"
+              >
+                Campus Club (Optional)
+              </label>
+              <select
+                id="club-select"
+                value={selectedClubId}
+                onChange={(e) => setSelectedClubId(e.target.value)}
+                disabled={verifyMutation.isPending}
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
+              >
+                <option value="">-- Choose your campus club --</option>
+                {clubs.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="flex justify-end gap-3 pt-2">
             <Button
               type="button"
@@ -123,7 +161,7 @@ export default function StudentVerificationDialog({
               ) : (
                 <>
                   <BadgeCheck className="w-4 h-4 mr-1.5" />
-                  Verify USN
+                  Submit Request
                 </>
               )}
             </Button>

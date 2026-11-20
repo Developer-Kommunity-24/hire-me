@@ -70,10 +70,14 @@ export default function Sidebar({
     if (exactMatch) return exactMatch.href
 
     const prefixMatches = navItems
-      .filter(
-        (item) =>
-          item.href !== '/' && (pathname.startsWith(item.href + '/') || pathname === item.href),
-      )
+      .filter((item) => {
+        if (item.href === '/') return false
+        if (pathname.startsWith(item.href + '/') || pathname === item.href) return true
+        if (item.href.startsWith('/student-admin') && pathname.startsWith('/student-admin')) {
+          return true
+        }
+        return false
+      })
       .sort((a, b) => b.href.length - a.href.length)
 
     return prefixMatches[0]?.href ?? null

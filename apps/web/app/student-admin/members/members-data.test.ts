@@ -1,11 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '@/lib/api-client'
 import {
+  acceptMemberRequest,
+  clubRequestsQueryKey,
   createMember,
   deleteMembers,
+  fetchClubRequests,
   fetchMembers,
   importMembers,
   membersQueryKey,
+  rejectMemberRequest,
 } from './members-data'
 
 const { apiFetchMock } = vi.hoisted(() => ({
@@ -184,6 +188,63 @@ describe('members-data', () => {
             message: 'A member with this USN already exists in your club',
           },
         ],
+      })
+    })
+  })
+
+  describe('fetchClubRequests', () => {
+    it('fetches and maps club verification requests', async () => {
+      apiFetchMock.mockResolvedValueOnce({
+        data: [
+          {
+            id: 'req-1',
+            studentId: 'stud-1',
+            fullName: 'Sam Altman',
+            usn: '1RV21CS099',
+            email: 'sam@example.com',
+            submittedAt: '2026-03-20T10:00:00.000Z',
+            status: 'pending',
+          },
+        ],
+      })
+
+      const requests = await fetchClubRequests()
+
+      expect(apiFetchMock).toHaveBeenCalledWith('/api/clubs/members/requests')
+      expect(requests).toHaveLength(1)
+      expect(requests[0]).toEqual({
+        id: 'req-1',
+        studentId: 'stud-1',
+        name: 'Sam Altman',
+        usn: '1RV21CS099',
+        email: 'sam@example.com',
+        submittedAt: expect.stringContaining('2026'),
+        status: 'pending',
+      })
+      expect(clubRequestsQueryKey).toEqual(['club', 'requests'])
+    })
+  })
+
+  describe('acceptMemberRequest', () => {
+    it('posts to accept endpoint', async () => {
+      apiFetchMock.mockResolvedValueOnce({ data: { id: 'm-10' } })
+
+      await acceptMemberRequest('req-1')
+
+      expect(apiFetchMock).toHaveBeenCalledWith('/api/clubs/members/requests/req-1/accept', {
+        method: 'POST',
+      })
+    })
+  })
+
+  describe('rejectMemberRequest', () => {
+    it('posts to reject endpoint', async () => {
+      apiFetchMock.mockResolvedValueOnce({ data: null })
+
+      await rejectMemberRequest('req-1')
+
+      expect(apiFetchMock).toHaveBeenCalledWith('/api/clubs/members/requests/req-1/reject', {
+        method: 'POST',
       })
     })
   })

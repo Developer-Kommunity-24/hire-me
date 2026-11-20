@@ -270,7 +270,7 @@ describe('StudentProfileView integration', () => {
 
     expect(screen.getByText('Software Engineering Student')).toBeInTheDocument()
     expect(screen.getByText('Building accessible products for the web.')).toBeInTheDocument()
-    expect(screen.getByText('Verified Student')).toBeInTheDocument()
+    expect(screen.getByText('DK24 Verified')).toBeInTheDocument()
     expect(screen.getByText('Open to Work')).toBeInTheDocument()
     expect(screen.getByText('Profile completeness: 90%')).toBeInTheDocument()
 

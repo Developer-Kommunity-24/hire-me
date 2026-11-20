@@ -61,6 +61,7 @@ vi.mock('../controllers/verification.controller.ts', async (importOriginal) => {
     resolveBadgeRevocation: vi.fn(),
     listPendingRevocations: vi.fn(),
     listVerificationRequests: vi.fn(),
+    listActiveClubs: vi.fn(),
   }
 })
 
@@ -71,6 +72,7 @@ import {
   resolveBadgeRevocation,
   listPendingRevocations,
   listVerificationRequests,
+  listActiveClubs,
 } from '../controllers/verification.controller.js'
 
 // ==========================================
@@ -525,6 +527,27 @@ describe('Verification API Routes', () => {
       expect(res.status).toBe(403)
       await expect(res.json()).resolves.toEqual({ error: 'Forbidden' })
       expect(listVerificationRequests).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('GET /api/verifications/clubs', () => {
+    it('returns 200 with list of active clubs', async () => {
+      const mockClubs = [
+        { id: '11111111-1111-4111-8111-111111111111', name: 'Coding Club', slug: 'coding-club' },
+        {
+          id: '22222222-2222-4222-8222-222222222222',
+          name: 'Robotics Club',
+          slug: 'robotics-club',
+        },
+      ]
+      vi.mocked(listActiveClubs).mockResolvedValue(mockClubs)
+
+      const res = await app.request('/api/verifications/clubs')
+      expect(res.status).toBe(200)
+
+      const body = (await res.json()) as { data: typeof mockClubs }
+      expect(body.data).toEqual(mockClubs)
+      expect(listActiveClubs).toHaveBeenCalled()
     })
   })
 })

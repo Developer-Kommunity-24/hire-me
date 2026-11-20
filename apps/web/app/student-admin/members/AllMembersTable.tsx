@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Search, Trash2 } from 'lucide-react'
+import Dk24VerifiedBadge from '@/components/common/Dk24VerifiedBadge'
 
 import {
   AlertDialog,
@@ -117,6 +118,7 @@ export default function AllMembersTable() {
               <th className="py-3 px-4 text-xs font-semibold text-gray-600">Name</th>
               <th className="py-3 px-4 text-xs font-semibold text-gray-600">USN / Username</th>
               <th className="py-3 px-4 text-xs font-semibold text-gray-600">Email</th>
+              <th className="py-3 px-4 text-xs font-semibold text-gray-600">Status</th>
               <th className="py-3 px-4 text-xs font-semibold text-gray-600">Joined Date</th>
               <th className="py-3 px-4 w-12 text-xs font-semibold text-gray-600 text-right" />
             </tr>
@@ -140,6 +142,13 @@ export default function AllMembersTable() {
                     {member.email}
                   </a>
                 </td>
+                <td className="py-3 px-4">
+                  {member.isVerified ? (
+                    <Dk24VerifiedBadge size="sm" label="DK24 Verified" />
+                  ) : (
+                    <span className="text-xs text-gray-400">Unverified</span>
+                  )}
+                </td>
                 <td className="py-3 px-4 text-sm text-gray-500">{member.joinedDate ?? '—'}</td>
                 <td className="py-3 px-4 text-right">
                   <button
@@ -156,7 +165,7 @@ export default function AllMembersTable() {
             ))}
             {filteredMembers.length === 0 && (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-sm text-gray-500">
+                <td colSpan={7} className="py-8 text-center text-sm text-gray-500">
                   No members found.
                 </td>
               </tr>

@@ -52,6 +52,7 @@ vi.mock('../controllers/applications.controller.ts', () => ({
   listOwnApplications: vi.fn(),
   updateApplicationStatus: vi.fn(),
   listApplicantsForPosting: vi.fn(),
+  withdrawApplication: vi.fn(),
 }))
 
 import {
@@ -59,6 +60,7 @@ import {
   listOwnApplications,
   updateApplicationStatus,
   listApplicantsForPosting,
+  withdrawApplication,
 } from '../controllers/applications.controller.js'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -324,5 +326,66 @@ describe('GET /api/postings/:id/applications', () => {
     const res = await request(`/api/postings/${postingId}/applications`)
     expect(res.status).toBe(403)
     expect(listApplicantsForPosting).not.toHaveBeenCalled()
+  })
+})
+
+describe('DELETE /api/applications/:id', () => {
+  const applicationId = '11111111-1111-4111-8111-111111111111'
+
+  it('returns 404 for a non-UUID id without calling the controller', async () => {
+    const res = await request('/api/applications/not-a-uuid', {
+      method: 'DELETE',
+    })
+
+    expect(res.status).toBe(404)
+    expect(withdrawApplication).not.toHaveBeenCalled()
+  })
+
+  it('returns 403 when the caller is not an authenticated student', async () => {
+    mockState.student = { outcome: 'forbidden', studentId: '' }
+
+    const res = await request(`/api/applications/${applicationId}`, {
+      method: 'DELETE',
+    })
+
+    expect(res.status).toBe(403)
+    expect(withdrawApplication).not.toHaveBeenCalled()
+  })
+
+  it('returns 404 when the application does not exist or does not belong to the student', async () => {
+    vi.mocked(withdrawApplication).mockResolvedValue({ ok: false, error: 'not_found' })
+
+    const res = await request(`/api/applications/${applicationId}`, {
+      method: 'DELETE',
+    })
+
+    expect(res.status).toBe(404)
+    expect(withdrawApplication).toHaveBeenCalledWith(expect.anything(), 'student-1', applicationId)
+  })
+
+  it('returns 400 when the application cannot be withdrawn due to its status', async () => {
+    vi.mocked(withdrawApplication).mockResolvedValue({ ok: false, error: 'cannot_withdraw' })
+
+    const res = await request(`/api/applications/${applicationId}`, {
+      method: 'DELETE',
+    })
+
+    expect(res.status).toBe(400)
+    const body = await json(res)
+    expect(body.error).toBe('Application cannot be withdrawn in its current status')
+    expect(withdrawApplication).toHaveBeenCalledWith(expect.anything(), 'student-1', applicationId)
+  })
+
+  it('returns 200 with success status when successfully withdrawn', async () => {
+    vi.mocked(withdrawApplication).mockResolvedValue({ ok: true, id: applicationId })
+
+    const res = await request(`/api/applications/${applicationId}`, {
+      method: 'DELETE',
+    })
+
+    expect(res.status).toBe(200)
+    const body = await json(res)
+    expect(body.data).toEqual({ id: applicationId, success: true })
+    expect(withdrawApplication).toHaveBeenCalledWith(expect.anything(), 'student-1', applicationId)
   })
 })

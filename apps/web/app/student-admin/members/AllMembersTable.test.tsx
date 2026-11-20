@@ -34,6 +34,7 @@ describe('AllMembersTable', () => {
           usn: '1RV21CS001',
           email: 'priya@example.com',
           addedAt: '2026-03-01T00:00:00.000Z',
+          isVerified: true,
         },
         {
           id: '2',
@@ -41,6 +42,7 @@ describe('AllMembersTable', () => {
           usn: '1RV21CS002',
           email: 'marcus@example.com',
           addedAt: '2026-03-02T00:00:00.000Z',
+          isVerified: true,
         },
       ],
     })
@@ -52,6 +54,7 @@ describe('AllMembersTable', () => {
     await waitFor(() => {
       expect(screen.getByText('Priya Nair')).toBeInTheDocument()
       expect(screen.getByText('Marcus Webb')).toBeInTheDocument()
+      expect(screen.getAllByText('DK24 Verified')).toHaveLength(2)
     })
 
     const searchInput = screen.getByPlaceholderText('Search by name, USN, or email')

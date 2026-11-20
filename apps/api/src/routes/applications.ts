@@ -12,6 +12,7 @@ import {
   applyToPosting,
   listOwnApplications,
   updateApplicationStatus,
+  withdrawApplication,
 } from '../controllers/applications.controller.js'
 import { createApplicationSchema, updateApplicationStatusSchema } from './applications.schemas.js'
 
@@ -103,3 +104,26 @@ applicationsRouter.patch(
     return c.json({ data: result.data })
   },
 )
+
+/**
+ * DELETE /api/applications/:id: student withdraws their application.
+ * 404 unknown or unowned application.
+ */
+applicationsRouter.delete('/:id', requireStudent, async (c) => {
+  const rawId = c.req.param('id')
+
+  if (!uuidSchema.safeParse(rawId).success) {
+    return c.json({ error: 'Application not found' }, 404)
+  }
+
+  const result = await withdrawApplication(c.var.db, c.var.studentId, rawId)
+
+  if (!result.ok) {
+    if (result.error === 'cannot_withdraw') {
+      return c.json({ error: 'Application cannot be withdrawn in its current status' }, 400)
+    }
+    return c.json({ error: 'Application not found' }, 404)
+  }
+
+  return c.json({ data: { id: result.id, success: true } })
+})

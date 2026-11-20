@@ -27,6 +27,7 @@ import {
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import Dk24VerifiedBadge from '@/components/common/Dk24VerifiedBadge'
 import UserAvatar from '@/components/student-profile/UserAvatar'
 import Sidebar from '../components/Sidebar'
 import Topbar from '../components/Topbar'
@@ -297,17 +298,15 @@ function CandidatesContent() {
                               <h3 className="text-base font-bold text-text-main truncate flex items-center gap-1.5">
                                 <span className="truncate">{candidate.fullName}</span>
                                 {isVerified && (
-                                  <span
-                                    title="DK24 Verified Student"
-                                    className="shrink-0 text-emerald-600"
-                                  >
-                                    <ShieldCheck className="w-4 h-4 fill-emerald-100" />
-                                  </span>
+                                  <Dk24VerifiedBadge iconOnly size="sm" label="DK24 Verified" />
                                 )}
                               </h3>
-                              <p className="text-xs text-text-muted truncate">
-                                {candidate.headline || 'Student on Hire-Me'}
-                              </p>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <p className="text-xs text-text-muted truncate">
+                                  {candidate.headline || 'Student on Hire-Me'}
+                                </p>
+                                {candidate.openToWork && <Badge variant="outline">Available</Badge>}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -504,13 +503,7 @@ function CandidatesContent() {
                       <h2 className="text-xl font-bold text-text-main flex items-center gap-2">
                         {selectedCandidate.fullName}
                         {selectedCandidate.dk24Status === 'verified' && (
-                          <span
-                            title="DK24 Verified"
-                            className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200"
-                          >
-                            <ShieldCheck className="w-3.5 h-3.5" />
-                            Verified
-                          </span>
+                          <Dk24VerifiedBadge size="sm" label="DK24 Verified" />
                         )}
                       </h2>
                       <p className="text-xs text-text-muted">

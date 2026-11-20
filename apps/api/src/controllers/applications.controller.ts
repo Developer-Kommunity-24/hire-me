@@ -63,12 +63,19 @@ export interface StudentApplication {
   appliedAt: Date
   updatedAt: Date
   posting: {
+    id?: string
     title: string
+    description?: string
+    stack?: string[] | null
     status: string
     deadline: string | null
     location: string | null
     employmentType: string
+    workArrangement?: string
+    compensation?: string | null
     companyName: string
+    companyUrl?: string | null
+    companyMail?: string
   }
 }
 
@@ -311,12 +318,19 @@ export async function listOwnApplications(
       appliedAt: applications.appliedAt,
       updatedAt: applications.updatedAt,
       posting: {
+        id: postings.id,
         title: postings.title,
+        description: postings.description,
+        stack: postings.stack,
         status: postings.status,
         deadline: postings.deadline,
         location: postings.location,
         employmentType: postings.employmentType,
+        workArrangement: postings.workArrangement,
+        compensation: postings.compensation,
         companyName: recruiters.companyName,
+        companyUrl: recruiters.companyUrl,
+        companyMail: recruiters.companyMail,
       },
     })
     .from(applications)
@@ -326,6 +340,43 @@ export async function listOwnApplications(
     .orderBy(desc(applications.appliedAt))
 
   return rows
+}
+
+export type WithdrawApplicationError = 'not_found' | 'cannot_withdraw'
+
+/**
+ * Allows an authenticated student to withdraw their own application.
+ * Deletes the application row from the applications table if in 'applied' or 'under_review' status.
+ */
+export async function withdrawApplication(
+  db: Database,
+  studentId: string,
+  applicationId: string,
+): Promise<{ ok: true; id: string } | { ok: false; error: WithdrawApplicationError }> {
+  const [existing] = await db
+    .select({ id: applications.id, status: applications.status })
+    .from(applications)
+    .where(and(eq(applications.id, applicationId), eq(applications.studentId, studentId)))
+    .limit(1)
+
+  if (!existing) {
+    return { ok: false, error: 'not_found' }
+  }
+
+  if (existing.status !== 'applied' && existing.status !== 'under_review') {
+    return { ok: false, error: 'cannot_withdraw' }
+  }
+
+  const [deleted] = await db
+    .delete(applications)
+    .where(and(eq(applications.id, applicationId), eq(applications.studentId, studentId)))
+    .returning({ id: applications.id })
+
+  if (!deleted) {
+    return { ok: false, error: 'not_found' }
+  }
+
+  return { ok: true, id: deleted.id }
 }
 
 /** Lists applicants for a posting owned by `recruiterId`, or `null` otherwise. */

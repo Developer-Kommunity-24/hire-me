@@ -13,6 +13,7 @@ export interface ClubMemberResponse {
   role: string
   addedAt: Date | string | null
   userId: string | null
+  isVerified?: boolean
 }
 
 export function normalizeMemberInput(input: AddMemberInput | EditMemberInput): {
@@ -32,6 +33,7 @@ function toClubMemberResponse(
     ClubMembership,
     'id' | 'clubId' | 'fullName' | 'usn' | 'email' | 'role' | 'addedAt' | 'userId'
   >,
+  isVerified = false,
 ): ClubMemberResponse {
   return {
     id: member.id,
@@ -42,6 +44,7 @@ function toClubMemberResponse(
     role: member.role,
     addedAt: member.addedAt,
     userId: member.userId,
+    isVerified,
   }
 }
 
@@ -125,12 +128,14 @@ export async function listClubMembers(db: Database, clubId: string): Promise<Clu
       role: clubMemberships.role,
       addedAt: clubMemberships.addedAt,
       userId: clubMemberships.userId,
+      dk24Status: studentProfiles.dk24Status,
     })
     .from(clubMemberships)
+    .leftJoin(studentProfiles, eq(clubMemberships.userId, studentProfiles.userId))
     .where(and(eq(clubMemberships.clubId, clubId), ACTIVE_CLUB_MEMBER))
     .orderBy(asc(clubMemberships.fullName))
 
-  return members.map(toClubMemberResponse)
+  return members.map((m) => toClubMemberResponse(m, m.dk24Status === 'verified'))
 }
 
 // ==========================================
@@ -169,7 +174,7 @@ export async function addClubMember(
       throw new Error('Insert returned no rows')
     }
 
-    return { ok: true, data: toClubMemberResponse(member) }
+    return { ok: true, data: toClubMemberResponse(member, false) }
   } catch (err) {
     const constraintError = classifyConstraintError(err)
 
