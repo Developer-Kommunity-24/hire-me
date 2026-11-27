@@ -34,39 +34,30 @@ const NAV_LINKS = [
   { href: '#features', label: 'Features' },
 ]
 
-const OPPORTUNITY_TYPES = ['Internship', 'Full-time', 'Part-time', 'Contract']
-const WORK_MODELS = ['Remote', 'Hybrid', 'On-site']
-
 const STUDENT_POINTS = [
-  'A profile that shows your work: academics, skills, projects and experience in one place.',
+  'Showcase your academics, skills, projects and experience.',
   'Search and filter jobs by role type and work model.',
-  'Apply in a click, then follow every milestone of your application.',
-  'Get notified when a matching role is posted or your status changes.',
+  'Apply in a click and track every milestone.',
+  'Get notified of new roles and status changes.',
 ]
 
 const RECRUITER_POINTS = [
-  'Post roles with stack, work arrangement, compensation and deadline.',
-  'Search talent by skill, graduation year, availability and DK24 status.',
-  'Move applicants through a clear pipeline, from applied to accepted.',
-  'Track active jobs, applicants and pending reviews from one dashboard.',
+  'Post roles with stack, compensation and deadline.',
+  'Search talent by skill, graduation year and DK24 status.',
+  'Move applicants from applied to accepted.',
+  'Track jobs, applicants and reviews in one dashboard.',
 ]
 
 const STEPS = [
-  {
-    title: 'Sign in',
-    body: 'Continue with Google and tell us whether you’re here to get hired or to hire.',
-  },
+  { title: 'Sign in', body: 'Continue with Google and pick your role.' },
   {
     title: 'Build your profile',
-    body: 'Students add academics, skills and projects. Recruiters add their company and post roles.',
+    body: 'Add your skills and projects, or your company and roles.',
   },
-  {
-    title: 'Get DK24 verified',
-    body: 'Students submit their USN, which is matched against club membership rolls to earn the badge.',
-  },
+  { title: 'Get DK24 verified', body: 'Submit your USN to earn the verified badge.' },
   {
     title: 'Apply, hire, track',
-    body: 'Applications move through a visible pipeline, and everyone is notified at each change.',
+    body: 'Follow every application through a clear pipeline.',
   },
 ]
 
@@ -74,37 +65,37 @@ const FEATURES = [
   {
     icon: Search,
     title: 'A job feed you can actually filter',
-    body: 'Search by keyword, then narrow by internship, full-time, part-time or contract, and by remote, hybrid or on-site.',
+    body: 'Filter by role type and work model.',
     tone: 'brand',
   },
   {
     icon: IdCard,
     title: 'Profiles that prove skill',
-    body: 'Academics, skills, projects, experience and achievements like hackathons and certifications, all on one profile.',
+    body: 'Academics, skills, projects, experience and achievements.',
     tone: 'brand',
   },
   {
     icon: Route,
     title: 'Application tracking',
-    body: 'See exactly where every application stands with a milestone history, from applied to shortlisted to accepted.',
+    body: 'See where every application stands, step by step.',
     tone: 'brand',
   },
   {
     icon: Radar,
     title: 'Talent search for recruiters',
-    body: 'Free-text and skill filters with any/all matching, plus graduation year, open-to-work and verification status.',
+    body: 'Filter by skill, graduation year and verification.',
     tone: 'recruiter',
   },
   {
     icon: Bell,
     title: 'Notifications that matter',
-    body: 'New matching postings, application updates and verification results land in your notification centre.',
+    body: 'New roles, status updates and verification results.',
     tone: 'recruiter',
   },
   {
     icon: FileSpreadsheet,
     title: 'Tools for club admins',
-    body: 'Add members one by one or bulk-import a CSV, review verification requests and keep rosters accurate.',
+    body: 'Add members one by one or import a CSV.',
     tone: 'recruiter',
   },
 ] as const
@@ -216,25 +207,51 @@ export default function LandingPage() {
               </h1>
 
               <p className="mt-6 max-w-xl text-base leading-relaxed text-text-muted sm:text-lg">
-                CareerLink connects DK24 students with teams that are hiring. Show real projects and
-                skills, earn a verified badge, and track every application, or discover entry-level
-                talent you can trust.
+                Connect with teams hiring across the DK24 network. Show your skills, get verified,
+                and track every application.
               </p>
 
-              <div className="mt-9 flex w-full flex-col gap-3 sm:w-auto sm:flex-row [&>a]:w-full sm:[&>a]:w-auto">
-                <Button asChild variant="brand" size="lg">
-                  <Link href="/login">
-                    <GraduationCap aria-hidden="true" />
-                    I’m a student
-                    <ArrowRight aria-hidden="true" />
+              {/* Dual action paths */}
+              <div className="mt-10 grid w-full gap-8 sm:grid-cols-2 sm:gap-12">
+                {/* Path 1: Student */}
+                <div className="group flex flex-col items-start">
+                  <h2 className="text-xl font-bold tracking-tight text-text-main sm:text-2xl">
+                    I&apos;m a Student
+                  </h2>
+                  <p className="mt-1.5 max-w-[260px] text-sm leading-relaxed text-text-muted">
+                    Get the opportunity that boosts your early career trajectory.
+                  </p>
+                  <Link
+                    href="/login"
+                    className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-text-main transition-colors group-hover:text-brand"
+                  >
+                    <span>Get Started</span>
+                    <ArrowUpRight
+                      aria-hidden="true"
+                      className="size-4 shrink-0 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                    />
                   </Link>
-                </Button>
-                <Button asChild variant="outline" size="lg">
-                  <Link href="/login">
-                    <Briefcase aria-hidden="true" className="text-recruiter" />I want to hire
-                    <ArrowUpRight aria-hidden="true" />
+                </div>
+
+                {/* Path 2: Recruiter */}
+                <div className="group flex flex-col items-start">
+                  <h2 className="text-xl font-bold tracking-tight text-text-main sm:text-2xl">
+                    I Want to Hire
+                  </h2>
+                  <p className="mt-1.5 max-w-[260px] text-sm leading-relaxed text-text-muted">
+                    Find verified, top-tier entry-level talent in minutes.
+                  </p>
+                  <Link
+                    href="/login"
+                    className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-text-main transition-colors group-hover:text-brand"
+                  >
+                    <span>Get Started</span>
+                    <ArrowUpRight
+                      aria-hidden="true"
+                      className="size-4 shrink-0 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                    />
                   </Link>
-                </Button>
+                </div>
               </div>
 
               <ul className="mt-9 flex flex-wrap gap-x-6 gap-y-2.5 text-sm font-medium text-text-muted">
@@ -255,37 +272,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ───────────── Opportunity strip ───────────── */}
-        <section
-          aria-label="Kinds of opportunities"
-          className="border-y border-border-subtle bg-bg-page"
-        >
-          <div className="mx-auto flex w-full max-w-[1360px] flex-col items-center gap-4 px-6 py-6 md:px-12 lg:flex-row lg:justify-between lg:px-16">
-            <p className="text-sm font-bold text-text-main">
-              Every kind of first opportunity, filterable in a click
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              {OPPORTUNITY_TYPES.map((type) => (
-                <span
-                  key={type}
-                  className="rounded-full border border-border-subtle bg-card px-3.5 py-1.5 text-xs font-bold text-text-main shadow-2xs"
-                >
-                  {type}
-                </span>
-              ))}
-              <span aria-hidden="true" className="mx-1 hidden h-5 w-px bg-border-muted sm:block" />
-              {WORK_MODELS.map((model) => (
-                <span
-                  key={model}
-                  className="rounded-full border border-recruiter/20 bg-recruiter-light px-3.5 py-1.5 text-xs font-bold text-recruiter-dark"
-                >
-                  {model}
-                </span>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* ───────────── Two sides ───────────── */}
         <section id="who-its-for" className="scroll-mt-20 py-20 lg:py-28">
           <div className="mx-auto w-full max-w-[1360px] px-6 md:px-12 lg:px-16">
@@ -298,19 +284,14 @@ export default function LandingPage() {
                     <span className="text-brand">scouting talent</span>
                   </>
                 }
-                description="CareerLink gives each side the tools it actually needs, and keeps both in sync."
               />
             </Reveal>
 
             <div className="mt-14 grid gap-6 lg:grid-cols-2">
               <Reveal>
-                <article className="group relative h-full overflow-hidden rounded-[28px] border border-emerald-100 bg-gradient-to-br from-brand-light via-white to-white p-8 sm:p-10">
-                  <div
-                    aria-hidden="true"
-                    className="absolute -right-16 -top-16 size-56 rounded-full bg-brand/10 blur-3xl transition-opacity duration-500 group-hover:opacity-80"
-                  />
-                  <div className="relative flex h-full flex-col">
-                    <span className="flex size-14 items-center justify-center rounded-2xl bg-brand text-white shadow-lg shadow-brand/30">
+                <article className="h-full rounded-2xl border border-emerald-200 bg-brand-light p-8 sm:p-10">
+                  <div className="flex h-full flex-col">
+                    <span className="flex size-14 items-center justify-center rounded-xl bg-brand text-white">
                       <GraduationCap className="size-7" strokeWidth={2.2} aria-hidden="true" />
                     </span>
                     <h3 className="mt-6 text-2xl font-extrabold tracking-tight sm:text-3xl">
@@ -342,13 +323,9 @@ export default function LandingPage() {
               </Reveal>
 
               <Reveal delay={0.12}>
-                <article className="group relative h-full overflow-hidden rounded-[28px] border border-purple-100 bg-gradient-to-br from-recruiter-light via-white to-white p-8 sm:p-10">
-                  <div
-                    aria-hidden="true"
-                    className="absolute -right-16 -top-16 size-56 rounded-full bg-recruiter/10 blur-3xl transition-opacity duration-500 group-hover:opacity-80"
-                  />
-                  <div className="relative flex h-full flex-col">
-                    <span className="flex size-14 items-center justify-center rounded-2xl bg-recruiter text-white shadow-lg shadow-recruiter/30">
+                <article className="h-full rounded-2xl border border-purple-200 bg-recruiter-light p-8 sm:p-10">
+                  <div className="flex h-full flex-col">
+                    <span className="flex size-14 items-center justify-center rounded-xl bg-recruiter text-white">
                       <Briefcase className="size-7" strokeWidth={2.2} aria-hidden="true" />
                     </span>
                     <h3 className="mt-6 text-2xl font-extrabold tracking-tight sm:text-3xl">
@@ -386,23 +363,25 @@ export default function LandingPage() {
         <section id="how-it-works" className="scroll-mt-20 bg-bg-page py-20 lg:py-28">
           <div className="mx-auto w-full max-w-[1360px] px-6 md:px-12 lg:px-16">
             <Reveal>
-              <SectionHeading
-                eyebrow="How it works"
-                title="From sign-in to offer in four steps"
-                description="No long forms and no black box. Every step is visible to both sides."
-              />
+              <SectionHeading eyebrow="How it works" title="From sign-in to offer in four steps" />
             </Reveal>
 
             <ol className="relative mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {STEPS.map((step, i) => (
                 <li key={step.title}>
                   <Reveal delay={i * 0.08} className="h-full">
-                    <div className="relative h-full rounded-3xl border border-border-subtle bg-card p-7 shadow-[0_10px_30px_-18px_rgba(15,23,42,0.2)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_50px_-20px_rgba(15,23,42,0.25)]">
-                      <span className="flex size-14 items-center justify-center rounded-2xl bg-action-dark font-mono text-xl font-black text-brand shadow-md">
+                    <div className="group h-full rounded-2xl border border-t-2 border-border-subtle border-t-brand/30 bg-card px-6 pb-8 pt-10 text-center shadow-[0_8px_30px_-12px_rgba(15,23,42,0.15)] transition-shadow duration-300 hover:shadow-[0_16px_40px_-12px_rgba(15,23,42,0.22)]">
+                      <span className="mx-auto flex size-11 items-center justify-center rounded-full bg-emerald-100 text-base font-bold text-emerald-600">
                         {String(i + 1).padStart(2, '0')}
                       </span>
-                      <h3 className="mt-6 text-lg font-extrabold tracking-tight">{step.title}</h3>
-                      <p className="mt-2 text-sm leading-relaxed text-text-muted">{step.body}</p>
+                      <h3 className="mt-5 text-lg font-semibold tracking-tight text-text-main">
+                        {step.title}
+                      </h3>
+                      <p className="mt-3 text-sm leading-relaxed text-text-muted">{step.body}</p>
+                      <span
+                        aria-hidden="true"
+                        className="mx-auto mt-6 block h-0.5 w-8 rounded-full bg-brand/50 transition-all duration-300 group-hover:w-14"
+                      />
                     </div>
                   </Reveal>
                 </li>
@@ -438,13 +417,13 @@ export default function LandingPage() {
                       Every <span className="text-brand">DK24 Verified</span> badge is earned
                     </>
                   }
-                  description="Recruiters shouldn’t have to wonder who they’re talking to. Verification is matched against club membership rolls, not self-declared."
+                  description="Matched against club membership rolls, not self-declared."
                 />
                 <ul className="mt-9 space-y-4">
                   {[
-                    'Submit your USN and it’s auto-matched against active club membership.',
-                    'Anything that can’t be matched goes to an admin review queue.',
-                    'Badges can be revoked if a membership is flagged, so they stay meaningful.',
+                    'Your USN is auto-matched against club membership.',
+                    'Unmatched requests go to admin review.',
+                    'Badges are revoked if a membership is flagged.',
                   ].map((point) => (
                     <li
                       key={point}
@@ -470,13 +449,13 @@ export default function LandingPage() {
                   </div>
                   <ol className="mt-7 space-y-6">
                     {[
-                      { t: 'USN submitted', d: 'Student requests verification', done: true },
+                      { t: 'USN submitted', d: 'Request sent', done: true },
                       {
                         t: 'Matched to club roster',
-                        d: 'USN and email checked automatically',
+                        d: 'Checked automatically',
                         done: true,
                       },
-                      { t: 'DK24 Verified', d: 'Badge appears on the profile', done: true },
+                      { t: 'DK24 Verified', d: 'Badge on your profile', done: true },
                     ].map((step, i, arr) => (
                       <li key={step.t} className="relative flex gap-4">
                         {i < arr.length - 1 && (
@@ -508,30 +487,26 @@ export default function LandingPage() {
               <SectionHeading
                 eyebrow="Everything in one place"
                 title="The details that make hiring feel effortless"
-                description="From the first search to the final status update, CareerLink keeps the process clear."
               />
             </Reveal>
 
             <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {FEATURES.map((feature, i) => {
                 const Icon = feature.icon
-                const isBrand = feature.tone === 'brand'
                 return (
                   <Reveal key={feature.title} delay={(i % 3) * 0.08} className="h-full">
-                    <article className="group h-full rounded-3xl border border-border-subtle bg-card p-7 transition-all duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-[0_24px_50px_-24px_rgba(15,23,42,0.3)]">
-                      <span
-                        className={`flex size-12 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-110 ${
-                          isBrand
-                            ? 'bg-brand-light text-brand'
-                            : 'bg-recruiter-light text-recruiter'
-                        }`}
-                      >
-                        <Icon className="size-6" strokeWidth={2.1} aria-hidden="true" />
+                    <article className="group h-full rounded-2xl border border-t-2 border-border-subtle border-t-brand/30 bg-card px-7 pb-8 pt-10 text-center shadow-[0_8px_30px_-12px_rgba(15,23,42,0.15)] transition-shadow duration-300 hover:shadow-[0_16px_40px_-12px_rgba(15,23,42,0.22)]">
+                      <span className="mx-auto flex size-11 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                        <Icon className="size-5" strokeWidth={2} aria-hidden="true" />
                       </span>
-                      <h3 className="mt-5 text-lg font-extrabold leading-snug tracking-tight">
+                      <h3 className="mt-5 text-lg font-semibold leading-snug tracking-tight text-text-main">
                         {feature.title}
                       </h3>
-                      <p className="mt-2 text-sm leading-relaxed text-text-muted">{feature.body}</p>
+                      <p className="mt-3 text-sm leading-relaxed text-text-muted">{feature.body}</p>
+                      <span
+                        aria-hidden="true"
+                        className="mx-auto mt-6 block h-0.5 w-8 rounded-full bg-brand/50 transition-all duration-300 group-hover:w-14"
+                      />
                     </article>
                   </Reveal>
                 )
@@ -543,21 +518,13 @@ export default function LandingPage() {
         {/* ───────────── Final CTA ───────────── */}
         <section className="px-4 pb-20 sm:px-6 lg:px-10 lg:pb-28">
           <Reveal>
-            <div className="relative mx-auto w-full max-w-[1360px] overflow-hidden rounded-[32px] bg-gradient-to-br from-brand-dark via-brand to-brand-emerald px-6 py-16 text-center sm:px-12 lg:py-24">
-              <div
-                aria-hidden="true"
-                className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.18)_1px,transparent_1px)] [background-size:26px_26px] [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_75%)]"
-              />
-              <div
-                aria-hidden="true"
-                className="absolute -top-24 left-1/2 size-80 -translate-x-1/2 rounded-full bg-white/20 blur-[90px]"
-              />
+            <div className="mx-auto w-full max-w-[1360px] rounded-[32px] bg-[#5edb92] px-6 py-16 text-center sm:px-12 lg:py-24">
               <div className="relative mx-auto max-w-2xl">
-                <h2 className="text-3xl font-black leading-[1.1] tracking-tight text-balance text-white sm:text-5xl">
+                <h2 className="text-3xl font-black leading-[1.1] tracking-tight text-balance text-text-main sm:text-5xl">
                   Your next opportunity is a sign-in away.
                 </h2>
-                <p className="mt-5 text-base leading-relaxed text-white/85 sm:text-lg">
-                  Join the DK24 community on CareerLink and let your work do the talking.
+                <p className="mt-5 text-base leading-relaxed text-text-main/80 sm:text-lg">
+                  Join the DK24 community on CareerLink.
                 </p>
                 <div className="mt-9 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center [&>a]:w-full sm:[&>a]:w-auto">
                   <Button asChild size="lg">

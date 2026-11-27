@@ -37,11 +37,6 @@ function Float({
   )
 }
 
-/**
- * Illustrative product preview for the hero. Everything here is sample content
- * built from real platform concepts (DK24 verification, job cards, the
- * applied → accepted pipeline) — no real student data or invented statistics.
- */
 export function HeroVisual() {
   return (
     <div className="relative mx-auto w-full max-w-[520px] lg:max-w-none">
@@ -225,10 +220,6 @@ export function HeroVisual() {
           </div>
         </Float>
       </div>
-
-      <p className="relative mt-3 text-center text-[11px] text-text-muted lg:mt-0 lg:text-right">
-        Illustrative preview with sample data
-      </p>
     </div>
   )
 }

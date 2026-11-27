@@ -6,14 +6,9 @@ import type { ReactNode } from 'react'
 interface RevealProps {
   children: ReactNode
   className?: string
-  /** Delay in seconds, handy for staggering siblings. */
   delay?: number
 }
 
-/**
- * Fades and lifts its children into view the first time they scroll on screen.
- * Falls back to a plain wrapper when the visitor prefers reduced motion.
- */
 export function Reveal({ children, className, delay = 0 }: RevealProps) {
   const reduceMotion = useReducedMotion()
 
